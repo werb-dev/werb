@@ -50,12 +50,14 @@ export function recipeToSessionPlan(
     });
   }
 
-  // Sparge (implied; recipes rarely encode it as a discrete step)
+  // Sparge (implied; recipes rarely encode it as a discrete step).
+  // Default target temperature 75°C — typical sparge water temp.
   steps.push({
     id: id(),
     kind: "sparge",
     label: "Sparge",
     status: "pending",
+    target_temperature_c: 75,
   });
 
   // Boil
@@ -69,12 +71,13 @@ export function recipeToSessionPlan(
     });
   }
 
-  // Chill (custom)
+  // Chill — default ale pitch temp 20°C. Brewer can adjust per yeast strain.
   steps.push({
     id: id(),
     kind: "chill",
     label: "Chill to pitch temp",
     status: "pending",
+    target_temperature_c: 20,
   });
 
   // Transfer (custom)

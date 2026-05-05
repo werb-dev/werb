@@ -1,6 +1,14 @@
 import { useMemo } from "react";
-import type { BeerJsonRecipe } from "@werb/adapters";
-import type { SessionStep } from "@werb/types";
+import {
+  isMass,
+  recipeToWaterInput,
+  toGrams,
+  toKilograms,
+  toMinutes,
+  type BeerJsonRecipe,
+} from "@werb/adapters";
+import type { SessionStep, WaterOutput } from "@werb/types";
+import { computeWater } from "@werb/calc";
 import { useBrewSession, useScreenWakeLock, useTick } from "../hooks/useBrewSession.ts";
 
 interface BrewScreenProps {
@@ -9,10 +17,49 @@ interface BrewScreenProps {
   onBack: () => void;
 }
 
+interface BoilHop {
+  name: string;
+  amount_g: number;
+  alpha_acid_pct: number;
+  time_min: number;
+  notes: string | undefined;
+}
+
+interface BrewContext {
+  water: WaterOutput;
+  totalGrainKg: number;
+  totalMashedKg: number;
+  boilHops: BoilHop[];
+  cultures: BeerJsonRecipe["ingredients"]["culture_additions"];
+}
+
 export function BrewScreen({ recipeId, recipe, onBack }: BrewScreenProps) {
   const brew = useBrewSession(recipeId, recipe);
   const tick = useTick(1000);
   const wakeLockHeld = useScreenWakeLock(brew.session?.status === "in_progress");
+
+  const ctx = useMemo<BrewContext>(() => {
+    const water = computeWater(recipeToWaterInput(recipe));
+    const fermentables = recipe.ingredients.fermentable_additions;
+    const totalGrainKg = fermentables.reduce(
+      (sum, f) => sum + (isMass(f.amount) ? toKilograms(f.amount) : 0),
+      0,
+    );
+    const totalMashedKg = fermentables
+      .filter((f) => f.type === "grain" && isMass(f.amount))
+      .reduce((sum, f) => sum + toKilograms(f.amount as Parameters<typeof toKilograms>[0]), 0);
+    const boilHops: BoilHop[] = (recipe.ingredients.hop_additions ?? [])
+      .filter((h) => h.timing?.use === "add_to_boil")
+      .map((h) => ({
+        name: h.name,
+        amount_g: isMass(h.amount) ? toGrams(h.amount) : 0,
+        alpha_acid_pct: h.alpha_acid?.value ?? 0,
+        time_min: h.timing?.time ? toMinutes(h.timing.time) : 0,
+        notes: h.notes,
+      }));
+    const cultures = recipe.ingredients.culture_additions;
+    return { water, totalGrainKg, totalMashedKg, boilHops, cultures };
+  }, [recipe]);
 
   if (!brew.session) {
     return <NoSession onBack={onBack} recipe={recipe} onStart={brew.start} />;
@@ -31,7 +78,12 @@ export function BrewScreen({ recipeId, recipe, onBack }: BrewScreenProps) {
         />
 
         {activeStep ? (
-          <ActiveStepCard step={activeStep} now={tick} onFinish={() => brew.finishStep(activeStep.id)} />
+          <ActiveStepCard
+            step={activeStep}
+            now={tick}
+            ctx={ctx}
+            onFinish={() => brew.finishStep(activeStep.id)}
+          />
         ) : session.status === "completed" ? (
           <CompletedCard session={session} />
         ) : (
@@ -46,6 +98,7 @@ export function BrewScreen({ recipeId, recipe, onBack }: BrewScreenProps) {
                 step={step}
                 now={tick}
                 isActive={step.id === activeStep?.id}
+                ctx={ctx}
                 onStart={() => brew.startStep(step.id)}
                 onFinish={() => brew.finishStep(step.id)}
                 onNotes={(notes) => brew.setStepNotes(step.id, notes)}
@@ -138,9 +191,7 @@ function WakeLockBadge({ held }: { held: boolean }) {
           : "Screen wake lock NOT held — display may sleep"
       }
       className={`shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-pill text-caption font-mono border ${
-        held
-          ? "border-success text-success"
-          : "border-border text-text-muted"
+        held ? "border-success text-success" : "border-border text-text-muted"
       }`}
     >
       <span
@@ -155,16 +206,20 @@ function WakeLockBadge({ held }: { held: boolean }) {
 function ActiveStepCard({
   step,
   now,
+  ctx,
   onFinish,
 }: {
   step: SessionStep;
   now: number;
+  ctx: BrewContext;
   onFinish: () => void;
 }) {
-  const elapsed = step.started_at ? Math.floor((now - new Date(step.started_at).getTime()) / 1000) : 0;
+  const elapsedSec = step.started_at
+    ? Math.floor((now - new Date(step.started_at).getTime()) / 1000)
+    : 0;
   const target = step.target_duration_min ?? null;
   const targetSec = target !== null ? target * 60 : null;
-  const remaining = targetSec !== null ? targetSec - elapsed : null;
+  const remaining = targetSec !== null ? targetSec - elapsedSec : null;
   const overrun = remaining !== null && remaining < 0;
 
   return (
@@ -182,22 +237,20 @@ function ActiveStepCard({
               overrun ? "text-warning" : "text-accent"
             }`}
           >
-            {remaining !== null ? formatDuration(Math.abs(remaining)) : formatDuration(elapsed)}
+            {remaining !== null ? formatDuration(Math.abs(remaining)) : formatDuration(elapsedSec)}
           </p>
           <p className="font-mono text-caption text-text-muted mt-1">
             {target !== null
               ? overrun
                 ? "overrun"
-                : `${formatDuration(elapsed)} / ${target} min`
-              : `elapsed ${formatDuration(elapsed)}`}
+                : `${formatDuration(elapsedSec)} / ${target} min`
+              : `elapsed ${formatDuration(elapsedSec)}`}
           </p>
         </div>
       </div>
-      {step.target_temperature_c !== undefined && (
-        <p className="mt-4 font-mono text-mono-lg text-data">
-          Target {step.target_temperature_c.toFixed(1)}°C
-        </p>
-      )}
+
+      <StepInfo step={step} ctx={ctx} elapsedSec={elapsedSec} variant="active" />
+
       <button
         onClick={onFinish}
         className="mt-6 w-full px-5 py-4 rounded-xl bg-accent text-bg text-body-lg font-medium hover:opacity-90 transition-opacity"
@@ -208,10 +261,254 @@ function ActiveStepCard({
   );
 }
 
+/**
+ * Renders the per-kind context numbers for a step. The active step shows a
+ * larger version (variant="active"); timeline rows show a compact line
+ * (variant="row").
+ */
+function StepInfo({
+  step,
+  ctx,
+  elapsedSec,
+  variant,
+}: {
+  step: SessionStep;
+  ctx: BrewContext;
+  elapsedSec: number;
+  variant: "active" | "row";
+}) {
+  const stats = stepStats(step, ctx);
+  const showHops = step.kind === "boil" && variant === "active" && ctx.boilHops.length > 0;
+  const showCultures =
+    step.kind === "ferment_pitch" && variant === "active" && ctx.cultures && ctx.cultures.length > 0;
+
+  if (stats.length === 0 && !showHops && !showCultures && step.target_temperature_c === undefined) {
+    return null;
+  }
+
+  if (variant === "active") {
+    return (
+      <div className="mt-6 space-y-5">
+        {(stats.length > 0 || step.target_temperature_c !== undefined) && (
+          <div className="grid grid-cols-3 gap-4">
+            {step.target_temperature_c !== undefined && (
+              <StatTile
+                value={`${step.target_temperature_c.toFixed(1)}°C`}
+                label="Target"
+                tone="data"
+              />
+            )}
+            {stats.map((s, i) => (
+              <StatTile key={i} value={s.value} label={s.label} tone={s.tone} />
+            ))}
+          </div>
+        )}
+        {showHops && (
+          <HopSchedule
+            hops={ctx.boilHops}
+            boilDurationMin={step.target_duration_min ?? 60}
+            elapsedSec={elapsedSec}
+          />
+        )}
+        {showCultures && <CultureList cultures={ctx.cultures!} />}
+      </div>
+    );
+  }
+
+  // Compact row variant: small font, comma-separated.
+  const inline: string[] = [];
+  if (step.target_temperature_c !== undefined) {
+    inline.push(`${step.target_temperature_c.toFixed(1)}°C`);
+  }
+  if (step.target_duration_min !== undefined) {
+    inline.push(`${step.target_duration_min} min`);
+  }
+  for (const s of stats) inline.push(`${s.value} ${s.label.toLowerCase()}`);
+  if (inline.length === 0) return null;
+  return (
+    <p className="font-mono text-caption text-text-muted mt-1">
+      {inline.join(" · ")}
+    </p>
+  );
+}
+
+interface StatLine {
+  value: string;
+  label: string;
+  tone?: "default" | "data" | "accent";
+}
+
+function stepStats(step: SessionStep, ctx: BrewContext): StatLine[] {
+  switch (step.kind) {
+    case "mash":
+      if (ctx.totalMashedKg <= 0) return [];
+      return [
+        { value: `${ctx.water.mash_water_l.toFixed(1)} L`, label: "Strike water" },
+        { value: `${ctx.totalMashedKg.toFixed(2)} kg`, label: "Grain" },
+        {
+          value: `${(ctx.water.mash_water_l / ctx.totalMashedKg).toFixed(2)} L/kg`,
+          label: "Thickness",
+        },
+      ];
+    case "sparge":
+      return [
+        {
+          value: ctx.water.sparge_water_l > 0
+            ? `${ctx.water.sparge_water_l.toFixed(1)} L`
+            : "—",
+          label: "Sparge water",
+        },
+        { value: `${ctx.water.pre_boil_volume_l.toFixed(1)} L`, label: "Pre-boil target" },
+        { value: `${ctx.water.grain_absorption_l.toFixed(1)} L`, label: "Absorbed" },
+      ];
+    case "boil":
+      return [
+        { value: `${ctx.water.pre_boil_volume_l.toFixed(1)} L`, label: "Pre-boil" },
+        { value: `${ctx.water.boil_off_l.toFixed(1)} L`, label: "Boil-off" },
+        { value: `${ctx.boilHops.length}`, label: "Hop additions" },
+      ];
+    case "chill":
+      return [
+        {
+          value: `${ctx.water.post_cool_kettle_volume_l.toFixed(1)} L`,
+          label: "In kettle",
+        },
+      ];
+    case "transfer":
+      return [
+        {
+          value: `${(ctx.water.post_cool_kettle_volume_l - 0.5).toFixed(1)} L`,
+          label: "To fermenter",
+        },
+      ];
+    default:
+      return [];
+  }
+}
+
+function StatTile({
+  value,
+  label,
+  tone = "default",
+}: {
+  value: string;
+  label: string;
+  tone?: "default" | "data" | "accent" | undefined;
+}) {
+  const valueColor =
+    tone === "data" ? "text-data" : tone === "accent" ? "text-accent" : "text-text";
+  return (
+    <div className="rounded-lg bg-surface-raised border border-border px-4 py-3">
+      <p className="text-caption uppercase tracking-widest text-text-muted">{label}</p>
+      <p className={`font-mono text-h3 mt-1 tabular-nums ${valueColor}`}>{value}</p>
+    </div>
+  );
+}
+
+function HopSchedule({
+  hops,
+  boilDurationMin,
+  elapsedSec,
+}: {
+  hops: BoilHop[];
+  boilDurationMin: number;
+  elapsedSec: number;
+}) {
+  // Sort by addition order (earliest first). BeerXML TIME=X means "X min
+  // before flameout" → addition at minute (boilDuration - X) of the boil.
+  const events = hops
+    .map((h) => ({
+      ...h,
+      additionAtMin: Math.max(0, boilDurationMin - h.time_min),
+    }))
+    .sort((a, b) => a.additionAtMin - b.additionAtMin);
+
+  return (
+    <div className="rounded-lg bg-bg border border-border p-4">
+      <p className="text-caption uppercase tracking-widest text-text-muted mb-3">
+        Hop schedule
+      </p>
+      <ul className="space-y-2">
+        {events.map((h, i) => {
+          const additionAtSec = h.additionAtMin * 60;
+          const remainingSec = additionAtSec - elapsedSec;
+          const due = remainingSec <= 0;
+          const next = !due && events.findIndex((e) => e.additionAtMin * 60 - elapsedSec > 0) === i;
+          return (
+            <li
+              key={i}
+              className={`flex items-baseline justify-between gap-4 px-2 py-2 rounded ${
+                next ? "bg-accent/10 ring-1 ring-accent/40" : ""
+              }`}
+            >
+              <div className="min-w-0">
+                <p
+                  className={`text-body-sm font-medium ${
+                    due ? "text-text-muted line-through" : "text-text"
+                  }`}
+                >
+                  {h.amount_g.toFixed(0)} g {h.name}
+                  {h.alpha_acid_pct > 0 && (
+                    <span className="text-text-muted font-mono text-caption ml-2">
+                      {h.alpha_acid_pct.toFixed(1)}% AA
+                    </span>
+                  )}
+                </p>
+                {h.notes && (
+                  <p className="text-caption text-text-muted mt-0.5">{h.notes}</p>
+                )}
+              </div>
+              <div className="text-right shrink-0 font-mono">
+                <p className={`text-mono-lg tabular-nums ${due ? "text-success" : next ? "text-accent" : "text-text-muted"}`}>
+                  {due ? "✓ added" : `in ${formatDuration(remainingSec)}`}
+                </p>
+                <p className="text-caption text-text-muted">@ {h.additionAtMin} min</p>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+function CultureList({
+  cultures,
+}: {
+  cultures: NonNullable<BeerJsonRecipe["ingredients"]["culture_additions"]>;
+}) {
+  return (
+    <div className="rounded-lg bg-bg border border-border p-4">
+      <p className="text-caption uppercase tracking-widest text-text-muted mb-3">
+        Yeast pitch
+      </p>
+      <ul className="space-y-2">
+        {cultures.map((c, i) => (
+          <li key={i} className="flex items-baseline justify-between gap-4">
+            <div>
+              <p className="text-body-sm font-medium">{c.name}</p>
+              <p className="text-caption text-text-muted">
+                {c.form} · {c.type}
+                {c.producer && ` · ${c.producer}`}
+                {c.product_id && ` · ${c.product_id}`}
+                {c.attenuation && ` · ${c.attenuation.value}% atten`}
+              </p>
+            </div>
+            <p className="font-mono text-mono-lg shrink-0">
+              {c.amount ? `${c.amount.value} ${c.amount.unit}` : "—"}
+            </p>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function TimelineRow({
   step,
   now,
   isActive,
+  ctx,
   onStart,
   onFinish,
   onNotes,
@@ -220,6 +517,7 @@ function TimelineRow({
   step: SessionStep;
   now: number;
   isActive: boolean;
+  ctx: BrewContext;
   onStart: () => void;
   onFinish: () => void;
   onNotes: (notes: string) => void;
@@ -233,10 +531,10 @@ function TimelineRow({
       : step.status === "skipped"
       ? "−"
       : "○";
-  const elapsed =
+  const elapsedSec =
     step.status === "active" && step.started_at
       ? Math.floor((now - new Date(step.started_at).getTime()) / 1000)
-      : null;
+      : 0;
 
   return (
     <li className="px-5 py-4">
@@ -256,14 +554,11 @@ function TimelineRow({
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline justify-between gap-4">
             <p className="text-body font-medium">{step.label}</p>
-            <span className="font-mono text-caption text-text-muted shrink-0">
-              {step.target_duration_min !== undefined && `${step.target_duration_min} min`}
-              {step.target_temperature_c !== undefined && ` · ${step.target_temperature_c.toFixed(1)}°C`}
-            </span>
           </div>
-          {elapsed !== null && (
+          <StepInfo step={step} ctx={ctx} elapsedSec={elapsedSec} variant="row" />
+          {step.status === "active" && elapsedSec > 0 && (
             <p className="font-mono text-caption text-accent mt-1 tabular-nums">
-              {formatDuration(elapsed)} elapsed
+              {formatDuration(elapsedSec)} elapsed
             </p>
           )}
           {step.completed_at && step.started_at && (
@@ -353,14 +648,16 @@ function NoSession({
   );
 }
 
-function CompletedCard({ session }: { session: { completed_at?: string; started_at: string } }) {
-  const total =
-    session.completed_at
-      ? Math.floor(
-          (new Date(session.completed_at).getTime() - new Date(session.started_at).getTime()) /
-            1000,
-        )
-      : 0;
+function CompletedCard({
+  session,
+}: {
+  session: { completed_at?: string; started_at: string };
+}) {
+  const total = session.completed_at
+    ? Math.floor(
+        (new Date(session.completed_at).getTime() - new Date(session.started_at).getTime()) / 1000,
+      )
+    : 0;
   return (
     <section className="mb-10 rounded-2xl bg-surface border border-success p-8 text-center">
       <p className="text-caption uppercase tracking-widest text-success font-medium">
