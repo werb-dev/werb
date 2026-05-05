@@ -1,28 +1,61 @@
 import { useState } from "react";
 import { DesignTokensShowcase } from "./design-tokens-showcase.tsx";
+import { LibraryScreen } from "./screens/Library.tsx";
 import { RecipeScreen } from "./screens/Recipe.tsx";
+import { getRecipe } from "./data/recipes.ts";
 
-type View = "recipe" | "tokens";
+type AppState =
+  | { view: "library" }
+  | { view: "recipe"; recipeId: string }
+  | { view: "tokens" };
 
 export function App() {
-  const [view, setView] = useState<View>("recipe");
+  const [state, setState] = useState<AppState>({ view: "library" });
+
+  const goLibrary = () => setState({ view: "library" });
+  const goRecipe = (recipeId: string) => setState({ view: "recipe", recipeId });
+  const goTokens = () => setState({ view: "tokens" });
+
+  let screen: React.ReactNode;
+  if (state.view === "recipe") {
+    const loaded = getRecipe(state.recipeId);
+    if (!loaded) {
+      screen = <Missing recipeId={state.recipeId} onBack={goLibrary} />;
+    } else {
+      screen = <RecipeScreen recipe={loaded.recipe} onBack={goLibrary} />;
+    }
+  } else if (state.view === "tokens") {
+    screen = <DesignTokensShowcase />;
+  } else {
+    screen = <LibraryScreen onSelect={goRecipe} />;
+  }
 
   return (
     <>
-      <DevNav view={view} setView={setView} />
-      {view === "recipe" ? <RecipeScreen /> : <DesignTokensShowcase />}
+      <DevNav state={state} goLibrary={goLibrary} goTokens={goTokens} />
+      {screen}
     </>
   );
 }
 
-/** Tiny dev-only view switcher — temporary until we have real navigation. */
-function DevNav({ view, setView }: { view: View; setView: (v: View) => void }) {
+function DevNav({
+  state,
+  goLibrary,
+  goTokens,
+}: {
+  state: AppState;
+  goLibrary: () => void;
+  goTokens: () => void;
+}) {
   return (
     <nav className="fixed top-3 right-3 z-50 flex gap-1 rounded-pill bg-surface-raised border border-border p-1 shadow-lg">
-      <NavButton active={view === "recipe"} onClick={() => setView("recipe")}>
-        Recipe
+      <NavButton
+        active={state.view === "library" || state.view === "recipe"}
+        onClick={goLibrary}
+      >
+        Library
       </NavButton>
-      <NavButton active={view === "tokens"} onClick={() => setView("tokens")}>
+      <NavButton active={state.view === "tokens"} onClick={goTokens}>
         Tokens
       </NavButton>
     </nav>
@@ -42,12 +75,28 @@ function NavButton({
     <button
       onClick={onClick}
       className={`px-4 py-1.5 rounded-pill text-caption font-medium transition-colors ${
-        active
-          ? "bg-accent text-bg"
-          : "text-text-muted hover:text-text hover:bg-surface"
+        active ? "bg-accent text-bg" : "text-text-muted hover:text-text hover:bg-surface"
       }`}
     >
       {children}
     </button>
+  );
+}
+
+function Missing({ recipeId, onBack }: { recipeId: string; onBack: () => void }) {
+  return (
+    <div className="min-h-dvh bg-bg text-text flex items-center justify-center">
+      <div className="text-center">
+        <p className="text-body text-text-muted">
+          Recipe <code className="font-mono text-mono">{recipeId}</code> not found.
+        </p>
+        <button
+          onClick={onBack}
+          className="mt-4 px-5 py-2 rounded-lg bg-accent text-bg text-body font-medium"
+        >
+          Back to library
+        </button>
+      </div>
+    </div>
   );
 }

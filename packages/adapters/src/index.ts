@@ -30,3 +30,4 @@ export {
 } from "./units.js";
 export { recipeToIbuInput } from "./recipe-to-ibu.js";
 export { recipeToWaterInput, type EquipmentOverrides } from "./recipe-to-water.js";
+export { srmToHex } from "./srm-color.js";

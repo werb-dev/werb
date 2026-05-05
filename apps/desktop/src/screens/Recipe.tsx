@@ -9,14 +9,9 @@ import {
   toCelsius,
   toSrm,
   isMass,
-  type BeerJsonFile,
   type BeerJsonRecipe,
 } from "@werb/adapters";
 import { computeIbu, computeWater } from "@werb/calc";
-import recipeRaw from "../../../../examples/double-ipa-mandarina.beerjson?raw";
-
-const file = JSON.parse(recipeRaw) as BeerJsonFile;
-const recipe: BeerJsonRecipe = file.beerjson.recipes![0]!;
 
 const TIMING_LABEL: Record<string, string> = {
   add_to_boil: "Boil",
@@ -25,7 +20,12 @@ const TIMING_LABEL: Record<string, string> = {
   add_to_package: "Package",
 };
 
-export function RecipeScreen() {
+interface RecipeScreenProps {
+  recipe: BeerJsonRecipe;
+  onBack?: (() => void) | undefined;
+}
+
+export function RecipeScreen({ recipe, onBack }: RecipeScreenProps) {
   const computed = useMemo(() => {
     const ibu = computeIbu(recipeToIbuInput(recipe));
     const water = computeWater(recipeToWaterInput(recipe));
@@ -47,6 +47,15 @@ export function RecipeScreen() {
   return (
     <div className="min-h-dvh bg-bg text-text">
       <main className="mx-auto max-w-4xl px-8 py-12">
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="mb-8 text-caption font-medium text-text-muted hover:text-text transition-colors flex items-center gap-2"
+          >
+            <span aria-hidden>←</span> Library
+          </button>
+        )}
+
         {/* ─── Header ───────────────────────────────────────────────────── */}
         <header className="mb-12">
           {recipe.style && (
