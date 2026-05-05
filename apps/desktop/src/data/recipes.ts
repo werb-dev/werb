@@ -1,4 +1,5 @@
 import type { BeerJsonFile, BeerJsonRecipe } from "@werb/adapters";
+import { validateBeerJson } from "@werb/validate";
 
 /**
  * Recipe data layer.
@@ -9,6 +10,9 @@ import type { BeerJsonFile, BeerJsonRecipe } from "@werb/adapters";
  * add file-picker / working-directory selection, this module is the seam:
  * swap the glob import for a Tauri fs read and everything downstream still
  * works.
+ *
+ * Every file is validated against BeerJSON 2.x at load. Invalid files are
+ * skipped with a console warning so a malformed recipe never reaches the UI.
  */
 
 interface LoadedRecipe {
@@ -19,7 +23,6 @@ interface LoadedRecipe {
   recipe: BeerJsonRecipe;
 }
 
-// Path is relative to this file. apps/desktop/src/data/ → ../../../../examples/
 const rawFiles = import.meta.glob("../../../../examples/*.beerjson", {
   query: "?raw",
   import: "default",
@@ -33,14 +36,22 @@ function basename(path: string): string {
 
 export const RECIPES: LoadedRecipe[] = Object.entries(rawFiles)
   .flatMap(([path, raw]) => {
-    let parsed: BeerJsonFile;
+    let parsed: unknown;
     try {
-      parsed = JSON.parse(raw) as BeerJsonFile;
+      parsed = JSON.parse(raw);
     } catch (err) {
-      console.error(`Failed to parse ${path}:`, err);
+      console.error(`[recipes] ${path}: invalid JSON`, err);
       return [];
     }
-    const recipes = parsed.beerjson?.recipes ?? [];
+    const result = validateBeerJson(parsed);
+    if (!result.valid) {
+      console.warn(
+        `[recipes] ${path}: failed BeerJSON 2.x validation, skipping`,
+        result.errors.slice(0, 5),
+      );
+      return [];
+    }
+    const recipes = (parsed as BeerJsonFile).beerjson?.recipes ?? [];
     return recipes.map((recipe, index) => ({
       id: recipes.length === 1 ? basename(path) : `${basename(path)}-${index}`,
       path,

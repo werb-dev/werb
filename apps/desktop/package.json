@@ -18,6 +18,7 @@
     "@werb/adapters": "workspace:*",
     "@werb/calc": "workspace:*",
     "@werb/types": "workspace:*",
+    "@werb/validate": "workspace:*",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
