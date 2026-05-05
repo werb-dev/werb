@@ -1,9 +1,12 @@
 /* eslint-disable */
 /**
- * Auto-generated from schemas/tools/water.output.schema.json.
- * DO NOT EDIT — run `pnpm gen:types` to regenerate.
+ * Auto-generated. DO NOT EDIT.
+ * Run `pnpm gen:types` to regenerate.
  */
 
+/**
+ * Computed volumes for each stage of the brew. All values in liters.
+ */
 export interface WaterOutput {
   /**
    * Strike water volume (mash infusion).

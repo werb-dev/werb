@@ -1,9 +1,12 @@
 /* eslint-disable */
 /**
- * Auto-generated from schemas/tools/ibu.input.schema.json.
- * DO NOT EDIT — run `pnpm gen:types` to regenerate.
+ * Auto-generated. DO NOT EDIT.
+ * Run `pnpm gen:types` to regenerate.
  */
 
+/**
+ * Normalized input for IBU calculation tools. Decoupled from BeerJSON storage format: an adapter converts a BeerJSON Recipe + Equipment into this shape.
+ */
 export interface IbuInput {
   /**
    * Bitterness estimation method. Enum aligned with BeerJSON IBUMethodType.
@@ -17,9 +20,11 @@ export interface IbuInput {
    * Original gravity (specific gravity, e.g. 1.050). Used as the wort gravity proxy in utilization formulas.
    */
   og: number;
+  /**
+   * @minItems 1
+   */
   hops: [HopAddition, ...HopAddition[]];
 }
-
 export interface HopAddition {
   /**
    * Optional, for traceability and per-addition reporting.

@@ -1,9 +1,12 @@
 /* eslint-disable */
 /**
- * Auto-generated from schemas/werb-equipment.schema.json.
- * DO NOT EDIT — run `pnpm gen:types` to regenerate.
+ * Auto-generated. DO NOT EDIT.
+ * Run `pnpm gen:types` to regenerate.
  */
 
+/**
+ * Profile of a brewing setup (mash tun, kettle, fermenter) used to compute volumes, losses, and efficiency for a brew session.
+ */
 export interface WerbEquipmentProfile {
   /**
    * Human-readable name of the equipment profile (e.g. 'Brewzilla 35L', 'Cooler MLT + propane kettle').

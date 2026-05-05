@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://werb.dev/schemas/werb-equipment.schema.json",
-  "title": "Werb equipment profile",
+  "title": "WerbEquipmentProfile",
   "description": "Profile of a brewing setup (mash tun, kettle, fermenter) used to compute volumes, losses, and efficiency for a brew session.",
   "type": "object",
   "additionalProperties": false,

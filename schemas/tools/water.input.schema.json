@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://werb.dev/schemas/tools/water.input.schema.json",
-  "title": "Water volumes calculation input",
+  "title": "WaterInput",
   "description": "Normalized input for computing strike water, sparge water, pre-boil and post-boil volumes for a brew session. Decoupled from BeerJSON: an adapter extracts these fields from a Recipe + Equipment profile.",
   "type": "object",
   "additionalProperties": false,

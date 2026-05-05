@@ -1,9 +1,12 @@
 /* eslint-disable */
 /**
- * Auto-generated from schemas/tools/ibu.output.schema.json.
- * DO NOT EDIT — run `pnpm gen:types` to regenerate.
+ * Auto-generated. DO NOT EDIT.
+ * Run `pnpm gen:types` to regenerate.
  */
 
+/**
+ * Result of an IBU calculation. Aggregate total plus per-addition breakdown.
+ */
 export interface IbuOutput {
   method: "Tinseth" | "Rager" | "Garetz" | "Other";
   /**
@@ -12,7 +15,6 @@ export interface IbuOutput {
   total_ibu: number;
   additions: IbuAdditionResult[];
 }
-
 export interface IbuAdditionResult {
   name?: string;
   /**

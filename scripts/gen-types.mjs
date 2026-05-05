@@ -4,9 +4,13 @@
  * Output goes to packages/types/src/generated/.
  *
  * Usage: pnpm gen:types
+ *
+ * Type names are explicitly mapped per target so they remain stable and
+ * decoupled from the schema's `title` (which is used for human-readable
+ * rendering, e.g. SwaggerUI-style views).
  */
-import { compileFromFile } from "json-schema-to-typescript";
-import { readdir, mkdir, writeFile } from "node:fs/promises";
+import { compile } from "json-schema-to-typescript";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { join, basename, extname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -16,23 +20,28 @@ const ROOT = join(__dirname, "..");
 const SCHEMAS_DIR = join(ROOT, "schemas");
 const OUT_DIR = join(ROOT, "packages/types/src/generated");
 
-// Schemas to compile. We deliberately skip schemas/beerjson/ (vendored upstream)
-// at this stage — BeerJSON types will be generated from beer.json once we wire
-// the recipe view (later step). Werb-owned schemas come first.
+// Schemas to compile. We deliberately skip schemas/beerjson/ at this stage —
+// BeerJSON types will be wired in a later step.
+//
+// `name` is the root TypeScript interface name produced by the generator.
 const TARGETS = [
-  "werb-equipment.schema.json",
-  "tools/ibu.input.schema.json",
-  "tools/ibu.output.schema.json",
-  "tools/water.input.schema.json",
-  "tools/water.output.schema.json",
+  { schema: "werb-equipment.schema.json", name: "WerbEquipmentProfile" },
+  { schema: "tools/ibu.input.schema.json", name: "IbuInput" },
+  { schema: "tools/ibu.output.schema.json", name: "IbuOutput" },
+  { schema: "tools/water.input.schema.json", name: "WaterInput" },
+  { schema: "tools/water.output.schema.json", name: "WaterOutput" },
 ];
 
 const compileOpts = {
   bannerComment:
-    "/* eslint-disable */\n/**\n * Auto-generated from schemas/. DO NOT EDIT.\n * Run `pnpm gen:types` to regenerate.\n */",
+    "/* eslint-disable */\n/**\n * Auto-generated. DO NOT EDIT.\n * Run `pnpm gen:types` to regenerate.\n */",
   style: { singleQuote: false, semi: true },
   additionalProperties: false,
 };
+
+function outName(rel) {
+  return basename(rel, extname(rel)).replace(/\.schema$/, "");
+}
 
 async function main() {
   if (!existsSync(OUT_DIR)) {
@@ -40,20 +49,20 @@ async function main() {
   }
 
   const indexLines = [];
-  for (const rel of TARGETS) {
+  for (const { schema: rel, name } of TARGETS) {
     const src = join(SCHEMAS_DIR, rel);
     if (!existsSync(src)) {
       console.error(`✗ Missing schema: ${rel}`);
       process.exitCode = 1;
       continue;
     }
-    const stem = basename(rel, extname(rel)).replace(/\.schema$/, "");
-    const outName = `${stem}.d.ts`;
-    const outPath = join(OUT_DIR, outName);
-    const ts = await compileFromFile(src, compileOpts);
+    const stem = outName(rel);
+    const outPath = join(OUT_DIR, `${stem}.d.ts`);
+    const json = JSON.parse(await readFile(src, "utf8"));
+    const ts = await compile(json, name, compileOpts);
     await writeFile(outPath, ts);
     indexLines.push(`export * from "./${stem}.js";`);
-    console.log(`✓ ${rel}  →  packages/types/src/generated/${outName}`);
+    console.log(`✓ ${rel}  →  ${name}  →  packages/types/src/generated/${stem}.d.ts`);
   }
 
   await writeFile(join(OUT_DIR, "index.ts"), indexLines.join("\n") + "\n");

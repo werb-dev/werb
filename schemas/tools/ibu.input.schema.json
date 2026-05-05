@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://werb.dev/schemas/tools/ibu.input.schema.json",
-  "title": "IBU calculation input",
+  "title": "IbuInput",
   "description": "Normalized input for IBU calculation tools. Decoupled from BeerJSON storage format: an adapter converts a BeerJSON Recipe + Equipment into this shape.",
   "type": "object",
   "additionalProperties": false,

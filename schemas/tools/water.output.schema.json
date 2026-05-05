@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://werb.dev/schemas/tools/water.output.schema.json",
-  "title": "Water volumes calculation output",
+  "title": "WaterOutput",
   "description": "Computed volumes for each stage of the brew. All values in liters.",
   "type": "object",
   "additionalProperties": false,

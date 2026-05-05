@@ -1,9 +1,12 @@
 /* eslint-disable */
 /**
- * Auto-generated from schemas/tools/water.input.schema.json.
- * DO NOT EDIT — run `pnpm gen:types` to regenerate.
+ * Auto-generated. DO NOT EDIT.
+ * Run `pnpm gen:types` to regenerate.
  */
 
+/**
+ * Normalized input for computing strike water, sparge water, pre-boil and post-boil volumes for a brew session. Decoupled from BeerJSON: an adapter extracts these fields from a Recipe + Equipment profile.
+ */
 export interface WaterInput {
   /**
    * Target finished volume into the fermenter (cooled), in liters.
