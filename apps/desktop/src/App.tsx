@@ -3,12 +3,15 @@ import { DesignTokensShowcase } from "./design-tokens-showcase.tsx";
 import { LibraryScreen } from "./screens/Library.tsx";
 import { RecipeScreen } from "./screens/Recipe.tsx";
 import { BrewScreen } from "./screens/Brew.tsx";
+import { EquipmentScreen } from "./screens/Equipment.tsx";
 import { useRecipes } from "./hooks/useRecipes.ts";
+import { useEquipment } from "./hooks/useEquipment.ts";
 
 type AppState =
   | { view: "library" }
   | { view: "recipe"; recipeId: string }
   | { view: "brew"; recipeId: string }
+  | { view: "equipment" }
   | { view: "tokens" };
 
 const SESSION_STORAGE_PREFIX = "werb.session.";
@@ -24,10 +27,12 @@ function hasSessionFor(recipeId: string): boolean {
 export function App() {
   const [state, setState] = useState<AppState>({ view: "library" });
   const recipesApi = useRecipes();
+  const equipmentApi = useEquipment();
 
   const goLibrary = () => setState({ view: "library" });
   const goRecipe = (recipeId: string) => setState({ view: "recipe", recipeId });
   const goBrew = (recipeId: string) => setState({ view: "brew", recipeId });
+  const goEquipment = () => setState({ view: "equipment" });
   const goTokens = () => setState({ view: "tokens" });
 
   let screen: React.ReactNode;
@@ -39,6 +44,7 @@ export function App() {
       screen = (
         <RecipeScreen
           recipe={loaded.recipe}
+          activeProfile={equipmentApi.activeProfile}
           onBack={goLibrary}
           onStartBrewing={() => goBrew(state.recipeId)}
           hasActiveSession={hasSessionFor(state.recipeId)}
@@ -54,10 +60,13 @@ export function App() {
         <BrewScreen
           recipeId={state.recipeId}
           recipe={loaded.recipe}
+          activeProfile={equipmentApi.activeProfile}
           onBack={() => goRecipe(state.recipeId)}
         />
       );
     }
+  } else if (state.view === "equipment") {
+    screen = <EquipmentScreen />;
   } else if (state.view === "tokens") {
     screen = <DesignTokensShowcase />;
   } else {
@@ -66,7 +75,7 @@ export function App() {
 
   return (
     <>
-      <DevNav state={state} goLibrary={goLibrary} goTokens={goTokens} />
+      <DevNav state={state} goLibrary={goLibrary} goEquipment={goEquipment} goTokens={goTokens} />
       {screen}
     </>
   );
@@ -75,10 +84,12 @@ export function App() {
 function DevNav({
   state,
   goLibrary,
+  goEquipment,
   goTokens,
 }: {
   state: AppState;
   goLibrary: () => void;
+  goEquipment: () => void;
   goTokens: () => void;
 }) {
   // Hide nav on the brew screen — fewer distractions during a brew.
@@ -91,6 +102,9 @@ function DevNav({
         onClick={goLibrary}
       >
         Library
+      </NavButton>
+      <NavButton active={state.view === "equipment"} onClick={goEquipment}>
+        Equipment
       </NavButton>
       <NavButton active={state.view === "tokens"} onClick={goTokens}>
         Tokens

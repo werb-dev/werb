@@ -15,6 +15,7 @@ import {
   type BeerJsonRecipe,
 } from "@werb/adapters";
 import { computeIbu, computeWater, computeAbv, computeColor, computeGravity } from "@werb/calc";
+import { profileToWaterOverrides, type ProfileWithId } from "../data/equipment.ts";
 
 const TIMING_LABEL: Record<string, string> = {
   add_to_boil: "Boil",
@@ -25,15 +26,16 @@ const TIMING_LABEL: Record<string, string> = {
 
 interface RecipeScreenProps {
   recipe: BeerJsonRecipe;
+  activeProfile?: ProfileWithId | undefined;
   onBack?: (() => void) | undefined;
   onStartBrewing?: (() => void) | undefined;
   hasActiveSession?: boolean | undefined;
 }
 
-export function RecipeScreen({ recipe, onBack, onStartBrewing, hasActiveSession }: RecipeScreenProps) {
+export function RecipeScreen({ recipe, activeProfile, onBack, onStartBrewing, hasActiveSession }: RecipeScreenProps) {
   const computed = useMemo(() => {
     const ibu = computeIbu(recipeToIbuInput(recipe));
-    const water = computeWater(recipeToWaterInput(recipe));
+    const water = computeWater(recipeToWaterInput(recipe, profileToWaterOverrides(activeProfile)));
     const color = computeColor(recipeToColorInput(recipe));
     const gravity = computeGravity(recipeToGravityInput(recipe));
     const abv =
@@ -50,7 +52,7 @@ export function RecipeScreen({ recipe, onBack, onStartBrewing, hasActiveSession 
       ibuByIndex.set(idx, ibu.additions[k]?.ibu ?? 0);
     });
     return { ibu, water, color, gravity, abv, ibuByIndex };
-  }, [recipe]);
+  }, [recipe, activeProfile]);
 
   const claimedIbu = recipe.ibu_estimate?.ibu?.value ?? null;
   const claimedOg = recipe.original_gravity?.value ?? null;
@@ -142,7 +144,14 @@ export function RecipeScreen({ recipe, onBack, onStartBrewing, hasActiveSession 
         </section>
 
         {/* ─── Computed water strip ────────────────────────────────────── */}
-        <Section title="Water volumes" subtitle="Computed for a 22 L batch with default equipment losses">
+        <Section
+          title="Water volumes"
+          subtitle={
+            activeProfile
+              ? `Computed using equipment profile "${activeProfile.name}"`
+              : "Computed using generic defaults — set an equipment profile for accurate numbers"
+          }
+        >
           <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-border rounded-xl overflow-hidden">
             <Tile label="Mash" value={`${computed.water.mash_water_l.toFixed(1)} L`} />
             <Tile label="Sparge" value={`${computed.water.sparge_water_l.toFixed(1)} L`} />

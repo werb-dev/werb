@@ -10,10 +10,12 @@ import {
 import type { SessionStep, WaterOutput } from "@werb/types";
 import { computeWater } from "@werb/calc";
 import { useBrewSession, useScreenWakeLock, useTick } from "../hooks/useBrewSession.ts";
+import { profileToWaterOverrides, type ProfileWithId } from "../data/equipment.ts";
 
 interface BrewScreenProps {
   recipeId: string;
   recipe: BeerJsonRecipe;
+  activeProfile?: ProfileWithId | undefined;
   onBack: () => void;
 }
 
@@ -33,13 +35,13 @@ interface BrewContext {
   cultures: BeerJsonRecipe["ingredients"]["culture_additions"];
 }
 
-export function BrewScreen({ recipeId, recipe, onBack }: BrewScreenProps) {
+export function BrewScreen({ recipeId, recipe, activeProfile, onBack }: BrewScreenProps) {
   const brew = useBrewSession(recipeId, recipe);
   const tick = useTick(1000);
   const wakeLockHeld = useScreenWakeLock(brew.session?.status === "in_progress");
 
   const ctx = useMemo<BrewContext>(() => {
-    const water = computeWater(recipeToWaterInput(recipe));
+    const water = computeWater(recipeToWaterInput(recipe, profileToWaterOverrides(activeProfile)));
     const fermentables = recipe.ingredients.fermentable_additions;
     const totalGrainKg = fermentables.reduce(
       (sum, f) => sum + (isMass(f.amount) ? toKilograms(f.amount) : 0),
@@ -59,7 +61,7 @@ export function BrewScreen({ recipeId, recipe, onBack }: BrewScreenProps) {
       }));
     const cultures = recipe.ingredients.culture_additions;
     return { water, totalGrainKg, totalMashedKg, boilHops, cultures };
-  }, [recipe]);
+  }, [recipe, activeProfile]);
 
   if (!brew.session) {
     return <NoSession onBack={onBack} recipe={recipe} onStart={brew.start} />;
