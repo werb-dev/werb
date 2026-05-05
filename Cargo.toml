@@ -1,0 +1,8 @@
+# Cargo workspace root.
+# Lets `cargo check` / `cargo build` work from the repo root and shares
+# a single target/ + Cargo.lock across all Rust crates we add later.
+[workspace]
+resolver = "2"
+members = [
+  "apps/desktop/src-tauri",
+]

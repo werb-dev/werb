@@ -4,7 +4,10 @@ build/
 .turbo/
 coverage/
 
-# Tauri
+# Cargo workspace
+/target/
+
+# Tauri (legacy crate-local target, kept for safety)
 apps/desktop/src-tauri/target/
 apps/desktop/src-tauri/gen/schemas/
 
