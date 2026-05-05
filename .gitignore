@@ -6,6 +6,10 @@ coverage/
 
 # Tauri
 apps/desktop/src-tauri/target/
+apps/desktop/src-tauri/gen/schemas/
+
+# TypeScript incremental build cache
+*.tsbuildinfo
 
 # OS
 .DS_Store
