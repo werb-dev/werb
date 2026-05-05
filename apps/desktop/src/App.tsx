@@ -2,7 +2,7 @@ import { useState } from "react";
 import { DesignTokensShowcase } from "./design-tokens-showcase.tsx";
 import { LibraryScreen } from "./screens/Library.tsx";
 import { RecipeScreen } from "./screens/Recipe.tsx";
-import { getRecipe } from "./data/recipes.ts";
+import { useRecipes } from "./hooks/useRecipes.ts";
 
 type AppState =
   | { view: "library" }
@@ -11,6 +11,7 @@ type AppState =
 
 export function App() {
   const [state, setState] = useState<AppState>({ view: "library" });
+  const recipesApi = useRecipes();
 
   const goLibrary = () => setState({ view: "library" });
   const goRecipe = (recipeId: string) => setState({ view: "recipe", recipeId });
@@ -18,7 +19,7 @@ export function App() {
 
   let screen: React.ReactNode;
   if (state.view === "recipe") {
-    const loaded = getRecipe(state.recipeId);
+    const loaded = recipesApi.recipes.find((r) => r.id === state.recipeId);
     if (!loaded) {
       screen = <Missing recipeId={state.recipeId} onBack={goLibrary} />;
     } else {
@@ -27,7 +28,7 @@ export function App() {
   } else if (state.view === "tokens") {
     screen = <DesignTokensShowcase />;
   } else {
-    screen = <LibraryScreen onSelect={goRecipe} />;
+    screen = <LibraryScreen onSelect={goRecipe} {...recipesApi} />;
   }
 
   return (
