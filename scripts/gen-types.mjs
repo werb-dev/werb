@@ -23,6 +23,8 @@ const TARGETS = [
   "werb-equipment.schema.json",
   "tools/ibu.input.schema.json",
   "tools/ibu.output.schema.json",
+  "tools/water.input.schema.json",
+  "tools/water.output.schema.json",
 ];
 
 const compileOpts = {

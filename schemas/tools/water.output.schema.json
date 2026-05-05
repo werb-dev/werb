@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://werb.dev/schemas/tools/water.output.schema.json",
+  "title": "Water volumes calculation output",
+  "description": "Computed volumes for each stage of the brew. All values in liters.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "mash_water_l",
+    "sparge_water_l",
+    "total_water_l",
+    "pre_boil_volume_l",
+    "post_boil_volume_l",
+    "post_cool_kettle_volume_l",
+    "grain_absorption_l",
+    "boil_off_l"
+  ],
+  "properties": {
+    "mash_water_l": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Strike water volume (mash infusion)."
+    },
+    "sparge_water_l": {
+      "type": "number",
+      "description": "Sparge water volume. Negative values indicate the mash thickness is too high to reach pre-boil volume from sparge alone — caller should warn the user."
+    },
+    "total_water_l": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Mash water + sparge water (assuming sparge_water_l >= 0)."
+    },
+    "pre_boil_volume_l": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Wort volume in the kettle at the start of the boil (hot)."
+    },
+    "post_boil_volume_l": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Wort volume in the kettle at the end of the boil (hot, before cooling)."
+    },
+    "post_cool_kettle_volume_l": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Wort volume in the kettle after cooling, before transfer to fermenter."
+    },
+    "grain_absorption_l": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Liters absorbed by the grain bed (lost to the spent grains)."
+    },
+    "boil_off_l": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Liters evaporated during the boil."
+    }
+  }
+}

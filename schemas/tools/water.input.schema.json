@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://werb.dev/schemas/tools/water.input.schema.json",
+  "title": "Water volumes calculation input",
+  "description": "Normalized input for computing strike water, sparge water, pre-boil and post-boil volumes for a brew session. Decoupled from BeerJSON: an adapter extracts these fields from a Recipe + Equipment profile.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "batch_size_l",
+    "total_grain_kg",
+    "boil_time_min",
+    "mash_thickness_l_per_kg"
+  ],
+  "properties": {
+    "batch_size_l": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Target finished volume into the fermenter (cooled), in liters."
+    },
+    "total_grain_kg": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Total dry weight of fermentables that participate in the mash (kg)."
+    },
+    "boil_time_min": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Total boil duration, minutes."
+    },
+    "mash_thickness_l_per_kg": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Liters of strike water per kg of grain. Typical: 2.5-3.5 L/kg."
+    },
+    "grain_absorption_l_per_kg": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0.96,
+      "description": "Liters of water absorbed per kg of grain. Typical: 0.8-1.0 L/kg."
+    },
+    "mash_dead_space_l": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0,
+      "description": "Volume left behind in the mash tun after lautering (liters)."
+    },
+    "kettle_dead_space_l": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0,
+      "description": "Volume left behind in the boil kettle after transfer (liters)."
+    },
+    "evaporation_rate_l_per_hour": {
+      "type": "number",
+      "minimum": 0,
+      "default": 3,
+      "description": "Boil-off rate in L/hour."
+    },
+    "post_boil_shrinkage_pct": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 20,
+      "default": 4,
+      "description": "Volume reduction percent from boiling temperature to room temperature."
+    },
+    "kettle_to_fermenter_loss_l": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0.5,
+      "description": "Volume lost transferring from the boil kettle to the fermenter (liters)."
+    }
+  }
+}
