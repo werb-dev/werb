@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://werb.dev/schemas/tools/gravity.input.schema.json",
+  "title": "GravityInput",
+  "description": "Input for predicted original gravity. Sums the fermentable contributions, applies brewhouse efficiency to mash-derived sugars only.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["batch_size_l", "efficiency_pct", "fermentables"],
+  "properties": {
+    "batch_size_l": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Post-boil wort volume in liters (cooled, into fermenter)."
+    },
+    "efficiency_pct": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "maximum": 100,
+      "description": "Brewhouse efficiency as a percent (e.g. 75 means 75%). Applied only to mash-derived fermentables."
+    },
+    "fermentables": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/FermentableGravityInput" }
+    }
+  },
+  "$defs": {
+    "FermentableGravityInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mass_kg", "yield_pct", "category"],
+      "properties": {
+        "name": { "type": "string" },
+        "mass_kg": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "yield_pct": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Fine-grind yield as a percent of sucrose. Typical: 75-85% for base malts."
+        },
+        "category": {
+          "type": "string",
+          "enum": ["mashed", "extract"],
+          "description": "Whether this fermentable is mashed (efficiency applies) or extract/sugar (no loss)."
+        }
+      }
+    }
+  }
+}

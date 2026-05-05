@@ -30,6 +30,10 @@ const TARGETS = [
   { schema: "tools/ibu.output.schema.json", name: "IbuOutput" },
   { schema: "tools/water.input.schema.json", name: "WaterInput" },
   { schema: "tools/water.output.schema.json", name: "WaterOutput" },
+  { schema: "tools/color.input.schema.json", name: "ColorInput" },
+  { schema: "tools/color.output.schema.json", name: "ColorOutput" },
+  { schema: "tools/gravity.input.schema.json", name: "GravityInput" },
+  { schema: "tools/gravity.output.schema.json", name: "GravityOutput" },
 ];
 
 const compileOpts = {

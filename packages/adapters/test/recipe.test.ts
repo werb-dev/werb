@@ -2,9 +2,14 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { recipeToIbuInput, recipeToWaterInput } from "../src/index.js";
+import {
+  recipeToIbuInput,
+  recipeToWaterInput,
+  recipeToColorInput,
+  recipeToGravityInput,
+} from "../src/index.js";
 import type { BeerJsonFile } from "../src/index.js";
-import { computeIbu, computeWater } from "@werb/calc";
+import { computeIbu, computeWater, computeColor, computeGravity } from "@werb/calc";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const fixturePath = join(__dirname, "../../../examples/double-ipa-mandarina.beerjson");
@@ -82,5 +87,42 @@ describe("recipeToWaterInput — Double IPA fixture", () => {
     );
     // Halving evap rate cuts pre-boil volume by 1.5 L (60min × 1.5 L/h diff).
     expect(baseline.pre_boil_volume_l - tighter.pre_boil_volume_l).toBeCloseTo(1.5, 2);
+  });
+});
+
+describe("recipeToColorInput / computeColor — Double IPA fixture", () => {
+  it("includes every fermentable with mass + color, converts EBC → SRM", () => {
+    const input = recipeToColorInput(recipe);
+    // 4 grains + rice hulls; rice hulls have color 0 EBC, still included.
+    expect(input.fermentables).toHaveLength(5);
+    // First fermentable: 6 kg, 8 EBC → ~4.06 SRM
+    expect(input.fermentables[0]!.mass_kg).toBeCloseTo(6, 4);
+    expect(input.fermentables[0]!.color_srm).toBeCloseTo(8 / 1.97, 3);
+  });
+
+  it("computed SRM is in the expected range for a Double IPA (~7.6 SRM, 15 EBC claimed)", () => {
+    const out = computeColor(recipeToColorInput(recipe));
+    expect(out.method).toBe("Morey");
+    expect(out.srm).toBeGreaterThan(4);
+    expect(out.srm).toBeLessThan(12);
+  });
+});
+
+describe("recipeToGravityInput / computeGravity — Double IPA fixture", () => {
+  it("classifies grain fermentables as mashed, drops the rice hulls (0% yield)", () => {
+    const input = recipeToGravityInput(recipe);
+    // 4 grains + 1 adjunct; rice hulls (yield 0%) are filtered out.
+    expect(input.fermentables).toHaveLength(4);
+    expect(input.fermentables.every((f) => f.category === "mashed")).toBe(true);
+    expect(input.efficiency_pct).toBe(75);
+  });
+
+  it("predicted OG is close to the recipe's claimed 1.069", () => {
+    const out = computeGravity(recipeToGravityInput(recipe));
+    // Grain bill: 6 + 1 + 0.2 + 0.2 = 7.4 kg, weighted yield ~80%, 75% eff, 22 L
+    // ~ 7.4 × 0.81 × 384 × 0.75 / 22 ≈ 78.4 GU → 1.078
+    // Recipe claim 1.069 — gap reflects yield assumption + boil-off model
+    expect(out.og).toBeGreaterThan(1.06);
+    expect(out.og).toBeLessThan(1.09);
   });
 });

@@ -3,3 +3,7 @@ export * from "./ibu.input.js";
 export * from "./ibu.output.js";
 export * from "./water.input.js";
 export * from "./water.output.js";
+export * from "./color.input.js";
+export * from "./color.output.js";
+export * from "./gravity.input.js";
+export * from "./gravity.output.js";

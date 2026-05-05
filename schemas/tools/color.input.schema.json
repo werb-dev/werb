@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://werb.dev/schemas/tools/color.input.schema.json",
+  "title": "ColorInput",
+  "description": "Input for beer color calculation. Decoupled from BeerJSON: an adapter projects a Recipe's fermentable bill into this normalized shape.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["batch_size_l", "fermentables"],
+  "properties": {
+    "method": {
+      "type": "string",
+      "enum": ["Morey", "Daniels", "Mosher"],
+      "default": "Morey",
+      "description": "Color estimation method. Morey is the de facto homebrew standard."
+    },
+    "batch_size_l": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Post-boil wort volume in liters (cooled, into fermenter)."
+    },
+    "fermentables": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/FermentableColorInput" }
+    }
+  },
+  "$defs": {
+    "FermentableColorInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mass_kg", "color_srm"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Optional, for traceability."
+        },
+        "mass_kg": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Fermentable mass in kg."
+        },
+        "color_srm": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Fermentable color in SRM. Adapter must convert EBC/Lovibond inputs."
+        }
+      }
+    }
+  }
+}

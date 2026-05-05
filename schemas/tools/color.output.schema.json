@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://werb.dev/schemas/tools/color.output.schema.json",
+  "title": "ColorOutput",
+  "description": "Result of a color calculation. Reports both SRM and EBC for convenience.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["method", "srm", "ebc", "mcu"],
+  "properties": {
+    "method": {
+      "type": "string",
+      "enum": ["Morey", "Daniels", "Mosher"]
+    },
+    "srm": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Estimated wort color in SRM."
+    },
+    "ebc": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Estimated wort color in EBC (= SRM × 1.97)."
+    },
+    "mcu": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Total Malt Color Units (lb·°L/gal). Surfaced for transparency — Morey applies a non-linear curve to this."
+    }
+  }
+}

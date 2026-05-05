@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://werb.dev/schemas/tools/gravity.output.schema.json",
+  "title": "GravityOutput",
+  "description": "Predicted original gravity for a batch.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["og", "gravity_units"],
+  "properties": {
+    "og": {
+      "type": "number",
+      "minimum": 1,
+      "description": "Predicted original gravity in specific gravity (e.g. 1.054)."
+    },
+    "gravity_units": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Total gravity units (1000 × (SG − 1)). 54 GU corresponds to OG 1.054."
+    }
+  }
+}

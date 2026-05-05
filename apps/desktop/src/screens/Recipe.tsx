@@ -2,6 +2,8 @@ import { useMemo } from "react";
 import {
   recipeToIbuInput,
   recipeToWaterInput,
+  recipeToColorInput,
+  recipeToGravityInput,
   toGrams,
   toKilograms,
   toLiters,
@@ -12,7 +14,7 @@ import {
   isVolume,
   type BeerJsonRecipe,
 } from "@werb/adapters";
-import { computeIbu, computeWater } from "@werb/calc";
+import { computeIbu, computeWater, computeAbv, computeColor, computeGravity } from "@werb/calc";
 
 const TIMING_LABEL: Record<string, string> = {
   add_to_boil: "Boil",
@@ -30,6 +32,12 @@ export function RecipeScreen({ recipe, onBack }: RecipeScreenProps) {
   const computed = useMemo(() => {
     const ibu = computeIbu(recipeToIbuInput(recipe));
     const water = computeWater(recipeToWaterInput(recipe));
+    const color = computeColor(recipeToColorInput(recipe));
+    const gravity = computeGravity(recipeToGravityInput(recipe));
+    const abv =
+      recipe.original_gravity && recipe.final_gravity
+        ? computeAbv(recipe.original_gravity.value, recipe.final_gravity.value)
+        : null;
     // Per-addition IBU lookup keyed by index, since duplicate hop names exist.
     const boilHopIndices = (recipe.ingredients.hop_additions ?? [])
       .map((h, i) => ({ h, i }))
@@ -39,11 +47,20 @@ export function RecipeScreen({ recipe, onBack }: RecipeScreenProps) {
     boilHopIndices.forEach((idx, k) => {
       ibuByIndex.set(idx, ibu.additions[k]?.ibu ?? 0);
     });
-    return { ibu, water, ibuByIndex };
-  }, []);
+    return { ibu, water, color, gravity, abv, ibuByIndex };
+  }, [recipe]);
 
   const claimedIbu = recipe.ibu_estimate?.ibu?.value ?? null;
+  const claimedOg = recipe.original_gravity?.value ?? null;
+  const claimedAbv = recipe.alcohol_by_volume?.value ?? null;
   const claimedSrm = recipe.color_estimate ? toSrm(recipe.color_estimate) : null;
+  const claimedColorDisplay = recipe.color_estimate
+    ? `${recipe.color_estimate.value.toFixed(0)} ${recipe.color_estimate.unit}`
+    : null;
+  const computedColorDisplay =
+    recipe.color_estimate?.unit === "EBC"
+      ? `${computed.color.ebc.toFixed(0)} EBC`
+      : `${computed.color.srm.toFixed(1)} SRM`;
 
   return (
     <div className="min-h-dvh bg-bg text-text">
@@ -79,28 +96,38 @@ export function RecipeScreen({ recipe, onBack }: RecipeScreenProps) {
 
         {/* ─── Targets vs computed strip ───────────────────────────────── */}
         <section className="mb-12 grid grid-cols-2 md:grid-cols-5 gap-px bg-border rounded-xl overflow-hidden">
-          <Tile label="OG" value={recipe.original_gravity?.value.toFixed(3) ?? "—"} />
+          <Tile
+            label="OG"
+            value={claimedOg?.toFixed(3) ?? "—"}
+            sub={`≈${computed.gravity.og.toFixed(3)}`}
+            warn={
+              claimedOg !== null && Math.abs(computed.gravity.og - claimedOg) > 0.008
+            }
+          />
           <Tile label="FG" value={recipe.final_gravity?.value.toFixed(3) ?? "—"} />
           <Tile
             label="IBU"
             value={claimedIbu?.toString() ?? "—"}
-            sub={`computed ${computed.ibu.total_ibu.toFixed(0)}`}
+            sub={`≈${computed.ibu.total_ibu.toFixed(0)}`}
             warn={claimedIbu !== null && Math.abs(computed.ibu.total_ibu - claimedIbu) > 15}
           />
           <Tile
             label="ABV"
-            value={
-              recipe.alcohol_by_volume ? `${recipe.alcohol_by_volume.value.toFixed(1)} %` : "—"
+            value={claimedAbv !== null ? `${claimedAbv.toFixed(1)}%` : "—"}
+            sub={computed.abv !== null ? `≈${computed.abv.toFixed(1)}%` : undefined}
+            warn={
+              claimedAbv !== null &&
+              computed.abv !== null &&
+              Math.abs(computed.abv - claimedAbv) > 0.5
             }
           />
           <Tile
             label="Color"
-            value={
-              recipe.color_estimate
-                ? `${recipe.color_estimate.value.toFixed(0)} ${recipe.color_estimate.unit}`
-                : "—"
+            value={claimedColorDisplay ?? "—"}
+            sub={`≈${computedColorDisplay}`}
+            warn={
+              claimedSrm !== null && Math.abs(computed.color.srm - claimedSrm) > 3
             }
-            sub={claimedSrm ? `${claimedSrm.toFixed(1)} SRM` : undefined}
           />
         </section>
 
