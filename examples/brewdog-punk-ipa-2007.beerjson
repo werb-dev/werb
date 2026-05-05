@@ -1,0 +1,250 @@
+{
+  "beerjson": {
+    "version": 2.06,
+    "recipes": [
+      {
+        "name": "PUNK IPA 2007 - 2010",
+        "type": "all grain",
+        "author": "(imported from BeerXML)",
+        "batch_size": {
+          "value": 20.0,
+          "unit": "l"
+        },
+        "efficiency": {
+          "brewhouse": {
+            "value": 82.14,
+            "unit": "%"
+          }
+        },
+        "style": {
+          "name": "IPA",
+          "category": "IPA",
+          "style_guide": "Unspecified",
+          "type": "beer"
+        },
+        "original_gravity": {
+          "value": 1.056,
+          "unit": "sg"
+        },
+        "final_gravity": {
+          "value": 1.01,
+          "unit": "sg"
+        },
+        "ingredients": {
+          "fermentable_additions": [
+            {
+              "name": "Extra Pale",
+              "type": "grain",
+              "yield": {
+                "fine_grind": {
+                  "value": 82.0,
+                  "unit": "%"
+                }
+              },
+              "color": {
+                "value": 2.0,
+                "unit": "SRM"
+              },
+              "amount": {
+                "value": 5.3,
+                "unit": "kg"
+              }
+            }
+          ],
+          "hop_additions": [
+            {
+              "name": "Ahtanum",
+              "alpha_acid": {
+                "value": 5.4,
+                "unit": "%"
+              },
+              "form": "pellet",
+              "amount": {
+                "value": 0.0175,
+                "unit": "kg"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 60.0,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Chinook",
+              "alpha_acid": {
+                "value": 12.6,
+                "unit": "%"
+              },
+              "form": "pellet",
+              "amount": {
+                "value": 0.015,
+                "unit": "kg"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 60.0,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Crystal",
+              "alpha_acid": {
+                "value": 4.0,
+                "unit": "%"
+              },
+              "form": "plug",
+              "amount": {
+                "value": 0.0175,
+                "unit": "kg"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 30.0,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Chinook",
+              "alpha_acid": {
+                "value": 12.6,
+                "unit": "%"
+              },
+              "form": "pellet",
+              "amount": {
+                "value": 0.0175,
+                "unit": "kg"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 30.0,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Ahtanum",
+              "alpha_acid": {
+                "value": 5.4,
+                "unit": "%"
+              },
+              "form": "pellet",
+              "amount": {
+                "value": 0.0175,
+                "unit": "kg"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 0,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Chinook",
+              "alpha_acid": {
+                "value": 12.6,
+                "unit": "%"
+              },
+              "form": "pellet",
+              "amount": {
+                "value": 0.0275,
+                "unit": "kg"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 0,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Crystal",
+              "alpha_acid": {
+                "value": 4.0,
+                "unit": "%"
+              },
+              "form": "plug",
+              "amount": {
+                "value": 0.0175,
+                "unit": "kg"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 0,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Motueka",
+              "alpha_acid": {
+                "value": 7.1,
+                "unit": "%"
+              },
+              "form": "pellet",
+              "amount": {
+                "value": 0.0175,
+                "unit": "kg"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 0,
+                  "unit": "min"
+                }
+              }
+            }
+          ],
+          "culture_additions": [
+            {
+              "name": "Wyeast 1056 - American Ale",
+              "type": "ale",
+              "form": "liquid",
+              "amount": {
+                "value": 0.035,
+                "unit": "l"
+              }
+            }
+          ]
+        },
+        "mash": {
+          "name": "Mash",
+          "grain_temperature": {
+            "value": 20.0,
+            "unit": "C"
+          },
+          "mash_steps": [
+            {
+              "name": "Mash step",
+              "type": "temperature",
+              "step_temperature": {
+                "value": 65.0,
+                "unit": "C"
+              },
+              "step_time": {
+                "value": 75.0,
+                "unit": "min"
+              }
+            }
+          ]
+        },
+        "boil": {
+          "boil_time": {
+            "value": 60.0,
+            "unit": "min"
+          }
+        }
+      }
+    ]
+  }
+}

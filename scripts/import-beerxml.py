@@ -211,12 +211,15 @@ def convert_style(el: ET.Element | None):
         "cider": "cider", "mead": "mead", "kombucha": "kombucha",
         "wine": "wine", "soda": "soda",
     }.get(raw_style_type, "beer")
+    # BeerJSON StyleBase requires name, category, style_guide, type. Some
+    # BeerXML files (e.g. Brewdog public exports) leave guide/category empty
+    # — fill in sentinels rather than emit invalid JSON.
     return {
         "name": text(el, "NAME") or "Unknown",
-        "category": text(el, "CATEGORY"),
+        "category": text(el, "CATEGORY") or "Unspecified",
         "category_number": int(num(el, "CATEGORY_NUMBER") or 0) or None,
         "style_letter": text(el, "STYLE_LETTER"),
-        "style_guide": text(el, "STYLE_GUIDE"),
+        "style_guide": text(el, "STYLE_GUIDE") or "Unspecified",
         "type": bj_style_type,
     }
 

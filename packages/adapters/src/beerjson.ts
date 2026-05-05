@@ -87,9 +87,14 @@ export interface CultureAddition {
   form: "liquid" | "dry" | "slant" | "culture" | "dregs";
   producer?: string;
   product_id?: string;
-  amount?: MassType | VolumeType;
+  /** Cultures can be measured by mass (dry yeast), volume (slurry), or unit count (packs). */
+  amount?: MassType | VolumeType | UnitCountType;
   attenuation?: PercentType;
 }
+
+/** BeerJSON UnitType — for unitless counts like "1.2 packs", "1 each". */
+export type UnitCountUnit = "1" | "unit" | "each" | "dimensionless" | "pkg";
+export interface UnitCountType { value: number; unit: UnitCountUnit }
 
 export interface MashProcedure {
   name: string;
@@ -128,8 +133,23 @@ export interface ColorType { value: number; unit: ColorUnit }
 export interface GravityType { value: number; unit: GravityUnit }
 export interface PercentType { value: number; unit: PercentUnit }
 
-export type AnyAmount = MassType | VolumeType;
+export type AnyAmount = MassType | VolumeType | UnitCountType;
+
+const MASS_UNITS = new Set(["mg", "g", "kg", "lb", "oz"]);
+const VOLUME_UNITS = new Set([
+  "ml", "l", "tsp", "tbsp", "floz", "cup", "pt", "qt", "gal", "bbl",
+  "ifloz", "ipt", "iqt", "igal", "ibbl",
+]);
+const UNIT_UNITS = new Set(["1", "unit", "each", "dimensionless", "pkg"]);
 
 export function isMass(x: AnyAmount): x is MassType {
-  return ["mg", "g", "kg", "lb", "oz"].includes(x.unit);
+  return MASS_UNITS.has(x.unit);
+}
+
+export function isVolume(x: AnyAmount): x is VolumeType {
+  return VOLUME_UNITS.has(x.unit);
+}
+
+export function isUnitCount(x: AnyAmount): x is UnitCountType {
+  return UNIT_UNITS.has(x.unit);
 }

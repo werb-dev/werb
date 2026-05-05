@@ -9,6 +9,7 @@ import {
   toCelsius,
   toSrm,
   isMass,
+  isVolume,
   type BeerJsonRecipe,
 } from "@werb/adapters";
 import { computeIbu, computeWater } from "@werb/calc";
@@ -241,11 +242,13 @@ export function RecipeScreen({ recipe, onBack }: RecipeScreenProps) {
                       </p>
                     </div>
                     <div className="font-mono text-mono-lg shrink-0">
-                      {c.amount && isMass(c.amount)
+                      {!c.amount
+                        ? "—"
+                        : isMass(c.amount)
                         ? `${toGrams(c.amount).toFixed(0)} g`
-                        : c.amount
+                        : isVolume(c.amount)
                         ? `${toLiters(c.amount).toFixed(2)} L`
-                        : "—"}
+                        : `${c.amount.value} ${c.amount.unit}`}
                     </div>
                   </li>
                 ))}

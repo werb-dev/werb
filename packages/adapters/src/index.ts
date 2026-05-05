@@ -18,7 +18,7 @@ export type {
   AnyAmount,
 } from "./beerjson.js";
 
-export { isMass } from "./beerjson.js";
+export { isMass, isVolume, isUnitCount } from "./beerjson.js";
 export {
   toGrams,
   toKilograms,
