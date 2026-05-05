@@ -1,0 +1,308 @@
+{
+  "beerjson": {
+    "version": 2.06,
+    "recipes": [
+      {
+        "name": "double IPA SINGLE HOP MANDARINA",
+        "type": "all grain",
+        "author": "(imported from BeerXML)",
+        "batch_size": {
+          "value": 22.0,
+          "unit": "l"
+        },
+        "efficiency": {
+          "brewhouse": {
+            "value": 75.0,
+            "unit": "%"
+          }
+        },
+        "style": {
+          "name": "Double IPA",
+          "category": "Strong American Ale",
+          "category_number": 22,
+          "style_letter": "A",
+          "style_guide": "BJCP 2015",
+          "type": "beer"
+        },
+        "original_gravity": {
+          "value": 1.069,
+          "unit": "sg"
+        },
+        "final_gravity": {
+          "value": 1.015,
+          "unit": "sg"
+        },
+        "alcohol_by_volume": {
+          "value": 7.1,
+          "unit": "%"
+        },
+        "ibu_estimate": {
+          "method": "Tinseth",
+          "ibu": {
+            "value": 67.0,
+            "unit": "IBUs"
+          }
+        },
+        "color_estimate": {
+          "value": 15.0,
+          "unit": "EBC"
+        },
+        "ingredients": {
+          "fermentable_additions": [
+            {
+              "name": "Malt Pale Ale",
+              "type": "grain",
+              "producer": "Malterie du Château",
+              "yield": {
+                "fine_grind": {
+                  "value": 81.0,
+                  "unit": "%"
+                }
+              },
+              "color": {
+                "value": 8.0,
+                "unit": "EBC"
+              },
+              "amount": {
+                "value": 6.0,
+                "unit": "kg"
+              }
+            },
+            {
+              "name": "Malt de blé",
+              "type": "grain",
+              "producer": "Les Maltiers",
+              "yield": {
+                "fine_grind": {
+                  "value": 82.0,
+                  "unit": "%"
+                }
+              },
+              "color": {
+                "value": 6.0,
+                "unit": "EBC"
+              },
+              "amount": {
+                "value": 1.0,
+                "unit": "kg"
+              }
+            },
+            {
+              "name": "Flocons d'Avoine",
+              "type": "grain",
+              "yield": {
+                "fine_grind": {
+                  "value": 80.0,
+                  "unit": "%"
+                }
+              },
+              "color": {
+                "value": 0.0,
+                "unit": "EBC"
+              },
+              "amount": {
+                "value": 0.2,
+                "unit": "kg"
+              }
+            },
+            {
+              "name": "Flocons de Froment",
+              "type": "grain",
+              "yield": {
+                "fine_grind": {
+                  "value": 77.0,
+                  "unit": "%"
+                }
+              },
+              "color": {
+                "value": 3.0,
+                "unit": "EBC"
+              },
+              "amount": {
+                "value": 0.2,
+                "unit": "kg"
+              }
+            },
+            {
+              "name": "Balle de riz",
+              "type": "other",
+              "yield": {
+                "fine_grind": {
+                  "value": 0.0,
+                  "unit": "%"
+                }
+              },
+              "color": {
+                "value": 0.0,
+                "unit": "EBC"
+              },
+              "amount": {
+                "value": 0.15,
+                "unit": "kg"
+              }
+            }
+          ],
+          "hop_additions": [
+            {
+              "name": "Mandarina Bavaria",
+              "alpha_acid": {
+                "value": 9.1,
+                "unit": "%"
+              },
+              "form": "pellet",
+              "amount": {
+                "value": 0.16,
+                "unit": "kg"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10.0,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Mandarina Bavaria",
+              "alpha_acid": {
+                "value": 9.1,
+                "unit": "%"
+              },
+              "form": "pellet",
+              "amount": {
+                "value": 0.1,
+                "unit": "kg"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 30.0,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Mandarina Bavaria",
+              "alpha_acid": {
+                "value": 9.1,
+                "unit": "%"
+              },
+              "form": "pellet",
+              "amount": {
+                "value": 0.03,
+                "unit": "kg"
+              },
+              "timing": {
+                "use": "add_to_fermentation",
+                "time": {
+                  "value": 18720.0,
+                  "unit": "min"
+                }
+              },
+              "notes": "au bout de 2 jours, pendant la tumultueuse"
+            },
+            {
+              "name": "Mandarina Bavaria",
+              "alpha_acid": {
+                "value": 9.1,
+                "unit": "%"
+              },
+              "form": "pellet",
+              "amount": {
+                "value": 0.17,
+                "unit": "kg"
+              },
+              "timing": {
+                "use": "add_to_fermentation",
+                "time": {
+                  "value": 4320.0,
+                  "unit": "min"
+                }
+              },
+              "notes": "en secondaire"
+            }
+          ],
+          "culture_additions": [
+            {
+              "name": "verdant IPA",
+              "type": "ale",
+              "form": "dry",
+              "producer": "lallemand",
+              "amount": {
+                "value": 0.022,
+                "unit": "kg"
+              },
+              "attenuation": {
+                "value": 78.0,
+                "unit": "%"
+              }
+            },
+            {
+              "name": "US West Coast Yeast",
+              "type": "ale",
+              "form": "dry",
+              "producer": "Mangrove Jack's",
+              "product_id": "M44",
+              "amount": {
+                "value": 0.022,
+                "unit": "kg"
+              },
+              "attenuation": {
+                "value": 77.0,
+                "unit": "%"
+              }
+            }
+          ]
+        },
+        "mash": {
+          "name": "Mash",
+          "grain_temperature": {
+            "value": 20.0,
+            "unit": "C"
+          },
+          "notes": "Penser à corriger le PH de l'eau de rinçage",
+          "mash_steps": [
+            {
+              "name": "Saccharification",
+              "type": "infusion",
+              "step_temperature": {
+                "value": 67.0,
+                "unit": "C"
+              },
+              "step_time": {
+                "value": 60.0,
+                "unit": "min"
+              },
+              "infuse_temperature": {
+                "value": 74.4,
+                "unit": "C"
+              },
+              "amount": {
+                "value": 25.5,
+                "unit": "l"
+              }
+            },
+            {
+              "name": "smash out",
+              "type": "temperature",
+              "step_temperature": {
+                "value": 75.0,
+                "unit": "C"
+              },
+              "step_time": {
+                "value": 10.0,
+                "unit": "min"
+              }
+            }
+          ]
+        },
+        "boil": {
+          "boil_time": {
+            "value": 60.0,
+            "unit": "min"
+          }
+        }
+      }
+    ]
+  }
+}
