@@ -1,13 +1,15 @@
 import {
   recipeToIbuInput,
+  recipeToWaterInput,
   toLiters,
   toSrm,
   srmToHex,
   type BeerJsonRecipe,
 } from "@werb/adapters";
-import { computeIbu } from "@werb/calc";
+import { computeIbu, computeWater } from "@werb/calc";
 import type { LoadedRecipe } from "../data/recipes.ts";
 import type { RecipeSource } from "../hooks/useRecipes.ts";
+import { profileToWaterOverrides, type ProfileWithId } from "../data/equipment.ts";
 
 interface LibraryScreenProps {
   recipes: LoadedRecipe[];
@@ -19,6 +21,8 @@ interface LibraryScreenProps {
   useBundled: () => void;
   refresh: () => Promise<void>;
   onSelect: (id: string) => void;
+  activeProfile?: ProfileWithId | undefined;
+  onGoEquipment: () => void;
 }
 
 export function LibraryScreen({
@@ -31,6 +35,8 @@ export function LibraryScreen({
   useBundled,
   refresh,
   onSelect,
+  activeProfile,
+  onGoEquipment,
 }: LibraryScreenProps) {
   const isDisk = source.type === "disk";
 
@@ -43,6 +49,7 @@ export function LibraryScreen({
             {isDisk ? " · disk" : " · bundled examples"}
           </p>
           <h1 className="text-h1 font-semibold mt-3">Library</h1>
+          <ProfileBadge profile={activeProfile} onGoEquipment={onGoEquipment} />
           {isDisk ? (
             <p className="text-body text-text-muted mt-2 font-mono break-all">
               {source.path}
@@ -115,7 +122,11 @@ export function LibraryScreen({
           <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {recipes.map(({ id, recipe }) => (
               <li key={id}>
-                <RecipeCard recipe={recipe} onSelect={() => onSelect(id)} />
+                <RecipeCard
+                  recipe={recipe}
+                  activeProfile={activeProfile}
+                  onSelect={() => onSelect(id)}
+                />
               </li>
             ))}
           </ul>
@@ -127,15 +138,25 @@ export function LibraryScreen({
 
 function RecipeCard({
   recipe,
+  activeProfile,
   onSelect,
 }: {
   recipe: BeerJsonRecipe;
+  activeProfile?: ProfileWithId | undefined;
   onSelect: () => void;
 }) {
   const beerColor = recipe.color_estimate ? srmToHex(toSrm(recipe.color_estimate)) : null;
   const computedIbu = (() => {
     try {
       return computeIbu(recipeToIbuInput(recipe)).total_ibu;
+    } catch {
+      return null;
+    }
+  })();
+  const totalWaterL = (() => {
+    try {
+      return computeWater(recipeToWaterInput(recipe, profileToWaterOverrides(activeProfile)))
+        .total_water_l;
     } catch {
       return null;
     }
@@ -206,13 +227,9 @@ function RecipeCard({
           value={recipe.final_gravity?.value.toFixed(3) ?? "—"}
         />
         <Stat
-          label="Color"
-          value={
-            recipe.color_estimate
-              ? `${recipe.color_estimate.value.toFixed(0)}${recipe.color_estimate.unit === "EBC" ? "" : ""}`
-              : "—"
-          }
-          sub={recipe.color_estimate?.unit}
+          label="Water"
+          value={totalWaterL !== null ? `${totalWaterL.toFixed(0)} L` : "—"}
+          sub={activeProfile ? "rig" : "default"}
         />
       </dl>
     </button>
@@ -238,6 +255,40 @@ function Stat({
         {sub && <span className="text-text-muted text-caption ml-1">{sub}</span>}
       </dd>
     </div>
+  );
+}
+
+function ProfileBadge({
+  profile,
+  onGoEquipment,
+}: {
+  profile?: ProfileWithId | undefined;
+  onGoEquipment: () => void;
+}) {
+  if (profile) {
+    return (
+      <button
+        onClick={onGoEquipment}
+        className="mt-3 inline-flex items-center gap-2 rounded-pill bg-surface border border-border px-3 py-1.5 text-caption text-text-muted hover:text-text hover:border-border-strong transition-colors"
+        title="Equipment profile in use — click to edit"
+      >
+        <span aria-hidden className="block w-1.5 h-1.5 rounded-pill bg-success" />
+        <span className="font-mono">
+          Brewing on <span className="text-text">{profile.name}</span> ·{" "}
+          {profile.efficiency_pct}% eff
+        </span>
+      </button>
+    );
+  }
+  return (
+    <button
+      onClick={onGoEquipment}
+      className="mt-3 inline-flex items-center gap-2 rounded-pill bg-surface border border-border border-dashed px-3 py-1.5 text-caption text-text-muted hover:text-text hover:border-accent transition-colors"
+    >
+      <span aria-hidden className="block w-1.5 h-1.5 rounded-pill bg-text-muted" />
+      <span>No equipment profile — using defaults</span>
+      <span aria-hidden className="text-accent">→</span>
+    </button>
   );
 }
 

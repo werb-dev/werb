@@ -70,7 +70,14 @@ export function App() {
   } else if (state.view === "tokens") {
     screen = <DesignTokensShowcase />;
   } else {
-    screen = <LibraryScreen onSelect={goRecipe} {...recipesApi} />;
+    screen = (
+      <LibraryScreen
+        onSelect={goRecipe}
+        activeProfile={equipmentApi.activeProfile}
+        onGoEquipment={goEquipment}
+        {...recipesApi}
+      />
+    );
   }
 
   return (
