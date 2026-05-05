@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://werb.dev/schemas/werb-equipment.schema.json",
+  "title": "Werb equipment profile",
+  "description": "Profile of a brewing setup (mash tun, kettle, fermenter) used to compute volumes, losses, and efficiency for a brew session.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["name", "batch_size_l", "efficiency_pct"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Human-readable name of the equipment profile (e.g. 'Brewzilla 35L', 'Cooler MLT + propane kettle')."
+    },
+    "description": {
+      "type": "string"
+    },
+    "batch_size_l": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Target finished batch volume into the fermenter, in liters."
+    },
+    "efficiency_pct": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Total brewhouse efficiency, percent (mash + lauter + boil losses considered)."
+    },
+    "mash_tun": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capacity_l"],
+      "properties": {
+        "capacity_l": { "type": "number", "exclusiveMinimum": 0 },
+        "dead_space_l": { "type": "number", "minimum": 0, "default": 0 },
+        "grain_absorption_l_per_kg": {
+          "type": "number",
+          "minimum": 0,
+          "default": 0.96,
+          "description": "Liters of water absorbed per kg of grain. Typical: 0.8-1.0 L/kg."
+        }
+      }
+    },
+    "kettle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capacity_l"],
+      "properties": {
+        "capacity_l": { "type": "number", "exclusiveMinimum": 0 },
+        "dead_space_l": { "type": "number", "minimum": 0, "default": 0 },
+        "evaporation_rate_l_per_hour": {
+          "type": "number",
+          "minimum": 0,
+          "default": 3,
+          "description": "Boil-off rate in L/hour. Typical: 2-4 L/h depending on kettle and burner."
+        },
+        "post_boil_shrinkage_pct": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 20,
+          "default": 4,
+          "description": "Volume reduction percentage from boiling temperature to room temperature."
+        }
+      }
+    },
+    "fermenter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capacity_l"],
+      "properties": {
+        "capacity_l": { "type": "number", "exclusiveMinimum": 0 },
+        "trub_loss_l": {
+          "type": "number",
+          "minimum": 0,
+          "default": 1,
+          "description": "Volume left behind as trub/yeast cake when transferring to packaging."
+        }
+      }
+    },
+    "transfer_loss_l": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0.5,
+      "description": "Volume lost during transfers between vessels (kettle to fermenter, fermenter to package)."
+    },
+    "notes": {
+      "type": "string"
+    }
+  }
+}

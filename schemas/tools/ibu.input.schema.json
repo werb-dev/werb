@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://werb.dev/schemas/tools/ibu.input.schema.json",
+  "title": "IBU calculation input",
+  "description": "Normalized input for IBU calculation tools. Decoupled from BeerJSON storage format: an adapter converts a BeerJSON Recipe + Equipment into this shape.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["batch_size_l", "og", "hops"],
+  "properties": {
+    "method": {
+      "description": "Bitterness estimation method. Enum aligned with BeerJSON IBUMethodType.",
+      "type": "string",
+      "enum": ["Tinseth", "Rager", "Garetz", "Other"],
+      "default": "Tinseth"
+    },
+    "batch_size_l": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Post-boil wort volume in liters (cooled, into fermenter)."
+    },
+    "og": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 1.2,
+      "description": "Original gravity (specific gravity, e.g. 1.050). Used as the wort gravity proxy in utilization formulas."
+    },
+    "hops": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/HopAddition" }
+    }
+  },
+  "$defs": {
+    "HopAddition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["amount_g", "alpha_acid_pct", "time_min"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Optional, for traceability and per-addition reporting."
+        },
+        "amount_g": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Hop mass in grams."
+        },
+        "alpha_acid_pct": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 30,
+          "description": "Alpha acid content as a percentage (e.g. 5.5 means 5.5%)."
+        },
+        "time_min": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Boil contact time in minutes. 0 for flameout/whirlpool/dry hop additions (which contribute 0 IBU under standard Tinseth)."
+        },
+        "form": {
+          "type": "string",
+          "enum": ["pellet", "leaf", "leaf (wet)", "plug", "extract", "powder"],
+          "default": "pellet",
+          "description": "Hop form. Used by some methods to apply a utilization multiplier (e.g. pellet ~1.10x leaf)."
+        }
+      }
+    }
+  }
+}

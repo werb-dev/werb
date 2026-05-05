@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://werb.dev/schemas/tools/ibu.output.schema.json",
+  "title": "IBU calculation output",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["method", "total_ibu", "additions"],
+  "properties": {
+    "method": {
+      "type": "string",
+      "enum": ["Tinseth", "Rager", "Garetz", "Other"]
+    },
+    "total_ibu": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Total estimated bitterness in IBU (mg/L of iso-alpha-acids)."
+    },
+    "additions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["ibu", "utilization"],
+        "properties": {
+          "name": { "type": "string" },
+          "ibu": {
+            "type": "number",
+            "minimum": 0,
+            "description": "IBU contribution of this single addition."
+          },
+          "utilization": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Utilization fraction applied (0-1)."
+          }
+        }
+      }
+    }
+  }
+}

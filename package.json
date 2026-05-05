@@ -1,0 +1,22 @@
+{
+  "name": "werb",
+  "private": true,
+  "version": "0.0.0",
+  "description": "File-driven homebrewing tool (BeerJSON in, brew sessions out).",
+  "type": "module",
+  "packageManager": "pnpm@9.0.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "gen:types": "node scripts/gen-types.mjs",
+    "test": "pnpm -r --if-present test",
+    "build": "pnpm -r --if-present build",
+    "lint": "pnpm -r --if-present lint"
+  },
+  "devDependencies": {
+    "json-schema-to-typescript": "^15.0.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0"
+  }
+}
