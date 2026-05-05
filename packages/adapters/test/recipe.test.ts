@@ -7,6 +7,7 @@ import {
   recipeToWaterInput,
   recipeToColorInput,
   recipeToGravityInput,
+  recipeToSessionPlan,
 } from "../src/index.js";
 import type { BeerJsonFile } from "../src/index.js";
 import { computeIbu, computeWater, computeColor, computeGravity } from "@werb/calc";
@@ -124,5 +125,72 @@ describe("recipeToGravityInput / computeGravity — Double IPA fixture", () => {
     // Recipe claim 1.069 — gap reflects yield assumption + boil-off model
     expect(out.og).toBeGreaterThan(1.06);
     expect(out.og).toBeLessThan(1.09);
+  });
+});
+
+describe("recipeToSessionPlan — Double IPA fixture", () => {
+  // Deterministic id generator for stable assertions.
+  let counter = 0;
+  const deps = {
+    now: () => new Date("2026-05-05T08:00:00Z"),
+    id: () => `step-${counter++}`,
+  };
+  // Reset between tests
+  function reset() {
+    counter = 0;
+  }
+
+  it("produces draft status, populated steps array, and ISO timestamps", () => {
+    reset();
+    const session = recipeToSessionPlan(recipe, "double-ipa-mandarina", deps);
+    expect(session.status).toBe("draft");
+    expect(session.started_at).toBe("2026-05-05T08:00:00.000Z");
+    expect(session.recipe_id).toBe("double-ipa-mandarina");
+    expect(session.recipe_name).toBe(recipe.name);
+    expect(session.steps.length).toBeGreaterThan(0);
+  });
+
+  it("expands mash steps + adds sparge / boil / chill / transfer / pitch", () => {
+    reset();
+    const session = recipeToSessionPlan(recipe, "x", deps);
+    const kinds = session.steps.map((s) => s.kind);
+    // Mandarina recipe has 2 mash steps (saccharification, smash out)
+    expect(kinds.filter((k) => k === "mash")).toHaveLength(2);
+    expect(kinds).toContain("sparge");
+    expect(kinds).toContain("boil");
+    expect(kinds).toContain("chill");
+    expect(kinds).toContain("transfer");
+    expect(kinds).toContain("ferment_pitch");
+  });
+
+  it("carries mash temperature + duration onto the session step", () => {
+    reset();
+    const session = recipeToSessionPlan(recipe, "x", deps);
+    const firstMash = session.steps.find((s) => s.kind === "mash")!;
+    expect(firstMash.target_temperature_c).toBe(67);
+    expect(firstMash.target_duration_min).toBe(60);
+  });
+
+  it("boil step carries the recipe's boil time", () => {
+    reset();
+    const session = recipeToSessionPlan(recipe, "x", deps);
+    const boil = session.steps.find((s) => s.kind === "boil")!;
+    expect(boil.target_duration_min).toBe(60);
+    expect(boil.target_temperature_c).toBeUndefined();
+  });
+
+  it("pitch step labels every culture", () => {
+    reset();
+    const session = recipeToSessionPlan(recipe, "x", deps);
+    const pitch = session.steps.find((s) => s.kind === "ferment_pitch")!;
+    // Mandarina recipe has two yeasts: verdant IPA + US West Coast Yeast
+    expect(pitch.label).toContain("verdant IPA");
+    expect(pitch.label).toContain("US West Coast Yeast");
+  });
+
+  it("every step starts in pending status", () => {
+    reset();
+    const session = recipeToSessionPlan(recipe, "x", deps);
+    expect(session.steps.every((s) => s.status === "pending")).toBe(true);
   });
 });

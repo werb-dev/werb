@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://werb.dev/schemas/werb-session.schema.json",
+  "title": "WerbSession",
+  "description": "A live record of a brew day. References a source recipe by ID and freezes a snapshot of it at session start so later edits to the recipe don't mutate the brew log.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "recipe_id", "status", "started_at", "steps"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique session ID (typically a UUID or ISO timestamp)."
+    },
+    "recipe_id": {
+      "type": "string",
+      "description": "Pointer to the source recipe (the LoadedRecipe.id, which is a file basename in v0)."
+    },
+    "recipe_name": {
+      "type": "string",
+      "description": "Human-readable recipe name, copied for offline display when the recipe file is unavailable."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "in_progress", "completed", "abandoned"]
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "steps": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/SessionStep" }
+    },
+    "measurements": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Measurement" },
+      "description": "Point-in-time readings logged during the brew. Optional in v0 (no UI yet)."
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "$defs": {
+    "SessionStep": {
+      "title": "SessionStep",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "label", "status"],
+      "properties": {
+        "id": { "type": "string" },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "mash",
+            "sparge",
+            "boil",
+            "hop_addition",
+            "whirlpool",
+            "chill",
+            "transfer",
+            "ferment_pitch",
+            "custom"
+          ]
+        },
+        "label": {
+          "type": "string",
+          "description": "Short human-readable label (e.g. 'Saccharification', 'Mosaic 30g flameout')."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "active", "done", "skipped"]
+        },
+        "started_at": { "type": "string", "format": "date-time" },
+        "completed_at": { "type": "string", "format": "date-time" },
+        "target_duration_min": {
+          "type": "number",
+          "description": "Planned duration. The Brew screen shows it as a countdown when the step is active."
+        },
+        "target_temperature_c": { "type": "number" },
+        "notes": { "type": "string" }
+      }
+    },
+    "Measurement": {
+      "title": "Measurement",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["at", "kind", "value"],
+      "properties": {
+        "at": { "type": "string", "format": "date-time" },
+        "kind": {
+          "type": "string",
+          "enum": ["temperature_c", "gravity_sg", "ph", "volume_l", "abv_pct"]
+        },
+        "value": { "type": "number" },
+        "step_id": { "type": "string" },
+        "notes": { "type": "string" }
+      }
+    }
+  }
+}

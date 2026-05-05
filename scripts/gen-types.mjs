@@ -26,6 +26,7 @@ const OUT_DIR = join(ROOT, "packages/types/src/generated");
 // `name` is the root TypeScript interface name produced by the generator.
 const TARGETS = [
   { schema: "werb-equipment.schema.json", name: "WerbEquipmentProfile" },
+  { schema: "werb-session.schema.json", name: "WerbSession" },
   { schema: "tools/ibu.input.schema.json", name: "IbuInput" },
   { schema: "tools/ibu.output.schema.json", name: "IbuOutput" },
   { schema: "tools/water.input.schema.json", name: "WaterInput" },

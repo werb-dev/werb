@@ -26,9 +26,11 @@ const TIMING_LABEL: Record<string, string> = {
 interface RecipeScreenProps {
   recipe: BeerJsonRecipe;
   onBack?: (() => void) | undefined;
+  onStartBrewing?: (() => void) | undefined;
+  hasActiveSession?: boolean | undefined;
 }
 
-export function RecipeScreen({ recipe, onBack }: RecipeScreenProps) {
+export function RecipeScreen({ recipe, onBack, onStartBrewing, hasActiveSession }: RecipeScreenProps) {
   const computed = useMemo(() => {
     const ibu = computeIbu(recipeToIbuInput(recipe));
     const water = computeWater(recipeToWaterInput(recipe));
@@ -92,6 +94,14 @@ export function RecipeScreen({ recipe, onBack }: RecipeScreenProps) {
             {recipe.efficiency?.brewhouse && ` · ${recipe.efficiency.brewhouse.value}% efficiency`}
             {recipe.type && ` · ${recipe.type}`}
           </p>
+          {onStartBrewing && (
+            <button
+              onClick={onStartBrewing}
+              className="mt-6 px-5 py-3 rounded-xl bg-accent text-bg text-body font-medium hover:opacity-90 transition-opacity"
+            >
+              {hasActiveSession ? "Resume brewing →" : "Start brewing →"}
+            </button>
+          )}
         </header>
 
         {/* ─── Targets vs computed strip ───────────────────────────────── */}
