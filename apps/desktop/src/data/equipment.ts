@@ -28,13 +28,29 @@ export function loadStore(): EquipmentStore {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return EMPTY_STORE;
     const parsed = JSON.parse(raw) as Partial<EquipmentStore>;
+    const profiles = (Array.isArray(parsed.profiles) ? parsed.profiles : []).map(migrateProfile);
     return {
-      profiles: Array.isArray(parsed.profiles) ? parsed.profiles : [],
+      profiles,
       activeId: typeof parsed.activeId === "string" ? parsed.activeId : null,
     };
   } catch {
     return EMPTY_STORE;
   }
+}
+
+/**
+ * Backfill optional sections that older saved profiles may not have. The
+ * editor displays defaults for missing sections but only writes on change,
+ * so a profile created before a section existed (e.g. `hlt` was added in
+ * a later version) silently lacks that section. Downstream consumers like
+ * the brew-screen HLT-fit warning rely on the section being present, so
+ * normalize on load.
+ */
+function migrateProfile(p: ProfileWithId): ProfileWithId {
+  return {
+    ...p,
+    hlt: p.hlt ?? { ...DEFAULT_PROFILE_VALUES.hlt },
+  };
 }
 
 export function saveStore(store: EquipmentStore): void {
