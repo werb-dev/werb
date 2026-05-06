@@ -279,9 +279,11 @@ pub struct Fermentable {
     /// Schema version.
     #[serde(default = "default_version")]
     pub version: u32,
-    /// Grain / sugar / extract / dry extract / adjunct.
-    #[serde(rename = "TYPE")]
-    pub fermentable_type: FermentableType,
+    /// Grain / sugar / extract / dry extract / adjunct. Optional in
+    /// practice — falls back to [`FermentableType::Adjunct`] via
+    /// [`Fermentable::effective_type`] when missing.
+    #[serde(default, rename = "TYPE")]
+    pub fermentable_type: Option<FermentableType>,
     /// Amount, in kilograms.
     pub amount: f64,
     /// Yield percentage — sugar potential as a fraction of dry weight.
@@ -299,6 +301,14 @@ pub struct Fermentable {
     /// Free-text notes.
     #[serde(default)]
     pub notes: Option<String>,
+}
+
+impl Fermentable {
+    /// Returns [`fermentable_type`](Self::fermentable_type) or, when
+    /// absent, falls back to [`FermentableType::Adjunct`].
+    pub fn effective_type(&self) -> FermentableType {
+        self.fermentable_type.clone().unwrap_or(FermentableType::Adjunct)
+    }
 }
 
 /// Kind of fermentable.
@@ -336,11 +346,14 @@ pub struct Yeast {
     /// Schema version.
     #[serde(default = "default_version")]
     pub version: u32,
-    /// Yeast family — Ale, Lager, Wheat, Wine, Champagne.
-    #[serde(rename = "TYPE")]
-    pub yeast_type: YeastType,
-    /// Liquid, dry, slant, or culture.
-    pub form: YeastForm,
+    /// Yeast family — Ale, Lager, Wheat, Wine, Champagne. Optional —
+    /// falls back to [`YeastType::Ale`] via [`Yeast::effective_type`].
+    #[serde(default, rename = "TYPE")]
+    pub yeast_type: Option<YeastType>,
+    /// Liquid, dry, slant, or culture. Optional — falls back to
+    /// [`YeastForm::Dry`] via [`Yeast::effective_form`].
+    #[serde(default)]
+    pub form: Option<YeastForm>,
     /// Amount in liters (for liquid) or kilograms (for dry, when
     /// `amount_is_weight` is true).
     pub amount: f64,
@@ -356,6 +369,20 @@ pub struct Yeast {
     /// Apparent attenuation, in percent.
     #[serde(default)]
     pub attenuation: Option<f64>,
+}
+
+impl Yeast {
+    /// Returns [`yeast_type`](Self::yeast_type) or, when absent, falls
+    /// back to [`YeastType::Ale`] — by far the most common case.
+    pub fn effective_type(&self) -> YeastType {
+        self.yeast_type.clone().unwrap_or(YeastType::Ale)
+    }
+
+    /// Returns [`form`](Self::form) or, when absent, falls back to
+    /// [`YeastForm::Dry`].
+    pub fn effective_form(&self) -> YeastForm {
+        self.form.clone().unwrap_or(YeastForm::Dry)
+    }
 }
 
 /// Yeast family.
@@ -472,9 +499,10 @@ pub struct MashStep {
     /// Schema version.
     #[serde(default = "default_version")]
     pub version: u32,
-    /// Infusion / temperature / decoction.
-    #[serde(rename = "TYPE")]
-    pub step_type: MashStepType,
+    /// Infusion / temperature / decoction. Optional — falls back to
+    /// [`MashStepType::Infusion`] via [`MashStep::effective_type`].
+    #[serde(default, rename = "TYPE")]
+    pub step_type: Option<MashStepType>,
     /// Volume of water added at this step, in liters (for infusion steps).
     #[serde(default)]
     pub infuse_amount: Option<f64>,
@@ -488,6 +516,14 @@ pub struct MashStep {
     /// End temperature for ramped steps, in °C.
     #[serde(default)]
     pub end_temp: Option<f64>,
+}
+
+impl MashStep {
+    /// Returns [`step_type`](Self::step_type) or, when absent, falls
+    /// back to [`MashStepType::Infusion`].
+    pub fn effective_type(&self) -> MashStepType {
+        self.step_type.clone().unwrap_or(MashStepType::Infusion)
+    }
 }
 
 /// Kind of mash step.

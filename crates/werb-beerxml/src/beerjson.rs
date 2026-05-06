@@ -165,7 +165,7 @@ fn style_to_beerjson(s: &Style) -> Value {
 fn fermentable_to_beerjson(f: &Fermentable) -> Value {
     let mut obj = Map::new();
     obj.insert("name".into(), Value::String(f.name.clone()));
-    obj.insert("type".into(), Value::String(fermentable_type_to_beerjson(&f.fermentable_type)));
+    obj.insert("type".into(), Value::String(fermentable_type_to_beerjson(&f.effective_type())));
     obj.insert("amount".into(), mass_kg(f.amount));
     if let Some(y) = f.yield_pct {
         obj.insert("yield".into(), json!({ "fine_grind": percent(y) }));
@@ -238,8 +238,8 @@ fn hop_form_to_beerjson(f: &HopForm) -> String {
 fn yeast_to_beerjson(y: &Yeast) -> Value {
     let mut obj = Map::new();
     obj.insert("name".into(), Value::String(y.name.clone()));
-    obj.insert("type".into(), Value::String(yeast_type_to_beerjson(&y.yeast_type)));
-    obj.insert("form".into(), Value::String(yeast_form_to_beerjson(&y.form)));
+    obj.insert("type".into(), Value::String(yeast_type_to_beerjson(&y.effective_type())));
+    obj.insert("form".into(), Value::String(yeast_form_to_beerjson(&y.effective_form())));
     if y.amount_is_weight.unwrap_or(false) {
         obj.insert("amount".into(), mass_kg(y.amount));
     } else {
@@ -313,7 +313,7 @@ fn misc_use_to_beerjson(u: &MiscUse) -> String {
 fn mash_step_to_beerjson(s: &MashStep) -> Value {
     let mut obj = Map::new();
     obj.insert("name".into(), Value::String(s.name.clone()));
-    obj.insert("type".into(), Value::String(mash_step_type_to_beerjson(&s.step_type)));
+    obj.insert("type".into(), Value::String(mash_step_type_to_beerjson(&s.effective_type())));
     obj.insert("step_temperature".into(), temperature_c(s.step_temp));
     obj.insert("step_time".into(), minutes(s.step_time));
     if let Some(infuse) = s.infuse_amount {

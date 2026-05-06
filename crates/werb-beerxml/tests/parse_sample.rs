@@ -19,6 +19,53 @@ fn parses_top_level_recipe_metadata() {
 }
 
 #[test]
+fn missing_type_on_nested_elements_falls_back() {
+    let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+<RECIPES>
+  <RECIPE>
+    <NAME>Type-less Recipe</NAME>
+    <VERSION>1</VERSION>
+    <BATCH_SIZE>20.0</BATCH_SIZE>
+    <FERMENTABLES>
+      <FERMENTABLE>
+        <NAME>Mystery malt</NAME>
+        <VERSION>1</VERSION>
+        <AMOUNT>5.0</AMOUNT>
+      </FERMENTABLE>
+    </FERMENTABLES>
+    <YEASTS>
+      <YEAST>
+        <NAME>Mystery yeast</NAME>
+        <VERSION>1</VERSION>
+        <AMOUNT>0.011</AMOUNT>
+      </YEAST>
+    </YEASTS>
+    <MASH>
+      <NAME>Single rest</NAME>
+      <VERSION>1</VERSION>
+      <MASH_STEPS>
+        <MASH_STEP>
+          <NAME>Sacc</NAME>
+          <VERSION>1</VERSION>
+          <STEP_TEMP>67.0</STEP_TEMP>
+          <STEP_TIME>60.0</STEP_TIME>
+        </MASH_STEP>
+      </MASH_STEPS>
+    </MASH>
+  </RECIPE>
+</RECIPES>"#;
+    let r = parse_one(xml).expect("missing nested TYPE/FORM should not fail parse");
+    let f = &r.fermentables.unwrap().items[0];
+    assert_eq!(f.effective_type(), FermentableType::Adjunct);
+    let y = &r.yeasts.unwrap().items[0];
+    assert_eq!(y.effective_type(), YeastType::Ale);
+    assert_eq!(y.effective_form(), YeastForm::Dry);
+    let m = &r.mash.unwrap().mash_steps.unwrap().items[0];
+    use werb_beerxml::MashStepType;
+    assert_eq!(m.effective_type(), MashStepType::Infusion);
+}
+
+#[test]
 fn missing_optional_fields_use_sensible_defaults() {
     let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
 <RECIPES>
@@ -56,7 +103,7 @@ fn parses_fermentables() {
     let f = r.fermentables.as_ref().unwrap();
     assert_eq!(f.items.len(), 2);
     assert_eq!(f.items[0].name, "Pale 2-Row");
-    assert_eq!(f.items[0].fermentable_type, FermentableType::Grain);
+    assert_eq!(f.items[0].effective_type(), FermentableType::Grain);
     assert!((f.items[0].amount - 4.5).abs() < 1e-9);
     assert_eq!(f.items[1].color, Some(60.0));
 }
@@ -79,8 +126,8 @@ fn parses_yeasts() {
     assert_eq!(y.items.len(), 1);
     let yeast = &y.items[0];
     assert_eq!(yeast.name, "Safale US-05");
-    assert_eq!(yeast.yeast_type, YeastType::Ale);
-    assert_eq!(yeast.form, YeastForm::Dry);
+    assert_eq!(yeast.effective_type(), YeastType::Ale);
+    assert_eq!(yeast.effective_form(), YeastForm::Dry);
     assert_eq!(yeast.amount_is_weight, Some(true));
     assert_eq!(yeast.product_id.as_deref(), Some("US-05"));
 }
