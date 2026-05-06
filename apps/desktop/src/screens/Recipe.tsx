@@ -32,11 +32,12 @@ interface RecipeScreenProps {
   activeProfile?: ProfileWithId | undefined;
   onBack?: (() => void) | undefined;
   onStartBrewing?: (() => void) | undefined;
+  onEdit?: (() => void) | undefined;
   onApplyScaled?: ((scaled: BeerJsonRecipe) => void) | undefined;
   hasActiveSession?: boolean | undefined;
 }
 
-export function RecipeScreen({ recipe, activeProfile, onBack, onStartBrewing, onApplyScaled, hasActiveSession }: RecipeScreenProps) {
+export function RecipeScreen({ recipe, activeProfile, onBack, onStartBrewing, onEdit, onApplyScaled, hasActiveSession }: RecipeScreenProps) {
   const computed = useMemo(() => {
     const ibu = computeIbu(recipeToIbuInput(recipe));
     const water = computeWater(recipeToWaterInput(recipe, profileToWaterOverrides(activeProfile)));
@@ -115,6 +116,14 @@ export function RecipeScreen({ recipe, activeProfile, onBack, onStartBrewing, on
                 recipe={recipe}
                 profile={activeProfile}
               />
+            )}
+            {onEdit && (
+              <button
+                onClick={onEdit}
+                className="px-4 py-3 rounded-xl bg-surface-raised border border-border text-body-sm font-medium hover:border-accent hover:text-accent transition-colors"
+              >
+                Edit recipe
+              </button>
             )}
           </div>
         </header>

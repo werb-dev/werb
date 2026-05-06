@@ -2,6 +2,7 @@ import { useState } from "react";
 import { DesignTokensShowcase } from "./design-tokens-showcase.tsx";
 import { LibraryScreen } from "./screens/Library.tsx";
 import { RecipeScreen } from "./screens/Recipe.tsx";
+import { RecipeEditor } from "./screens/RecipeEditor.tsx";
 import { BrewScreen } from "./screens/Brew.tsx";
 import { EquipmentScreen } from "./screens/Equipment.tsx";
 import { useRecipes } from "./hooks/useRecipes.ts";
@@ -11,6 +12,7 @@ import { BUNDLED_SAMPLES, importBeerJsonFromDisk, importBeerXmlFromDisk } from "
 type AppState =
   | { view: "library" }
   | { view: "recipe"; recipeId: string }
+  | { view: "edit_recipe"; recipeId: string }
   | { view: "brew"; recipeId: string }
   | { view: "equipment" }
   | { view: "tokens" };
@@ -32,6 +34,7 @@ export function App() {
 
   const goLibrary = () => setState({ view: "library" });
   const goRecipe = (recipeId: string) => setState({ view: "recipe", recipeId });
+  const goEditRecipe = (recipeId: string) => setState({ view: "edit_recipe", recipeId });
   const goBrew = (recipeId: string) => setState({ view: "brew", recipeId });
   const goEquipment = () => setState({ view: "equipment" });
   const goTokens = () => setState({ view: "tokens" });
@@ -49,12 +52,26 @@ export function App() {
           activeProfile={profile}
           onBack={goLibrary}
           onStartBrewing={() => goBrew(state.recipeId)}
+          onEdit={() => goEditRecipe(state.recipeId)}
           onApplyScaled={
             profile
               ? (scaled) => recipesApi.update(state.recipeId, scaled)
               : undefined
           }
           hasActiveSession={hasSessionFor(state.recipeId)}
+        />
+      );
+    }
+  } else if (state.view === "edit_recipe") {
+    const loaded = recipesApi.recipes.find((r) => r.id === state.recipeId);
+    if (!loaded) {
+      screen = <Missing recipeId={state.recipeId} onBack={goLibrary} />;
+    } else {
+      screen = (
+        <RecipeEditor
+          recipe={loaded.recipe}
+          onClose={() => goRecipe(state.recipeId)}
+          onSave={(updated) => recipesApi.update(state.recipeId, updated)}
         />
       );
     }
