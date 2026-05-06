@@ -34,6 +34,7 @@ interface BrewContext {
   boilHops: BoilHop[];
   cultures: BeerJsonRecipe["ingredients"]["culture_additions"];
   hltFit: HltFit | null;
+  kettleFit: KettleFit | null;
 }
 
 /**
@@ -48,6 +49,10 @@ type HltFit =
   | { kind: "two_heats"; strikeL: number; spargeL: number; capacityL: number }
   | { kind: "overflow"; volumeL: number; capacityL: number; which: "strike" | "sparge" };
 
+type KettleFit =
+  | { kind: "ok" }
+  | { kind: "overflow"; preBoilL: number; capacityL: number };
+
 function checkHltFit(water: WaterOutput, profile: ProfileWithId | undefined): HltFit | null {
   const capacityL = profile?.hlt?.capacity_l;
   if (!capacityL || capacityL <= 0) return null;
@@ -57,6 +62,15 @@ function checkHltFit(water: WaterOutput, profile: ProfileWithId | undefined): Hl
   if (strikeL > usableL) return { kind: "overflow", volumeL: strikeL, capacityL: usableL, which: "strike" };
   if (spargeL > usableL) return { kind: "overflow", volumeL: spargeL, capacityL: usableL, which: "sparge" };
   if (strikeL + spargeL > usableL) return { kind: "two_heats", strikeL, spargeL, capacityL: usableL };
+  return { kind: "ok" };
+}
+
+function checkKettleFit(water: WaterOutput, profile: ProfileWithId | undefined): KettleFit | null {
+  const capacityL = profile?.kettle?.capacity_l;
+  if (!capacityL || capacityL <= 0) return null;
+  const usableL = capacityL - (profile.kettle?.dead_space_l ?? 0);
+  const preBoilL = water.pre_boil_volume_l;
+  if (preBoilL > usableL) return { kind: "overflow", preBoilL, capacityL: usableL };
   return { kind: "ok" };
 }
 
@@ -86,7 +100,8 @@ export function BrewScreen({ recipeId, recipe, activeProfile, onBack }: BrewScre
       }));
     const cultures = recipe.ingredients.culture_additions;
     const hltFit = checkHltFit(water, activeProfile);
-    return { water, totalGrainKg, totalMashedKg, boilHops, cultures, hltFit };
+    const kettleFit = checkKettleFit(water, activeProfile);
+    return { water, totalGrainKg, totalMashedKg, boilHops, cultures, hltFit, kettleFit };
   }, [recipe, activeProfile]);
 
   if (!brew.session) {
@@ -106,6 +121,7 @@ export function BrewScreen({ recipeId, recipe, activeProfile, onBack }: BrewScre
         />
 
         {ctx.hltFit && ctx.hltFit.kind !== "ok" && <HltFitBanner fit={ctx.hltFit} />}
+        {ctx.kettleFit && ctx.kettleFit.kind !== "ok" && <KettleFitBanner fit={ctx.kettleFit} />}
 
         {activeStep ? (
           <ActiveStepCard
@@ -234,6 +250,21 @@ function HltFitBanner({ fit }: { fit: Exclude<HltFit, { kind: "ok" }> }) {
         {" "}
         {(fit.strikeL + fit.spargeL).toFixed(1)} L exceeds your HLT capacity (
         {fit.capacityL.toFixed(1)} L). Heat strike first, drain to mash, then heat sparge.
+      </p>
+    </section>
+  );
+}
+
+function KettleFitBanner({ fit }: { fit: Exclude<KettleFit, { kind: "ok" }> }) {
+  return (
+    <section className="mb-8 rounded-xl border border-danger bg-danger/10 px-5 py-4">
+      <p className="text-caption uppercase tracking-widest text-danger font-medium">
+        Kettle too small
+      </p>
+      <p className="text-body-sm text-text mt-1">
+        Pre-boil volume ({fit.preBoilL.toFixed(1)} L) exceeds your kettle usable
+        capacity ({fit.capacityL.toFixed(1)} L). You'll boil over — reduce batch size
+        or use a bigger kettle.
       </p>
     </section>
   );
