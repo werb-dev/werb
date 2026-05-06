@@ -239,6 +239,21 @@ describe("recipeToScaleInput / applyScale — Double IPA fixture", () => {
     expect(before).toBe(after);
   });
 
+  it("applyScale scales mash step infuse amounts by volume_factor", () => {
+    // Without this, the water calc derives mash thickness from a
+    // fixed-volume strike against a shrunken grain bill — sparge
+    // explodes to compensate.
+    const out = computeScale(recipeToScaleInput(recipe, { batch_size_l: 10, efficiency_pct: 75 }));
+    const scaled = applyScale(recipe, out);
+    const origStep = recipe.mash!.mash_steps[0]!;
+    const newStep = scaled.mash!.mash_steps[0]!;
+    if (origStep.amount && newStep.amount) {
+      expect(newStep.amount.value).toBeCloseTo(origStep.amount.value * out.volume_factor, 6);
+    } else {
+      throw new Error("fixture must have a mash step with an amount for this test");
+    }
+  });
+
   it("identity scale (same target) leaves amounts within rounding error", () => {
     const target = {
       batch_size_l: recipe.batch_size.value,
