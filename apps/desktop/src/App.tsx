@@ -72,10 +72,10 @@ export function App() {
   } else {
     screen = (
       <LibraryScreen
+        recipes={recipesApi.recipes}
         onSelect={goRecipe}
         activeProfile={equipmentApi.activeProfile}
         onGoEquipment={goEquipment}
-        {...recipesApi}
       />
     );
   }

@@ -2,28 +2,58 @@ import type { BeerJsonFile, BeerJsonRecipe } from "@werb/adapters";
 import { validateBeerJson } from "@werb/validate";
 
 /**
- * Recipe data layer.
+ * Recipe storage layer.
  *
- * Two sources today:
- *   1. BUNDLED — examples/*.beerjson, glob-imported at build time. Always
- *      available, used until the user picks a working directory.
- *   2. DISK — a Tauri-fs-loaded directory of .beerjson files. Activated by
- *      the user via the Library "Open folder" action. Persisted across
- *      launches via localStorage.
- *
- * Both sources produce the same `LoadedRecipe` shape so the rest of the app
- * doesn't care where a recipe came from.
+ * One JSON blob in localStorage holds the user's recipe list. Each entry
+ * carries a stable ID, the recipe itself (BeerJSON shape), and timestamps.
+ * Mirrors the equipment-profile pattern — the app is the source of truth,
+ * disk files are an import/export concern.
  */
 
-export interface LoadedRecipe {
-  /** Stable ID derived from the file basename (no extension). */
+export interface StoredRecipe {
   id: string;
-  /** Source file path, useful for debugging. */
-  path: string;
   recipe: BeerJsonRecipe;
+  createdAt: string;
+  updatedAt: string;
 }
 
-// ─── Bundled examples (Vite glob, eager) ──────────────────────────────────
+interface RecipeStore {
+  recipes: StoredRecipe[];
+}
+
+const STORAGE_KEY = "werb.recipes";
+
+const EMPTY_STORE: RecipeStore = { recipes: [] };
+
+export function loadStore(): RecipeStore {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return EMPTY_STORE;
+    const parsed = JSON.parse(raw) as Partial<RecipeStore>;
+    return {
+      recipes: Array.isArray(parsed.recipes) ? parsed.recipes : [],
+    };
+  } catch {
+    return EMPTY_STORE;
+  }
+}
+
+export function saveStore(store: RecipeStore): void {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+}
+
+export function generateId(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `r-${Math.random().toString(36).slice(2, 11)}`;
+}
+
+// ─── Bundled sample recipes (Vite glob, eager) ────────────────────────────
+//
+// Kept around so the import-samples action can push them into the store on
+// demand. Not loaded automatically — the store stays empty until the user
+// imports something explicitly.
 
 const bundledRaw = import.meta.glob("../../../../examples/*.beerjson", {
   query: "?raw",
@@ -31,92 +61,25 @@ const bundledRaw = import.meta.glob("../../../../examples/*.beerjson", {
   eager: true,
 }) as Record<string, string>;
 
-function basename(path: string): string {
-  const last = path.split("/").pop() ?? path;
-  return last.replace(/\.beerjson$/, "");
-}
-
-function parseAndCollect(
-  path: string,
-  raw: string,
-  warn: (msg: string, errors?: unknown) => void = console.warn,
-): LoadedRecipe[] {
+function parseAndCollect(path: string, raw: string): BeerJsonRecipe[] {
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
   } catch (err) {
-    warn(`[recipes] ${path}: invalid JSON — ${(err as Error).message}`);
+    console.warn(`[recipes] ${path}: invalid JSON — ${(err as Error).message}`);
     return [];
   }
   const result = validateBeerJson(parsed);
   if (!result.valid) {
-    warn(
+    console.warn(
       `[recipes] ${path}: failed BeerJSON 2.x validation, skipping`,
       result.errors.slice(0, 5),
     );
     return [];
   }
-  const recipes = (parsed as BeerJsonFile).beerjson?.recipes ?? [];
-  return recipes.map((recipe, index) => ({
-    id: recipes.length === 1 ? basename(path) : `${basename(path)}-${index}`,
-    path,
-    recipe,
-  }));
+  return (parsed as BeerJsonFile).beerjson?.recipes ?? [];
 }
 
-export const BUNDLED_RECIPES: LoadedRecipe[] = Object.entries(bundledRaw)
+export const BUNDLED_SAMPLES: BeerJsonRecipe[] = Object.entries(bundledRaw)
   .flatMap(([path, raw]) => parseAndCollect(path, raw))
-  .sort((a, b) => a.recipe.name.localeCompare(b.recipe.name));
-
-// ─── Disk loader (Tauri only) ─────────────────────────────────────────────
-
-export interface DiskLoadResult {
-  recipes: LoadedRecipe[];
-  /** Files that failed parse or validation, surfaced to the UI. */
-  skipped: { path: string; reason: string }[];
-}
-
-export async function loadRecipesFromDirectory(directory: string): Promise<DiskLoadResult> {
-  const { readDir, readTextFile } = await import("@tauri-apps/plugin-fs");
-  const entries = await readDir(directory);
-  const files = entries.filter((e) => e.isFile && e.name.endsWith(".beerjson"));
-
-  const recipes: LoadedRecipe[] = [];
-  const skipped: DiskLoadResult["skipped"] = [];
-
-  for (const f of files) {
-    const filePath = `${directory}/${f.name}`;
-    let raw: string;
-    try {
-      raw = await readTextFile(filePath);
-    } catch (err) {
-      skipped.push({ path: filePath, reason: `read error: ${(err as Error).message}` });
-      continue;
-    }
-    let firstError: string | null = null;
-    const collected = parseAndCollect(filePath, raw, (msg, errors) => {
-      if (firstError) return;
-      const tail = errors ? ` (${JSON.stringify(errors).slice(0, 160)})` : "";
-      firstError = `${msg.replace(/^\[recipes\] /, "")}${tail}`;
-    });
-    if (collected.length === 0 && firstError) {
-      skipped.push({ path: filePath, reason: firstError });
-    }
-    recipes.push(...collected);
-  }
-
-  recipes.sort((a, b) => a.recipe.name.localeCompare(b.recipe.name));
-  return { recipes, skipped };
-}
-
-// ─── Folder picker ────────────────────────────────────────────────────────
-
-export async function pickWorkingDirectory(): Promise<string | null> {
-  const { open } = await import("@tauri-apps/plugin-dialog");
-  const selected = await open({
-    directory: true,
-    multiple: false,
-    title: "Pick a folder of .beerjson recipes",
-  });
-  return typeof selected === "string" ? selected : null;
-}
+  .sort((a, b) => a.name.localeCompare(b.name));

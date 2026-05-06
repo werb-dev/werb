@@ -7,19 +7,11 @@ import {
   type BeerJsonRecipe,
 } from "@werb/adapters";
 import { computeIbu, computeWater } from "@werb/calc";
-import type { LoadedRecipe } from "../data/recipes.ts";
-import type { RecipeSource } from "../hooks/useRecipes.ts";
+import type { StoredRecipe } from "../data/recipes.ts";
 import { profileToWaterOverrides, type ProfileWithId } from "../data/equipment.ts";
 
 interface LibraryScreenProps {
-  recipes: LoadedRecipe[];
-  source: RecipeSource;
-  loading: boolean;
-  error: string | null;
-  skipped: { path: string; reason: string }[];
-  pickFolder: () => Promise<void>;
-  useBundled: () => void;
-  refresh: () => Promise<void>;
+  recipes: StoredRecipe[];
   onSelect: (id: string) => void;
   activeProfile?: ProfileWithId | undefined;
   onGoEquipment: () => void;
@@ -27,97 +19,23 @@ interface LibraryScreenProps {
 
 export function LibraryScreen({
   recipes,
-  source,
-  loading,
-  error,
-  skipped,
-  pickFolder,
-  useBundled,
-  refresh,
   onSelect,
   activeProfile,
   onGoEquipment,
 }: LibraryScreenProps) {
-  const isDisk = source.type === "disk";
-
   return (
     <div className="min-h-dvh bg-bg text-text">
       <main className="mx-auto max-w-5xl px-8 py-12">
         <header className="mb-12">
           <p className="text-caption uppercase tracking-widest text-text-muted">
             Werb · {recipes.length} recipe{recipes.length === 1 ? "" : "s"}
-            {isDisk ? " · disk" : " · bundled examples"}
           </p>
           <h1 className="text-h1 font-semibold mt-3">Library</h1>
           <ProfileBadge profile={activeProfile} onGoEquipment={onGoEquipment} />
-          {isDisk ? (
-            <p className="text-body text-text-muted mt-2 font-mono break-all">
-              {source.path}
-            </p>
-          ) : (
-            <p className="text-body text-text-muted mt-2 max-w-2xl">
-              Showing the bundled examples. Pick a folder of{" "}
-              <code className="font-mono text-mono">.beerjson</code> files to
-              load your own.
-            </p>
-          )}
-
-          <div className="flex flex-wrap gap-2 mt-5">
-            <button
-              onClick={pickFolder}
-              disabled={loading}
-              className="px-4 py-2 rounded-lg bg-accent text-bg text-body-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
-            >
-              {loading ? "Loading…" : isDisk ? "Change folder" : "Open folder"}
-            </button>
-            {isDisk && (
-              <>
-                <button
-                  onClick={refresh}
-                  disabled={loading}
-                  className="px-4 py-2 rounded-lg bg-surface-raised border border-border text-body-sm font-medium hover:border-border-strong disabled:opacity-50 transition-colors"
-                >
-                  Refresh
-                </button>
-                <button
-                  onClick={useBundled}
-                  disabled={loading}
-                  className="px-4 py-2 rounded-lg bg-surface-raised border border-border text-text-muted text-body-sm font-medium hover:text-text disabled:opacity-50 transition-colors"
-                >
-                  Use bundled examples
-                </button>
-              </>
-            )}
-          </div>
-
-          {error && (
-            <div className="mt-5 rounded-lg border border-warning bg-surface p-4">
-              <p className="text-caption uppercase tracking-widest text-warning font-medium">
-                Couldn't load folder
-              </p>
-              <p className="text-body-sm text-text mt-2 font-mono break-all">{error}</p>
-            </div>
-          )}
-
-          {skipped.length > 0 && (
-            <details className="mt-5 rounded-lg bg-surface border border-border p-4">
-              <summary className="text-body-sm font-medium cursor-pointer">
-                {skipped.length} file{skipped.length === 1 ? "" : "s"} skipped
-              </summary>
-              <ul className="mt-3 space-y-2">
-                {skipped.map((s, i) => (
-                  <li key={i} className="text-caption font-mono text-text-muted break-all">
-                    <span className="text-warning">✗</span>{" "}
-                    {s.path.split("/").pop()} — {s.reason}
-                  </li>
-                ))}
-              </ul>
-            </details>
-          )}
         </header>
 
         {recipes.length === 0 ? (
-          <EmptyState isDisk={isDisk} />
+          <EmptyState />
         ) : (
           <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {recipes.map(({ id, recipe }) => (
@@ -292,13 +210,13 @@ function ProfileBadge({
   );
 }
 
-function EmptyState({ isDisk }: { isDisk: boolean }) {
+function EmptyState() {
   return (
     <div className="rounded-xl bg-surface border border-border border-dashed p-12 text-center">
-      <p className="text-body text-text-muted">
-        {isDisk
-          ? "No .beerjson files found in this folder."
-          : "No bundled examples found — check examples/ exists at the workspace root."}
+      <p className="text-body text-text">No recipes yet.</p>
+      <p className="text-body-sm text-text-muted mt-2 max-w-md mx-auto">
+        Import a sample, open a <code className="font-mono">.beerjson</code> file, or paste
+        a BeerXML — coming up next.
       </p>
     </div>
   );

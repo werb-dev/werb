@@ -1,99 +1,79 @@
-import { useCallback, useEffect, useState } from "react";
-import { isTauri } from "@tauri-apps/api/core";
+import { useCallback, useState } from "react";
+import type { BeerJsonRecipe } from "@werb/adapters";
 import {
-  BUNDLED_RECIPES,
-  loadRecipesFromDirectory,
-  pickWorkingDirectory,
-  type LoadedRecipe,
+  generateId,
+  loadStore,
+  saveStore,
+  type StoredRecipe,
 } from "../data/recipes.ts";
 
-const STORAGE_KEY = "werb.workingDirectory";
-
-export type RecipeSource =
-  | { type: "bundled" }
-  | { type: "disk"; path: string };
-
-interface RecipesState {
-  recipes: LoadedRecipe[];
-  source: RecipeSource;
-  loading: boolean;
-  error: string | null;
-  skipped: { path: string; reason: string }[];
-}
-
-const INITIAL: RecipesState = {
-  recipes: BUNDLED_RECIPES,
-  source: { type: "bundled" },
-  loading: false,
-  error: null,
-  skipped: [],
-};
-
+/**
+ * Recipe state. Mirrors localStorage; every mutation persists.
+ * Returned API: list of recipes plus CRUD actions. Imports (bundled samples,
+ * .beerjson files, BeerXML) all go through `create`.
+ */
 export function useRecipes() {
-  const [state, setState] = useState<RecipesState>(INITIAL);
+  const [store, setStore] = useState(() => loadStore());
 
-  const loadFromDisk = useCallback(async (path: string) => {
-    setState((s) => ({ ...s, loading: true, error: null }));
-    try {
-      const { recipes, skipped } = await loadRecipesFromDirectory(path);
-      setState({
-        recipes,
-        source: { type: "disk", path },
-        loading: false,
-        error: null,
-        skipped,
-      });
-    } catch (err) {
-      setState({
-        ...INITIAL,
-        error: `Failed to load from ${path}: ${(err as Error).message}`,
-      });
-      // Don't clobber localStorage — user might fix permissions and reload.
-    }
+  const persist = useCallback((next: typeof store) => {
+    saveStore(next);
+    setStore(next);
   }, []);
 
-  const pickFolder = useCallback(async () => {
-    if (!isTauri()) {
-      setState((s) => ({
-        ...s,
-        error: "Folder picking requires the desktop app (run pnpm tauri:dev).",
+  const create = useCallback(
+    (recipe: BeerJsonRecipe): StoredRecipe => {
+      const now = new Date().toISOString();
+      const fresh: StoredRecipe = {
+        id: generateId(),
+        recipe,
+        createdAt: now,
+        updatedAt: now,
+      };
+      persist({ recipes: [...store.recipes, fresh] });
+      return fresh;
+    },
+    [store, persist],
+  );
+
+  const createMany = useCallback(
+    (recipes: BeerJsonRecipe[]): StoredRecipe[] => {
+      const now = new Date().toISOString();
+      const fresh = recipes.map<StoredRecipe>((recipe) => ({
+        id: generateId(),
+        recipe,
+        createdAt: now,
+        updatedAt: now,
       }));
-      return;
-    }
-    const path = await pickWorkingDirectory();
-    if (!path) return; // User cancelled.
-    localStorage.setItem(STORAGE_KEY, path);
-    await loadFromDisk(path);
-  }, [loadFromDisk]);
+      persist({ recipes: [...store.recipes, ...fresh] });
+      return fresh;
+    },
+    [store, persist],
+  );
 
-  const useBundled = useCallback(() => {
-    localStorage.removeItem(STORAGE_KEY);
-    setState(INITIAL);
-  }, []);
+  const update = useCallback(
+    (id: string, recipe: BeerJsonRecipe) => {
+      const now = new Date().toISOString();
+      persist({
+        recipes: store.recipes.map((r) =>
+          r.id === id ? { ...r, recipe, updatedAt: now } : r,
+        ),
+      });
+    },
+    [store, persist],
+  );
 
-  const refresh = useCallback(async () => {
-    if (state.source.type === "disk") {
-      await loadFromDisk(state.source.path);
-    }
-  }, [state.source, loadFromDisk]);
-
-  // On mount: rehydrate from localStorage if a directory was previously picked.
-  useEffect(() => {
-    if (!isTauri()) return;
-    const persisted = localStorage.getItem(STORAGE_KEY);
-    if (persisted) {
-      void loadFromDisk(persisted);
-    }
-  }, [loadFromDisk]);
+  const remove = useCallback(
+    (id: string) => {
+      persist({ recipes: store.recipes.filter((r) => r.id !== id) });
+    },
+    [store, persist],
+  );
 
   return {
-    recipes: state.recipes,
-    source: state.source,
-    loading: state.loading,
-    error: state.error,
-    skipped: state.skipped,
-    pickFolder,
-    useBundled,
-    refresh,
+    recipes: store.recipes,
+    create,
+    createMany,
+    update,
+    remove,
   };
 }
