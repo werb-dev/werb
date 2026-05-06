@@ -259,6 +259,38 @@ export function RecipeScreen({ recipe, activeProfile, onBack, onStartBrewing, on
           </ul>
         </Section>
 
+        {/* ─── Miscellaneous additions ─────────────────────────────────── */}
+        {recipe.ingredients.miscellaneous_additions &&
+          recipe.ingredients.miscellaneous_additions.length > 0 && (
+            <Section title="Miscellaneous">
+              <ul className="rounded-xl bg-surface border border-border divide-y divide-border">
+                {recipe.ingredients.miscellaneous_additions.map((m, i) => {
+                  const useLabel = TIMING_LABEL[m.timing?.use ?? ""] ?? null;
+                  const time = m.timing?.time ? toMinutes(m.timing.time) : 0;
+                  const amount = isMass(m.amount)
+                    ? `${toGrams(m.amount).toFixed(0)} g`
+                    : isVolume(m.amount)
+                    ? `${toLiters(m.amount).toFixed(2)} L`
+                    : "—";
+                  return (
+                    <li key={i} className="px-6 py-5 flex items-baseline justify-between gap-6">
+                      <div className="min-w-0">
+                        <p className="text-body font-medium truncate">{m.name}</p>
+                        <p className="text-body-sm text-text-muted mt-1">
+                          {m.type && <span className="capitalize">{m.type}</span>}
+                          {useLabel && ` · ${useLabel}`}
+                          {time > 0 && ` · ${time.toFixed(0)} min`}
+                          {m.notes && ` · ${m.notes}`}
+                        </p>
+                      </div>
+                      <div className="font-mono text-mono-lg shrink-0">{amount}</div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </Section>
+          )}
+
         {/* ─── Mash schedule ───────────────────────────────────────────── */}
         {recipe.mash && recipe.mash.mash_steps.length > 0 && (
           <Section

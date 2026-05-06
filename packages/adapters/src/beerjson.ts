@@ -28,7 +28,7 @@ export interface BeerJsonRecipe {
     fermentable_additions: FermentableAddition[];
     hop_additions?: HopAddition[];
     culture_additions?: CultureAddition[];
-    miscellaneous_additions?: unknown[];
+    miscellaneous_additions?: MiscAddition[];
     water_additions?: unknown[];
   };
   mash?: MashProcedure;
@@ -97,6 +97,14 @@ export type CultureType =
   | "malolactic"
   | "other"
   | "spontaneous";
+
+export interface MiscAddition {
+  name: string;
+  type?: string;
+  amount: MassType | VolumeType;
+  timing?: TimingType;
+  notes?: string;
+}
 
 export interface CultureAddition {
   name: string;

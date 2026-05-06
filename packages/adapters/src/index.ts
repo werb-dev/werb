@@ -7,6 +7,7 @@ export type {
   TimingType,
   CultureAddition,
   CultureType,
+  MiscAddition,
   MashProcedure,
   MashStep,
   VolumeType,
