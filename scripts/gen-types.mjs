@@ -37,6 +37,8 @@ const TARGETS = [
   { schema: "tools/gravity.output.schema.json", name: "GravityOutput" },
   { schema: "tools/scale.input.schema.json", name: "ScaleInput" },
   { schema: "tools/scale.output.schema.json", name: "ScaleOutput" },
+  { schema: "tools/strike-temp.input.schema.json", name: "StrikeTempInput" },
+  { schema: "tools/strike-temp.output.schema.json", name: "StrikeTempOutput" },
 ];
 
 const compileOpts = {

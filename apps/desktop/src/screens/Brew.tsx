@@ -432,6 +432,17 @@ interface StatLine {
 
 function stepStats(step: SessionStep, ctx: BrewContext): StatLine[] {
   switch (step.kind) {
+    case "prepare_water":
+      // Strike volume + a thickness reminder so the brewer can sanity-check
+      // before pouring.
+      if (ctx.totalMashedKg <= 0) return [];
+      return [
+        { value: `${ctx.water.mash_water_l.toFixed(1)} L`, label: "Strike volume" },
+        {
+          value: `${(ctx.water.mash_water_l / ctx.totalMashedKg).toFixed(2)} L/kg`,
+          label: "Thickness",
+        },
+      ];
     case "mash":
       if (ctx.totalMashedKg <= 0) return [];
       return [
@@ -782,6 +793,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function kindLabel(kind: SessionStep["kind"]): string {
   switch (kind) {
+    case "prepare_water": return "Prepare water";
     case "mash": return "Mash";
     case "sparge": return "Sparge";
     case "boil": return "Boil";

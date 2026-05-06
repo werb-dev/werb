@@ -32,7 +32,17 @@ export interface WerbSession {
 }
 export interface SessionStep {
   id: string;
-  kind: "mash" | "sparge" | "boil" | "hop_addition" | "whirlpool" | "chill" | "transfer" | "ferment_pitch" | "custom";
+  kind:
+    | "prepare_water"
+    | "mash"
+    | "sparge"
+    | "boil"
+    | "hop_addition"
+    | "whirlpool"
+    | "chill"
+    | "transfer"
+    | "ferment_pitch"
+    | "custom";
   /**
    * Short human-readable label (e.g. 'Saccharification', 'Mosaic 30g flameout').
    */

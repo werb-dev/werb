@@ -39,5 +39,9 @@ export {
   type ScaleTarget,
   type MashFitResult,
 } from "./recipe-to-scale.js";
+export {
+  recipeToStrikeTempInput,
+  type StrikeTempOptions,
+} from "./recipe-to-strike-temp.js";
 export { recipeToSessionPlan, type SessionPlanDeps } from "./recipe-to-session.js";
 export { srmToHex } from "./srm-color.js";

@@ -55,6 +55,7 @@
         "kind": {
           "type": "string",
           "enum": [
+            "prepare_water",
             "mash",
             "sparge",
             "boil",

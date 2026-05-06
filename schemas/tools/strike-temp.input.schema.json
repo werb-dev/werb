@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://werb.dev/schemas/tools/strike-temp.input.schema.json",
+  "title": "StrikeTempInput",
+  "description": "Normalized input for computing the strike water temperature needed to hit a target mash temperature when grain is added. Decoupled from BeerJSON: an adapter extracts these fields from a Recipe.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "mash_target_c",
+    "grain_temp_c",
+    "thickness_l_per_kg"
+  ],
+  "properties": {
+    "mash_target_c": {
+      "type": "number",
+      "description": "Desired mash rest temperature once grain has equilibrated, in °C."
+    },
+    "grain_temp_c": {
+      "type": "number",
+      "description": "Grain temperature at the moment of mash-in, in °C. Use ambient room temp if grain has been stored indoors."
+    },
+    "thickness_l_per_kg": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Mash thickness — liters of water per kg of grain. Typical: 1.5-3.5 L/kg."
+    },
+    "grain_specific_heat_ratio": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "default": 0.41,
+      "description": "Ratio of grain's specific heat to water's specific heat. Standard homebrew approximation: 0.41 (Palmer, 'How to Brew')."
+    }
+  }
+}

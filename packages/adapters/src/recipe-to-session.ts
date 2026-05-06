@@ -1,6 +1,8 @@
 import type { WerbSession, SessionStep } from "@werb/types";
 import type { BeerJsonRecipe } from "./beerjson.js";
 import { toCelsius, toMinutes } from "./units.js";
+import { computeStrikeTemp } from "@werb/calc";
+import { recipeToStrikeTempInput, type StrikeTempOptions } from "./recipe-to-strike-temp.js";
 
 /**
  * Initialize a brew session from a recipe.
@@ -20,6 +22,8 @@ import { toCelsius, toMinutes } from "./units.js";
 export interface SessionPlanDeps {
   now?: () => Date;
   id?: () => string;
+  /** Strike-temp tuning passed through to the prepare-water step. */
+  strikeTemp?: StrikeTempOptions;
 }
 
 export function recipeToSessionPlan(
@@ -37,6 +41,21 @@ export function recipeToSessionPlan(
 
   const startedAt = now().toISOString();
   const steps: SessionStep[] = [];
+
+  // Heat strike water to the temperature that will hit the recipe's mash
+  // target once cool grain is added. Inserted before mash so the brewer
+  // gets a dedicated timer/temperature target during the heat-up phase.
+  const strikeInput = recipeToStrikeTempInput(recipe, deps.strikeTemp ?? {});
+  if (strikeInput) {
+    const out = computeStrikeTemp(strikeInput);
+    steps.push({
+      id: id(),
+      kind: "prepare_water",
+      label: "Heat strike water",
+      status: "pending",
+      target_temperature_c: out.strike_temp_c,
+    });
+  }
 
   // Mash steps
   for (const step of recipe.mash?.mash_steps ?? []) {

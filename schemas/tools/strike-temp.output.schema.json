@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://werb.dev/schemas/tools/strike-temp.output.schema.json",
+  "title": "StrikeTempOutput",
+  "description": "Strike water temperature plus the inputs that drove the calculation, echoed for display.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "strike_temp_c",
+    "mash_target_c",
+    "grain_temp_c",
+    "thickness_l_per_kg"
+  ],
+  "properties": {
+    "strike_temp_c": {
+      "type": "number",
+      "description": "Temperature to heat the strike water to before doughing in, in °C."
+    },
+    "mash_target_c": {
+      "type": "number",
+      "description": "Echoed mash rest target temperature."
+    },
+    "grain_temp_c": {
+      "type": "number",
+      "description": "Echoed grain temperature."
+    },
+    "thickness_l_per_kg": {
+      "type": "number",
+      "description": "Echoed mash thickness."
+    }
+  }
+}

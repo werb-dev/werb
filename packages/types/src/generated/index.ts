@@ -10,3 +10,5 @@ export * from "./gravity.input.js";
 export * from "./gravity.output.js";
 export * from "./scale.input.js";
 export * from "./scale.output.js";
+export * from "./strike-temp.input.js";
+export * from "./strike-temp.output.js";
