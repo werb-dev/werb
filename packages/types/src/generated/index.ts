@@ -8,3 +8,5 @@ export * from "./color.input.js";
 export * from "./color.output.js";
 export * from "./gravity.input.js";
 export * from "./gravity.output.js";
+export * from "./scale.input.js";
+export * from "./scale.output.js";

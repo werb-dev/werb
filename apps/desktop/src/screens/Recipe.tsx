@@ -29,10 +29,11 @@ interface RecipeScreenProps {
   activeProfile?: ProfileWithId | undefined;
   onBack?: (() => void) | undefined;
   onStartBrewing?: (() => void) | undefined;
+  onScaleToProfile?: (() => void) | undefined;
   hasActiveSession?: boolean | undefined;
 }
 
-export function RecipeScreen({ recipe, activeProfile, onBack, onStartBrewing, hasActiveSession }: RecipeScreenProps) {
+export function RecipeScreen({ recipe, activeProfile, onBack, onStartBrewing, onScaleToProfile, hasActiveSession }: RecipeScreenProps) {
   const computed = useMemo(() => {
     const ibu = computeIbu(recipeToIbuInput(recipe));
     const water = computeWater(recipeToWaterInput(recipe, profileToWaterOverrides(activeProfile)));
@@ -96,14 +97,23 @@ export function RecipeScreen({ recipe, activeProfile, onBack, onStartBrewing, ha
             {recipe.efficiency?.brewhouse && ` · ${recipe.efficiency.brewhouse.value}% efficiency`}
             {recipe.type && ` · ${recipe.type}`}
           </p>
-          {onStartBrewing && (
-            <button
-              onClick={onStartBrewing}
-              className="mt-6 px-5 py-3 rounded-xl bg-accent text-bg text-body font-medium hover:opacity-90 transition-opacity"
-            >
-              {hasActiveSession ? "Resume brewing →" : "Start brewing →"}
-            </button>
-          )}
+          <div className="mt-6 flex flex-wrap gap-3 items-center">
+            {onStartBrewing && (
+              <button
+                onClick={onStartBrewing}
+                className="px-5 py-3 rounded-xl bg-accent text-bg text-body font-medium hover:opacity-90 transition-opacity"
+              >
+                {hasActiveSession ? "Resume brewing →" : "Start brewing →"}
+              </button>
+            )}
+            {onScaleToProfile && activeProfile && (
+              <ScaleButton
+                onScale={onScaleToProfile}
+                recipe={recipe}
+                profile={activeProfile}
+              />
+            )}
+          </div>
         </header>
 
         {/* ─── Targets vs computed strip ───────────────────────────────── */}
@@ -328,6 +338,53 @@ export function RecipeScreen({ recipe, activeProfile, onBack, onStartBrewing, ha
 }
 
 // ─── Subcomponents ─────────────────────────────────────────────────────
+
+function ScaleButton({
+  onScale,
+  recipe,
+  profile,
+}: {
+  onScale: () => void;
+  recipe: BeerJsonRecipe;
+  profile: ProfileWithId;
+}) {
+  const fromBatch = toLiters(recipe.batch_size);
+  const fromEff = recipe.efficiency?.brewhouse?.value ?? null;
+  const sameBatch = Math.abs(fromBatch - profile.batch_size_l) < 0.5;
+  const sameEff = fromEff !== null && Math.abs(fromEff - profile.efficiency_pct) < 1;
+  const isNoOp = sameBatch && sameEff;
+
+  const handleClick = () => {
+    if (isNoOp) return; // nothing to do
+    const summary = [
+      `Batch: ${fromBatch.toFixed(0)} L → ${profile.batch_size_l} L`,
+      fromEff !== null ? `Efficiency: ${fromEff}% → ${profile.efficiency_pct}%` : null,
+    ]
+      .filter(Boolean)
+      .join("\n");
+    if (confirm(`Adapt this recipe to "${profile.name}"?\n\n${summary}\n\nIngredient amounts will be rescaled in place.`)) {
+      onScale();
+    }
+  };
+
+  return (
+    <button
+      onClick={handleClick}
+      disabled={isNoOp}
+      title={
+        isNoOp
+          ? "Recipe already matches your rig — nothing to scale."
+          : `Rescale fermentables, hops, yeast, miscs and volumes for ${profile.name}.`
+      }
+      className="px-4 py-3 rounded-xl bg-surface-raised border border-border text-body-sm font-medium hover:border-accent hover:text-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+    >
+      Adapt to my rig
+      <span className="block font-mono text-caption text-text-muted mt-0.5">
+        → {profile.batch_size_l} L · {profile.efficiency_pct}%
+      </span>
+    </button>
+  );
+}
 
 function Section({
   title,

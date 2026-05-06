@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://werb.dev/schemas/tools/scale.output.schema.json",
+  "title": "ScaleOutput",
+  "description": "Multipliers for rescaling a recipe to a new batch size and efficiency. The caller applies these factors to ingredient amounts; the calc engine itself does no recipe mutation.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "volume_factor",
+    "fermentable_factor",
+    "to_batch_size_l",
+    "to_efficiency_pct"
+  ],
+  "properties": {
+    "volume_factor": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Multiplier for any quantity that scales linearly with batch volume — hops, yeast, miscs, water-derived volumes."
+    },
+    "fermentable_factor": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Multiplier for fermentable additions: volume_factor × (from_efficiency / to_efficiency). Lower target efficiency means more grain to hit the same OG."
+    },
+    "to_batch_size_l": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Echoed target batch size, in liters."
+    },
+    "to_efficiency_pct": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "maximum": 100,
+      "description": "Echoed target brewhouse efficiency, percent."
+    }
+  }
+}

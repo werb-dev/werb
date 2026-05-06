@@ -8,9 +8,11 @@ import {
   recipeToColorInput,
   recipeToGravityInput,
   recipeToSessionPlan,
+  recipeToScaleInput,
+  applyScale,
 } from "../src/index.js";
 import type { BeerJsonFile } from "../src/index.js";
-import { computeIbu, computeWater, computeColor, computeGravity } from "@werb/calc";
+import { computeIbu, computeWater, computeColor, computeGravity, computeScale } from "@werb/calc";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const fixturePath = join(__dirname, "../../../examples/double-ipa-mandarina.beerjson");
@@ -192,5 +194,62 @@ describe("recipeToSessionPlan — Double IPA fixture", () => {
     reset();
     const session = recipeToSessionPlan(recipe, "x", deps);
     expect(session.steps.every((s) => s.status === "pending")).toBe(true);
+  });
+});
+
+describe("recipeToScaleInput / applyScale — Double IPA fixture", () => {
+  it("recipeToScaleInput pulls from recipe + target", () => {
+    const input = recipeToScaleInput(recipe, { batch_size_l: 25, efficiency_pct: 70 });
+    expect(input.from_batch_size_l).toBe(recipe.batch_size.value);
+    expect(input.to_batch_size_l).toBe(25);
+    expect(input.from_efficiency_pct).toBe(recipe.efficiency!.brewhouse!.value);
+    expect(input.to_efficiency_pct).toBe(70);
+  });
+
+  it("applyScale updates batch_size and efficiency to the target", () => {
+    const out = computeScale(recipeToScaleInput(recipe, { batch_size_l: 25, efficiency_pct: 70 }));
+    const scaled = applyScale(recipe, out);
+    expect(scaled.batch_size).toEqual({ value: 25, unit: "l" });
+    expect(scaled.efficiency?.brewhouse).toEqual({ value: 70, unit: "%" });
+  });
+
+  it("applyScale scales fermentables by fermentable_factor and hops by volume_factor", () => {
+    const out = computeScale(recipeToScaleInput(recipe, { batch_size_l: 25, efficiency_pct: 70 }));
+    const scaled = applyScale(recipe, out);
+    const origFermentable = recipe.ingredients.fermentable_additions[0]!;
+    const newFermentable = scaled.ingredients.fermentable_additions[0]!;
+    if ("value" in origFermentable.amount && "value" in newFermentable.amount) {
+      expect(newFermentable.amount.value).toBeCloseTo(
+        origFermentable.amount.value * out.fermentable_factor,
+        6,
+      );
+    }
+    const origHop = recipe.ingredients.hop_additions![0]!;
+    const newHop = scaled.ingredients.hop_additions![0]!;
+    if ("value" in origHop.amount && "value" in newHop.amount) {
+      expect(newHop.amount.value).toBeCloseTo(origHop.amount.value * out.volume_factor, 6);
+    }
+  });
+
+  it("applyScale leaves the original recipe unmutated", () => {
+    const before = JSON.stringify(recipe.ingredients.fermentable_additions[0]!.amount);
+    const out = computeScale(recipeToScaleInput(recipe, { batch_size_l: 30, efficiency_pct: 60 }));
+    applyScale(recipe, out);
+    const after = JSON.stringify(recipe.ingredients.fermentable_additions[0]!.amount);
+    expect(before).toBe(after);
+  });
+
+  it("identity scale (same target) leaves amounts within rounding error", () => {
+    const target = {
+      batch_size_l: recipe.batch_size.value,
+      efficiency_pct: recipe.efficiency!.brewhouse!.value,
+    };
+    const out = computeScale(recipeToScaleInput(recipe, target));
+    const scaled = applyScale(recipe, out);
+    const orig = recipe.ingredients.fermentable_additions[0]!.amount;
+    const next = scaled.ingredients.fermentable_additions[0]!.amount;
+    if ("value" in orig && "value" in next) {
+      expect(next.value).toBeCloseTo(orig.value, 6);
+    }
   });
 });

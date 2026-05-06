@@ -35,6 +35,8 @@ const TARGETS = [
   { schema: "tools/color.output.schema.json", name: "ColorOutput" },
   { schema: "tools/gravity.input.schema.json", name: "GravityInput" },
   { schema: "tools/gravity.output.schema.json", name: "GravityOutput" },
+  { schema: "tools/scale.input.schema.json", name: "ScaleInput" },
+  { schema: "tools/scale.output.schema.json", name: "ScaleOutput" },
 ];
 
 const compileOpts = {

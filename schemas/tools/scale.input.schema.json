@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://werb.dev/schemas/tools/scale.input.schema.json",
+  "title": "ScaleInput",
+  "description": "Normalized input for computing how to rescale a recipe from one batch size and efficiency to another. Decoupled from BeerJSON: an adapter extracts these fields from a Recipe + Equipment profile.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "from_batch_size_l",
+    "to_batch_size_l",
+    "from_efficiency_pct",
+    "to_efficiency_pct"
+  ],
+  "properties": {
+    "from_batch_size_l": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Original recipe's batch size, in liters."
+    },
+    "to_batch_size_l": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Target batch size after scaling, in liters."
+    },
+    "from_efficiency_pct": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "maximum": 100,
+      "description": "Original recipe's brewhouse efficiency, percent."
+    },
+    "to_efficiency_pct": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "maximum": 100,
+      "description": "Target brewhouse efficiency after scaling, percent."
+    }
+  }
+}
