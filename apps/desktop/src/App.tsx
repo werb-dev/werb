@@ -6,7 +6,7 @@ import { BrewScreen } from "./screens/Brew.tsx";
 import { EquipmentScreen } from "./screens/Equipment.tsx";
 import { useRecipes } from "./hooks/useRecipes.ts";
 import { useEquipment } from "./hooks/useEquipment.ts";
-import { BUNDLED_SAMPLES, importBeerJsonFromDisk } from "./data/recipes.ts";
+import { BUNDLED_SAMPLES, importBeerJsonFromDisk, importBeerXmlFromDisk } from "./data/recipes.ts";
 
 type AppState =
   | { view: "library" }
@@ -78,6 +78,11 @@ export function App() {
         onImportSamples={() => recipesApi.createMany(BUNDLED_SAMPLES).length}
         onImportBeerJsonFile={async () => {
           const { recipes, error } = await importBeerJsonFromDisk();
+          if (recipes.length > 0) recipesApi.createMany(recipes);
+          return { count: recipes.length, error };
+        }}
+        onImportBeerXmlFile={async () => {
+          const { recipes, error } = await importBeerXmlFromDisk();
           if (recipes.length > 0) recipesApi.createMany(recipes);
           return { count: recipes.length, error };
         }}

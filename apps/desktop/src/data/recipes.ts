@@ -141,3 +141,39 @@ export async function importBeerJsonFromDisk(): Promise<ImportResult> {
   }
   return parseBeerJsonText(raw);
 }
+
+/**
+ * Open a native file dialog filtered to .xml/.beerxml, read the file, and
+ * convert it to BeerJSON via the `parse_beerxml` Tauri command (backed by
+ * the werb-beerxml crate). Returns `{ recipes: [] }` with no error if the
+ * user cancels.
+ */
+export async function importBeerXmlFromDisk(): Promise<ImportResult> {
+  const { isTauri, invoke } = await import("@tauri-apps/api/core");
+  if (!isTauri()) {
+    return { recipes: [], error: "File import requires the desktop app (run pnpm tauri:dev)." };
+  }
+  const { open } = await import("@tauri-apps/plugin-dialog");
+  const selected = await open({
+    multiple: false,
+    filters: [{ name: "BeerXML", extensions: ["beerxml", "xml"] }],
+    title: "Import a .beerxml recipe",
+  });
+  if (typeof selected !== "string") return { recipes: [] }; // cancelled
+  const { readTextFile } = await import("@tauri-apps/plugin-fs");
+  let raw: string;
+  try {
+    raw = await readTextFile(selected);
+  } catch (err) {
+    return { recipes: [], error: `Read failed: ${(err as Error).message}` };
+  }
+  try {
+    const recipes = await invoke<BeerJsonRecipe[]>("parse_beerxml", { xml: raw });
+    if (recipes.length === 0) {
+      return { recipes: [], error: "File parsed but contained no recipes." };
+    }
+    return { recipes };
+  } catch (err) {
+    return { recipes: [], error: `BeerXML parse failed: ${err}` };
+  }
+}

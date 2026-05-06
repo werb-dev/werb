@@ -1,0 +1,115 @@
+use werb_beerxml::{parse, parse_one, Error, FermentableType, HopForm, HopUse, RecipeType, YeastForm, YeastType};
+
+const SAMPLE: &str = include_str!("fixtures/sample_ipa.beerxml");
+
+#[test]
+fn parses_top_level_recipe_metadata() {
+    let r = parse_one(SAMPLE).expect("parse");
+    assert_eq!(r.name, "Cascade IPA");
+    assert_eq!(r.recipe_type, RecipeType::AllGrain);
+    assert_eq!(r.brewer.as_deref(), Some("Test Brewer"));
+    assert!((r.batch_size - 20.0).abs() < 1e-9);
+    assert!((r.boil_size - 26.0).abs() < 1e-9);
+    assert_eq!(r.boil_time, 60.0);
+    assert_eq!(r.efficiency, Some(75.0));
+    assert_eq!(r.ibu, Some(52.5));
+    assert_eq!(r.est_og_value(), Some(1.062));
+    assert_eq!(r.est_fg_value(), Some(1.012));
+    assert_eq!(r.est_color_value(), Some(9.5));
+}
+
+#[test]
+fn parses_style_block() {
+    let r = parse_one(SAMPLE).unwrap();
+    let style = r.style.as_ref().expect("style");
+    assert_eq!(style.name, "American IPA");
+    assert_eq!(style.category_number.as_deref(), Some("21"));
+    assert_eq!(style.style_letter.as_deref(), Some("A"));
+    assert_eq!(style.og_min, Some(1.056));
+    assert_eq!(style.color_max, Some(14.0));
+}
+
+#[test]
+fn parses_fermentables() {
+    let r = parse_one(SAMPLE).unwrap();
+    let f = r.fermentables.as_ref().unwrap();
+    assert_eq!(f.items.len(), 2);
+    assert_eq!(f.items[0].name, "Pale 2-Row");
+    assert_eq!(f.items[0].fermentable_type, FermentableType::Grain);
+    assert!((f.items[0].amount - 4.5).abs() < 1e-9);
+    assert_eq!(f.items[1].color, Some(60.0));
+}
+
+#[test]
+fn parses_hops() {
+    let r = parse_one(SAMPLE).unwrap();
+    let h = r.hops.as_ref().unwrap();
+    assert_eq!(h.items.len(), 2);
+    assert_eq!(h.items[0].name, "Cascade");
+    assert_eq!(h.items[0].hop_use, Some(HopUse::Boil));
+    assert_eq!(h.items[0].form, Some(HopForm::Pellet));
+    assert_eq!(h.items[1].hop_use, Some(HopUse::DryHop));
+}
+
+#[test]
+fn parses_yeasts() {
+    let r = parse_one(SAMPLE).unwrap();
+    let y = r.yeasts.as_ref().unwrap();
+    assert_eq!(y.items.len(), 1);
+    let yeast = &y.items[0];
+    assert_eq!(yeast.name, "Safale US-05");
+    assert_eq!(yeast.yeast_type, YeastType::Ale);
+    assert_eq!(yeast.form, YeastForm::Dry);
+    assert_eq!(yeast.amount_is_weight, Some(true));
+    assert_eq!(yeast.product_id.as_deref(), Some("US-05"));
+}
+
+#[test]
+fn parses_mash_schedule() {
+    let r = parse_one(SAMPLE).unwrap();
+    let mash = r.mash.as_ref().unwrap();
+    assert_eq!(mash.name, "Single Infusion");
+    assert_eq!(mash.grain_temp, Some(20.0));
+    let steps = mash.mash_steps.as_ref().unwrap();
+    assert_eq!(steps.items.len(), 1);
+    assert_eq!(steps.items[0].step_temp, 67.0);
+    assert_eq!(steps.items[0].step_time, 60.0);
+    assert_eq!(steps.items[0].infuse_amount, Some(15.0));
+}
+
+#[test]
+fn empty_input_errors() {
+    let xml = "<RECIPES></RECIPES>";
+    match parse(xml) {
+        Err(Error::NoRecipes) => {}
+        other => panic!("expected NoRecipes, got {other:?}"),
+    }
+}
+
+#[test]
+fn malformed_xml_errors() {
+    let xml = "<RECIPES><RECIPE><NAME>oops"; // truncated
+    assert!(matches!(parse(xml), Err(Error::Xml(_))));
+}
+
+#[test]
+fn beerjson_conversion_round_trip() {
+    let r = parse_one(SAMPLE).unwrap();
+    let json = r.to_beerjson();
+    assert_eq!(json["name"], "Cascade IPA");
+    assert_eq!(json["type"], "all grain");
+    assert_eq!(json["batch_size"]["value"], 20.0);
+    assert_eq!(json["batch_size"]["unit"], "l");
+    assert_eq!(json["boil"]["boil_time"]["value"], 60.0);
+    assert_eq!(json["boil"]["boil_time"]["unit"], "min");
+    assert_eq!(json["original_gravity"]["value"], 1.062);
+    assert_eq!(json["original_gravity"]["unit"], "sg");
+    assert_eq!(json["style"]["name"], "American IPA");
+    assert_eq!(json["style"]["type"], "ale");
+    assert_eq!(json["ingredients"]["fermentable_additions"][0]["name"], "Pale 2-Row");
+    assert_eq!(json["ingredients"]["fermentable_additions"][0]["amount"]["unit"], "kg");
+    assert_eq!(json["ingredients"]["hop_additions"][1]["timing"]["use"], "add_to_fermentation");
+    assert_eq!(json["ingredients"]["culture_additions"][0]["form"], "dry");
+    assert_eq!(json["ingredients"]["culture_additions"][0]["amount"]["unit"], "kg"); // amount_is_weight
+    assert_eq!(json["mash"]["mash_steps"][0]["step_temperature"]["value"], 67.0);
+}

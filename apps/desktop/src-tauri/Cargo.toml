@@ -17,6 +17,7 @@ tauri-plugin-fs = "2"
 tauri-plugin-dialog = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+werb-beerxml = { path = "../../../crates/werb-beerxml" }
 
 [features]
 default = ["custom-protocol"]

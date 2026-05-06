@@ -16,6 +16,7 @@ interface LibraryScreenProps {
   onSelect: (id: string) => void;
   onImportSamples: () => number;
   onImportBeerJsonFile: () => Promise<{ count: number; error?: string | undefined }>;
+  onImportBeerXmlFile: () => Promise<{ count: number; error?: string | undefined }>;
   activeProfile?: ProfileWithId | undefined;
   onGoEquipment: () => void;
 }
@@ -25,6 +26,7 @@ export function LibraryScreen({
   onSelect,
   onImportSamples,
   onImportBeerJsonFile,
+  onImportBeerXmlFile,
   activeProfile,
   onGoEquipment,
 }: LibraryScreenProps) {
@@ -37,16 +39,19 @@ export function LibraryScreen({
     if (count === 0) setImportError("No bundled samples found.");
   };
 
-  const handleImportFile = async () => {
+  const runImport = async (fn: () => Promise<{ count: number; error?: string | undefined }>) => {
     setImportError(null);
     setImporting(true);
     try {
-      const { error } = await onImportBeerJsonFile();
+      const { error } = await fn();
       if (error) setImportError(error);
     } finally {
       setImporting(false);
     }
   };
+
+  const handleImportFile = () => runImport(onImportBeerJsonFile);
+  const handleImportXml = () => runImport(onImportBeerXmlFile);
 
   return (
     <div className="min-h-dvh bg-bg text-text">
@@ -65,6 +70,13 @@ export function LibraryScreen({
               className="px-4 py-2 rounded-lg bg-accent text-bg text-body-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
             >
               {importing ? "Importing…" : "Import .beerjson"}
+            </button>
+            <button
+              onClick={handleImportXml}
+              disabled={importing}
+              className="px-4 py-2 rounded-lg bg-surface-raised border border-border text-body-sm font-medium hover:border-border-strong disabled:opacity-50 transition-colors"
+            >
+              Import .beerxml
             </button>
             <button
               onClick={handleImportSamples}

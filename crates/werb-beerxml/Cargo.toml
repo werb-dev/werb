@@ -1,0 +1,19 @@
+[package]
+name = "werb-beerxml"
+version = "0.1.0"
+edition = "2021"
+description = "BeerXML 1.0 parser with optional BeerJSON 2.x conversion. A modern replacement for the long-dormant `beerxml` crate."
+keywords = ["beer", "brewing", "beerxml", "beerjson", "homebrew"]
+categories = ["parser-implementations", "encoding"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/werb-dev/werb"
+readme = "README.md"
+
+[dependencies]
+quick-xml = { version = "0.36", features = ["serde", "serialize"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "1"
+
+[dev-dependencies]
+serde_json = "1"
