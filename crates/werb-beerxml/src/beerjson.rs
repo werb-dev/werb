@@ -23,6 +23,7 @@ impl Recipe {
     /// emitted as `null`, so the output validates cleanly against the
     /// BeerJSON schema.
     pub fn to_beerjson(&self) -> Value {
+        let color_unit = self.effective_color_unit();
         let mut recipe = Map::new();
         recipe.insert("name".into(), Value::String(self.name.clone()));
         recipe.insert("type".into(), Value::String(recipe_type_to_beerjson(&self.effective_recipe_type())));
@@ -55,8 +56,8 @@ impl Recipe {
         if let Some(ibu) = self.ibu {
             recipe.insert("ibu_estimate".into(), json!({ "ibu": json!({ "value": ibu, "unit": "IBUs" }) }));
         }
-        if let Some(srm) = self.est_color_value() {
-            recipe.insert("color_estimate".into(), json!({ "value": srm, "unit": "SRM" }));
+        if let Some(c) = self.est_color_value() {
+            recipe.insert("color_estimate".into(), json!({ "value": c, "unit": color_unit }));
         }
         if let Some(notes) = &self.notes {
             recipe.insert("notes".into(), Value::String(notes.clone()));
@@ -71,7 +72,12 @@ impl Recipe {
             Value::Array(
                 self.fermentables
                     .as_ref()
-                    .map(|f| f.items.iter().map(fermentable_to_beerjson).collect())
+                    .map(|f| {
+                        f.items
+                            .iter()
+                            .map(|item| fermentable_to_beerjson(item, color_unit))
+                            .collect()
+                    })
                     .unwrap_or_default(),
             ),
         );
@@ -171,7 +177,7 @@ fn style_to_beerjson(s: &Style) -> Value {
     Value::Object(style)
 }
 
-fn fermentable_to_beerjson(f: &Fermentable) -> Value {
+fn fermentable_to_beerjson(f: &Fermentable, color_unit: &str) -> Value {
     let mut obj = Map::new();
     obj.insert("name".into(), Value::String(f.name.clone()));
     obj.insert("type".into(), Value::String(fermentable_type_to_beerjson(&f.effective_type())));
@@ -180,9 +186,11 @@ fn fermentable_to_beerjson(f: &Fermentable) -> Value {
         obj.insert("yield".into(), json!({ "fine_grind": percent(y) }));
     }
     if let Some(c) = f.color {
-        // BeerJSON's ColorUnitType enum is {"EBC", "Lovi", "SRM"}; the
-        // spec uses the abbreviation "Lovi", not "Lovibond".
-        obj.insert("color".into(), json!({ "value": c, "unit": "Lovi" }));
+        // BeerXML 1.0 spec says fermentable COLOR is degrees Lovibond,
+        // but most modern tools store EBC there. We label the value
+        // with whichever unit the recipe's EST_COLOR string indicated
+        // (passed in as `color_unit`) — see Recipe::effective_color_unit.
+        obj.insert("color".into(), json!({ "value": c, "unit": color_unit }));
     }
     if let Some(o) = &f.origin {
         obj.insert("origin".into(), Value::String(o.clone()));

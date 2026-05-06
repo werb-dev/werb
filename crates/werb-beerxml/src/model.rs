@@ -117,6 +117,34 @@ impl Recipe {
     pub fn est_color_value(&self) -> Option<f64> {
         parse_leading_f64(self.est_color.as_deref()?)
     }
+
+    /// Best-effort guess at the color unit the source tool used,
+    /// derived from [`est_color`](Self::est_color)'s suffix. Returns
+    /// one of `"EBC"`, `"SRM"`, or `"Lovi"` (matching BeerJSON's
+    /// `ColorUnitType` enum) when the suffix matches; falls back to
+    /// `"EBC"` otherwise — the modern default for European tools that
+    /// produce most BeerXML files in circulation today.
+    ///
+    /// This unit applies both to the recipe's overall color estimate
+    /// and (more importantly) to every fermentable's `COLOR` field —
+    /// the BeerXML 1.0 spec says fermentable color is degrees Lovibond,
+    /// but most tools store EBC there in practice. Using the same
+    /// signal everywhere produces a coherent file.
+    pub fn effective_color_unit(&self) -> &'static str {
+        let Some(s) = self.est_color.as_deref() else {
+            return "EBC";
+        };
+        let upper = s.to_uppercase();
+        if upper.contains("EBC") {
+            "EBC"
+        } else if upper.contains("SRM") {
+            "SRM"
+        } else if upper.contains("LOVI") || upper.contains("°L") {
+            "Lovi"
+        } else {
+            "EBC"
+        }
+    }
 }
 
 fn parse_leading_f64(s: &str) -> Option<f64> {

@@ -210,9 +210,96 @@ fn beerjson_conversion_round_trip() {
     assert_eq!(json["style"]["type"], "ale");
     assert_eq!(json["ingredients"]["fermentable_additions"][0]["name"], "Pale 2-Row");
     assert_eq!(json["ingredients"]["fermentable_additions"][0]["amount"]["unit"], "kg");
-    assert_eq!(json["ingredients"]["fermentable_additions"][0]["color"]["unit"], "Lovi");
+    // Fixture's EST_COLOR is "9.5 SRM" → fermentables labeled SRM too,
+    // since real BeerXML files use one display unit globally.
+    assert_eq!(json["ingredients"]["fermentable_additions"][0]["color"]["unit"], "SRM");
+    assert_eq!(json["color_estimate"]["unit"], "SRM");
     assert_eq!(json["ingredients"]["hop_additions"][1]["timing"]["use"], "add_to_fermentation");
     assert_eq!(json["ingredients"]["culture_additions"][0]["form"], "dry");
-    assert_eq!(json["ingredients"]["culture_additions"][0]["amount"]["unit"], "kg"); // amount_is_weight
+    assert_eq!(json["ingredients"]["culture_additions"][0]["amount"]["unit"], "kg");
     assert_eq!(json["mash"]["mash_steps"][0]["step_temperature"]["value"], 67.0);
+}
+
+#[test]
+fn color_unit_falls_back_to_ebc_when_est_color_missing() {
+    let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+<RECIPES>
+  <RECIPE>
+    <NAME>No-Estimate</NAME>
+    <VERSION>1</VERSION>
+    <BATCH_SIZE>20.0</BATCH_SIZE>
+    <FERMENTABLES>
+      <FERMENTABLE>
+        <NAME>Mystery</NAME>
+        <VERSION>1</VERSION>
+        <TYPE>Grain</TYPE>
+        <AMOUNT>5.0</AMOUNT>
+        <COLOR>8.0</COLOR>
+      </FERMENTABLE>
+    </FERMENTABLES>
+  </RECIPE>
+</RECIPES>"#;
+    let r = parse_one(xml).unwrap();
+    let json = r.to_beerjson();
+    assert_eq!(
+        json["ingredients"]["fermentable_additions"][0]["color"]["unit"],
+        "EBC"
+    );
+}
+
+#[test]
+fn color_unit_picks_up_ebc_from_est_color() {
+    let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+<RECIPES>
+  <RECIPE>
+    <NAME>Euro</NAME>
+    <VERSION>1</VERSION>
+    <BATCH_SIZE>20.0</BATCH_SIZE>
+    <FERMENTABLES>
+      <FERMENTABLE>
+        <NAME>Pilsner</NAME>
+        <VERSION>1</VERSION>
+        <TYPE>Grain</TYPE>
+        <AMOUNT>5.0</AMOUNT>
+        <COLOR>4.0</COLOR>
+      </FERMENTABLE>
+    </FERMENTABLES>
+    <EST_COLOR>15 EBC</EST_COLOR>
+  </RECIPE>
+</RECIPES>"#;
+    let r = parse_one(xml).unwrap();
+    let json = r.to_beerjson();
+    assert_eq!(
+        json["ingredients"]["fermentable_additions"][0]["color"]["unit"],
+        "EBC"
+    );
+    assert_eq!(json["color_estimate"]["unit"], "EBC");
+}
+
+#[test]
+fn color_unit_picks_up_lovi_from_est_color() {
+    let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+<RECIPES>
+  <RECIPE>
+    <NAME>US Recipe</NAME>
+    <VERSION>1</VERSION>
+    <BATCH_SIZE>20.0</BATCH_SIZE>
+    <FERMENTABLES>
+      <FERMENTABLE>
+        <NAME>2-Row</NAME>
+        <VERSION>1</VERSION>
+        <TYPE>Grain</TYPE>
+        <AMOUNT>5.0</AMOUNT>
+        <COLOR>2.0</COLOR>
+      </FERMENTABLE>
+    </FERMENTABLES>
+    <EST_COLOR>5.5 °L</EST_COLOR>
+  </RECIPE>
+</RECIPES>"#;
+    let r = parse_one(xml).unwrap();
+    let json = r.to_beerjson();
+    assert_eq!(
+        json["ingredients"]["fermentable_additions"][0]["color"]["unit"],
+        "Lovi"
+    );
 }
