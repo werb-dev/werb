@@ -5,7 +5,18 @@ import type {
   CultureType,
   FermentableAddition,
   HopAddition,
+  MiscAddition,
 } from "@werb/adapters";
+import {
+  searchCultures,
+  searchFermentables,
+  searchHops,
+  searchMiscs,
+  type CultureEntry,
+  type FermentableEntry,
+  type HopEntry,
+  type MiscEntry,
+} from "../data/catalog/index.ts";
 
 /**
  * Pareto in-app recipe editor. Edits metadata + ingredients in place;
@@ -66,6 +77,7 @@ export function RecipeEditor({ recipe, onClose, onSave }: RecipeEditorProps) {
         />
         <HopsSection draft={draft} updateIngredients={updateIngredients} />
         <CulturesSection draft={draft} updateIngredients={updateIngredients} />
+        <MiscsSection draft={draft} updateIngredients={updateIngredients} />
       </main>
     </div>
   );
@@ -185,7 +197,7 @@ function FermentablesSection({
 
   return (
     <Section title="Fermentables">
-      <div className="rounded-xl bg-surface border border-border overflow-hidden">
+      <div className="rounded-xl bg-surface border border-border">
         <RowHeader
           cols={[
             { label: "Name", span: "col-span-4" },
@@ -201,10 +213,21 @@ function FermentablesSection({
             key={i}
             className="grid grid-cols-12 gap-2 px-4 py-2 border-b border-border last:border-b-0 items-center hover:bg-surface-raised/40 transition-colors"
           >
-            <InlineInput
+            <Combobox
               className="col-span-4"
               value={f.name}
               onChange={(v) => updateRow(i, { ...f, name: v })}
+              suggest={searchFermentables}
+              onPick={(entry) => updateRow(i, applyFermentableEntry(f, entry))}
+              renderItem={(entry) => (
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="font-medium truncate">{entry.name}</span>
+                  <span className="font-mono text-caption text-text-muted shrink-0">
+                    {entry.color_ebc} EBC · {entry.yield_pct}%
+                    {entry.producer && ` · ${entry.producer}`}
+                  </span>
+                </div>
+              )}
             />
             <InlineSelect
               className="col-span-2"
@@ -299,7 +322,7 @@ function HopsSection({
 
   return (
     <Section title="Hops">
-      <div className="rounded-xl bg-surface border border-border overflow-hidden">
+      <div className="rounded-xl bg-surface border border-border">
         <RowHeader
           cols={[
             { label: "Name", span: "col-span-3" },
@@ -316,10 +339,25 @@ function HopsSection({
             key={i}
             className="grid grid-cols-12 gap-2 px-4 py-2 border-b border-border last:border-b-0 items-center hover:bg-surface-raised/40 transition-colors"
           >
-            <InlineInput
+            <Combobox
               className="col-span-3"
               value={h.name}
               onChange={(v) => updateRow(i, { ...h, name: v })}
+              suggest={searchHops}
+              onPick={(entry) => updateRow(i, applyHopEntry(h, entry))}
+              renderItem={(entry) => (
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="font-medium truncate">
+                    {entry.name}
+                    {entry.origin && (
+                      <span className="text-caption text-text-muted ml-2">{entry.origin}</span>
+                    )}
+                  </span>
+                  <span className="font-mono text-caption text-text-muted shrink-0">
+                    {entry.alpha_acid_pct}% AA
+                  </span>
+                </div>
+              )}
             />
             <InlineSelect
               className="col-span-2"
@@ -436,7 +474,7 @@ function CulturesSection({
 
   return (
     <Section title="Cultures">
-      <div className="rounded-xl bg-surface border border-border overflow-hidden">
+      <div className="rounded-xl bg-surface border border-border">
         <RowHeader
           cols={[
             { label: "Name", span: "col-span-4" },
@@ -452,10 +490,21 @@ function CulturesSection({
             key={i}
             className="grid grid-cols-12 gap-2 px-4 py-2 border-b border-border last:border-b-0 items-center hover:bg-surface-raised/40 transition-colors"
           >
-            <InlineInput
+            <Combobox
               className="col-span-4"
               value={c.name}
               onChange={(v) => updateRow(i, { ...c, name: v })}
+              suggest={searchCultures}
+              onPick={(entry) => updateRow(i, applyCultureEntry(c, entry))}
+              renderItem={(entry) => (
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="font-medium truncate">{entry.name}</span>
+                  <span className="font-mono text-caption text-text-muted shrink-0">
+                    {entry.form} · {entry.attenuation_pct}% · {entry.default_amount}{" "}
+                    {entry.default_amount_unit}
+                  </span>
+                </div>
+              )}
             />
             <InlineSelect
               className="col-span-2"
@@ -626,6 +675,266 @@ function SelectField({
       </select>
     </label>
   );
+}
+
+// ─── Miscs ────────────────────────────────────────────────────────────────
+
+const MISC_TYPES: MiscEntry["type"][] = [
+  "spice",
+  "fining",
+  "water_agent",
+  "herb",
+  "flavor",
+  "wood",
+  "other",
+];
+
+const MISC_USES = ["add_to_boil", "add_to_mash", "add_to_fermentation", "add_to_package"] as const;
+const MISC_USE_LABELS: Record<(typeof MISC_USES)[number], string> = {
+  add_to_boil: "Boil",
+  add_to_mash: "Mash",
+  add_to_fermentation: "Ferment",
+  add_to_package: "Package",
+};
+
+function MiscsSection({
+  draft,
+  updateIngredients,
+}: {
+  draft: BeerJsonRecipe;
+  updateIngredients: (patch: Partial<BeerJsonRecipe["ingredients"]>) => void;
+}) {
+  const items = draft.ingredients.miscellaneous_additions ?? [];
+
+  const addRow = () => {
+    const fresh: MiscAddition = {
+      name: "New addition",
+      type: "spice",
+      amount: { value: 5, unit: "g" },
+      timing: { use: "add_to_boil", time: { value: 5, unit: "min" } },
+    };
+    updateIngredients({ miscellaneous_additions: [...items, fresh] });
+  };
+
+  const updateRow = (i: number, next: MiscAddition) => {
+    const copy = items.slice();
+    copy[i] = next;
+    updateIngredients({ miscellaneous_additions: copy });
+  };
+
+  const removeRow = (i: number) => {
+    updateIngredients({ miscellaneous_additions: items.filter((_, j) => j !== i) });
+  };
+
+  return (
+    <Section title="Miscellaneous">
+      <div className="rounded-xl bg-surface border border-border">
+        <RowHeader
+          cols={[
+            { label: "Name", span: "col-span-3" },
+            { label: "Type", span: "col-span-2" },
+            { label: "Use", span: "col-span-2" },
+            { label: "Time", span: "col-span-1" },
+            { label: "Amount", span: "col-span-3" },
+            { label: "", span: "col-span-1" },
+          ]}
+        />
+        {items.map((m, i) => (
+          <div
+            key={i}
+            className="grid grid-cols-12 gap-2 px-4 py-2 border-b border-border last:border-b-0 items-center hover:bg-surface-raised/40 transition-colors"
+          >
+            <Combobox
+              className="col-span-3"
+              value={m.name}
+              onChange={(v) => updateRow(i, { ...m, name: v })}
+              suggest={searchMiscs}
+              onPick={(entry) => updateRow(i, applyMiscEntry(m, entry))}
+              renderItem={(entry) => (
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="font-medium truncate">{entry.name}</span>
+                  <span className="font-mono text-caption text-text-muted shrink-0">
+                    {entry.type} · {entry.default_amount} {entry.default_amount_unit}
+                  </span>
+                </div>
+              )}
+            />
+            <InlineSelect
+              className="col-span-2"
+              value={m.type ?? "other"}
+              onChange={(v) => updateRow(i, { ...m, type: v })}
+              options={MISC_TYPES}
+            />
+            <InlineSelect
+              className="col-span-2"
+              value={m.timing?.use ?? "add_to_boil"}
+              onChange={(v) =>
+                updateRow(i, {
+                  ...m,
+                  timing: { ...m.timing, use: v as (typeof MISC_USES)[number] },
+                })
+              }
+              options={[...MISC_USES]}
+              labels={MISC_USE_LABELS}
+            />
+            <InlineNumber
+              className="col-span-1"
+              value={m.timing?.time?.value ?? 0}
+              unit="min"
+              step={1}
+              onChange={(v) =>
+                updateRow(i, {
+                  ...m,
+                  timing: { ...m.timing, time: { value: v, unit: "min" } },
+                })
+              }
+            />
+            <InlineNumber
+              className="col-span-3"
+              value={m.amount.value}
+              unit={m.amount.unit}
+              step={0.1}
+              onChange={(v) => updateRow(i, { ...m, amount: { ...m.amount, value: v } })}
+            />
+            <div className="col-span-1 flex justify-end">
+              <InlineDeleteButton onClick={() => removeRow(i)} />
+            </div>
+          </div>
+        ))}
+      </div>
+      <AddRowButton label="+ Add miscellaneous" onClick={addRow} />
+    </Section>
+  );
+}
+
+// ─── Catalog-aware combobox + apply-entry helpers ─────────────────────────
+
+function Combobox<T>({
+  value,
+  onChange,
+  suggest,
+  onPick,
+  renderItem,
+  className,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  suggest: (query: string) => T[];
+  onPick: (item: T) => void;
+  renderItem: (item: T) => React.ReactNode;
+  className?: string;
+}) {
+  const [focused, setFocused] = useState(false);
+  const items = focused && value.trim().length > 0 ? suggest(value) : [];
+
+  return (
+    <div className={`relative ${className ?? ""}`}>
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => window.setTimeout(() => setFocused(false), 150)}
+        className="w-full bg-transparent border-b border-transparent px-1 py-1 text-body text-text placeholder:text-text-muted focus:outline-none focus:border-accent hover:border-border transition-colors min-w-0"
+      />
+      {items.length > 0 && (
+        <div className="absolute top-full left-0 right-0 z-50 max-h-72 overflow-auto bg-surface-raised border border-border rounded-lg shadow-xl mt-1">
+          {items.map((item, i) => (
+            <button
+              key={i}
+              type="button"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                onPick(item);
+                setFocused(false);
+              }}
+              className="block w-full text-left px-3 py-2 hover:bg-surface focus:bg-surface text-body-sm border-b border-border last:border-b-0"
+            >
+              {renderItem(item)}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function applyFermentableEntry(
+  f: FermentableAddition,
+  e: FermentableEntry,
+): FermentableAddition {
+  return {
+    ...f,
+    name: e.name,
+    type: e.type,
+    color: { value: e.color_ebc, unit: "EBC" },
+    yield: { fine_grind: { value: e.yield_pct, unit: "%" } },
+    ...(e.producer && { producer: e.producer }),
+    ...(e.origin && { origin: e.origin }),
+  };
+}
+
+function applyHopEntry(h: HopAddition, e: HopEntry): HopAddition {
+  return {
+    ...h,
+    name: e.name,
+    alpha_acid: { value: e.alpha_acid_pct, unit: "%" },
+    ...(e.origin && { producer: e.origin }),
+  };
+}
+
+function cultureAmountFromEntry(
+  e: CultureEntry,
+): NonNullable<CultureAddition["amount"]> {
+  if (e.default_amount_unit === "g") {
+    return { value: e.default_amount, unit: "g" };
+  }
+  if (e.default_amount_unit === "ml") {
+    return { value: e.default_amount, unit: "ml" };
+  }
+  return { value: e.default_amount, unit: "pkg" };
+}
+
+function applyCultureEntry(c: CultureAddition, e: CultureEntry): CultureAddition {
+  return {
+    ...c,
+    name: e.name,
+    type: e.type,
+    form: e.form,
+    amount: cultureAmountFromEntry(e),
+    attenuation: { value: e.attenuation_pct, unit: "%" },
+    ...(e.producer && { producer: e.producer }),
+    ...(e.product_id && { product_id: e.product_id }),
+    ...((e.temp_min_c !== undefined || e.temp_max_c !== undefined) && {
+      temperature_range: {
+        ...(e.temp_min_c !== undefined && { minimum: { value: e.temp_min_c, unit: "C" } }),
+        ...(e.temp_max_c !== undefined && { maximum: { value: e.temp_max_c, unit: "C" } }),
+      },
+    }),
+  };
+}
+
+function miscAmountFromEntry(e: MiscEntry): MiscAddition["amount"] {
+  if (e.default_amount_unit === "g" || e.default_amount_unit === "kg") {
+    return { value: e.default_amount, unit: e.default_amount_unit };
+  }
+  return { value: e.default_amount, unit: e.default_amount_unit };
+}
+
+function applyMiscEntry(m: MiscAddition, e: MiscEntry): MiscAddition {
+  return {
+    ...m,
+    name: e.name,
+    type: e.type,
+    amount: miscAmountFromEntry(e),
+    timing: {
+      use: e.default_use,
+      ...(e.default_time_min !== undefined && {
+        time: { value: e.default_time_min, unit: "min" },
+      }),
+    },
+    ...(e.notes && { notes: e.notes }),
+  };
 }
 
 // ─── Inline (table-style) primitives for ingredient rows ──────────────────
