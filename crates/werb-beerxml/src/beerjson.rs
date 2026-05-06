@@ -26,17 +26,23 @@ impl Recipe {
         let mut recipe = Map::new();
         recipe.insert("name".into(), Value::String(self.name.clone()));
         recipe.insert("type".into(), Value::String(recipe_type_to_beerjson(&self.effective_recipe_type())));
-        if let Some(brewer) = &self.brewer {
-            recipe.insert("author".into(), Value::String(brewer.clone()));
-        }
+        // BeerJSON 2.x marks `author` as required, so emit a placeholder
+        // when the source omits BREWER.
+        recipe.insert(
+            "author".into(),
+            Value::String(self.brewer.clone().unwrap_or_else(|| "Unknown".to_string())),
+        );
         recipe.insert("batch_size".into(), volume_l(self.batch_size));
         recipe.insert("boil".into(), json!({
             "pre_boil_size": volume_l(self.effective_boil_size()),
             "boil_time": minutes(self.effective_boil_time()),
         }));
-        if let Some(eff) = self.efficiency {
-            recipe.insert("efficiency".into(), json!({ "brewhouse": percent(eff) }));
-        }
+        // `efficiency.brewhouse` is required in BeerJSON; default to 75%
+        // (the typical homebrew assumption) when absent in the source.
+        recipe.insert(
+            "efficiency".into(),
+            json!({ "brewhouse": percent(self.efficiency.unwrap_or(75.0)) }),
+        );
         if let Some(style) = &self.style {
             recipe.insert("style".into(), style_to_beerjson(style));
         }
@@ -56,14 +62,19 @@ impl Recipe {
             recipe.insert("notes".into(), Value::String(notes.clone()));
         }
 
-        // Ingredients block.
+        // Ingredients block. BeerJSON requires `ingredients` and
+        // specifically `ingredients.fermentable_additions` (even if
+        // empty), so always emit them.
         let mut ingredients = Map::new();
-        if let Some(f) = &self.fermentables {
-            ingredients.insert(
-                "fermentable_additions".into(),
-                Value::Array(f.items.iter().map(fermentable_to_beerjson).collect()),
-            );
-        }
+        ingredients.insert(
+            "fermentable_additions".into(),
+            Value::Array(
+                self.fermentables
+                    .as_ref()
+                    .map(|f| f.items.iter().map(fermentable_to_beerjson).collect())
+                    .unwrap_or_default(),
+            ),
+        );
         if let Some(h) = &self.hops {
             ingredients.insert(
                 "hop_additions".into(),
@@ -82,9 +93,7 @@ impl Recipe {
                 Value::Array(m.items.iter().map(misc_to_beerjson).collect()),
             );
         }
-        if !ingredients.is_empty() {
-            recipe.insert("ingredients".into(), Value::Object(ingredients));
-        }
+        recipe.insert("ingredients".into(), Value::Object(ingredients));
 
         if let Some(mash) = &self.mash {
             let mut mash_obj = Map::new();

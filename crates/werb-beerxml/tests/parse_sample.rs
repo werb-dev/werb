@@ -66,6 +66,28 @@ fn missing_type_on_nested_elements_falls_back() {
 }
 
 #[test]
+fn beerjson_output_satisfies_required_fields() {
+    // Bare-minimum BeerXML — no brewer, no efficiency, no fermentables.
+    // The BeerJSON output still has to satisfy the schema's required
+    // fields (`author`, `efficiency`, `ingredients.fermentable_additions`)
+    // or the downstream app blows up dereferencing them.
+    let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+<RECIPES>
+  <RECIPE>
+    <NAME>Bare Recipe</NAME>
+    <VERSION>1</VERSION>
+    <BATCH_SIZE>20.0</BATCH_SIZE>
+  </RECIPE>
+</RECIPES>"#;
+    let r = parse_one(xml).unwrap();
+    let json = r.to_beerjson();
+    assert!(json["author"].is_string(), "author must be present");
+    assert!(json["efficiency"]["brewhouse"]["value"].is_number(), "efficiency.brewhouse required");
+    assert!(json["ingredients"]["fermentable_additions"].is_array(), "fermentable_additions required");
+    assert_eq!(json["ingredients"]["fermentable_additions"].as_array().unwrap().len(), 0);
+}
+
+#[test]
 fn missing_optional_fields_use_sensible_defaults() {
     let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
 <RECIPES>
