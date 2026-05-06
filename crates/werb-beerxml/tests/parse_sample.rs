@@ -152,6 +152,18 @@ fn parses_yeasts() {
     assert_eq!(yeast.effective_form(), YeastForm::Dry);
     assert_eq!(yeast.amount_is_weight, Some(true));
     assert_eq!(yeast.product_id.as_deref(), Some("US-05"));
+    assert_eq!(yeast.min_temperature, Some(15.0));
+    assert_eq!(yeast.max_temperature, Some(22.0));
+}
+
+#[test]
+fn beerjson_emits_yeast_temperature_range() {
+    let r = parse_one(SAMPLE).unwrap();
+    let json = r.to_beerjson();
+    let yeast = &json["ingredients"]["culture_additions"][0];
+    assert_eq!(yeast["temperature_range"]["minimum"]["value"], 15.0);
+    assert_eq!(yeast["temperature_range"]["minimum"]["unit"], "C");
+    assert_eq!(yeast["temperature_range"]["maximum"]["value"], 22.0);
 }
 
 #[test]

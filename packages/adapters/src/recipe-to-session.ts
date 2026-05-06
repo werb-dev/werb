@@ -1,8 +1,50 @@
 import type { WerbSession, SessionStep } from "@werb/types";
-import type { BeerJsonRecipe } from "./beerjson.js";
+import type { BeerJsonRecipe, CultureAddition, CultureType } from "./beerjson.js";
 import { toCelsius, toMinutes } from "./units.js";
 import { computeStrikeTemp } from "@werb/calc";
 import { recipeToStrikeTempInput, type StrikeTempOptions } from "./recipe-to-strike-temp.js";
+
+/**
+ * Derive a pitch temperature for the recipe's cultures.
+ *
+ * Preferred path: use each culture's BeerJSON `temperature_range.minimum`,
+ * picking the max so every culture is at or above its documented minimum.
+ * Fallback when no culture provides a range: use the culture `type` to look
+ * up a sensible default minimum (ale 18, lager 10, kveik 30, etc.) and
+ * apply the same max-of-mins rule.
+ *
+ * Returns 20 °C — generic ale pitch — when there are no cultures at all.
+ */
+const PITCH_DEFAULT_BY_TYPE: Record<CultureType, number> = {
+  lager: 10,
+  wine: 15,
+  champagne: 15,
+  ale: 18,
+  wheat: 18,
+  wild: 18,
+  lacto: 18,
+  pedio: 18,
+  brett: 18,
+  "mixed-culture": 18,
+  bacteria: 18,
+  malolactic: 18,
+  other: 18,
+  spontaneous: 18,
+  kveik: 30,
+};
+
+export function pitchTempC(cultures: readonly CultureAddition[]): number {
+  if (cultures.length === 0) return 20;
+  const fromRanges = cultures
+    .map((c) => c.temperature_range?.minimum)
+    .filter((t): t is NonNullable<typeof t> => t !== undefined)
+    .map((t) => toCelsius(t));
+  if (fromRanges.length > 0) {
+    return Math.max(...fromRanges);
+  }
+  const defaults = cultures.map((c) => PITCH_DEFAULT_BY_TYPE[c.type]);
+  return Math.max(...defaults);
+}
 
 /**
  * Initialize a brew session from a recipe.
@@ -103,13 +145,15 @@ export function recipeToSessionPlan(
     });
   }
 
-  // Chill — default ale pitch temp 20°C. Brewer can adjust per yeast strain.
+  // Chill to a pitch temp derived from the recipe's cultures: BeerJSON
+  // temperature_range.minimum if any culture provides one, otherwise a
+  // type-based default (ale, lager, kveik, etc.).
   steps.push({
     id: id(),
     kind: "chill",
     label: "Chill to pitch temp",
     status: "pending",
-    target_temperature_c: 20,
+    target_temperature_c: pitchTempC(recipe.ingredients.culture_additions ?? []),
   });
 
   // Transfer (custom)

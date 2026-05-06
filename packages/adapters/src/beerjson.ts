@@ -81,15 +81,37 @@ export interface TimingType {
   step?: number;
 }
 
+export type CultureType =
+  | "ale"
+  | "lager"
+  | "wheat"
+  | "wild"
+  | "kveik"
+  | "lacto"
+  | "pedio"
+  | "brett"
+  | "mixed-culture"
+  | "champagne"
+  | "wine"
+  | "bacteria"
+  | "malolactic"
+  | "other"
+  | "spontaneous";
+
 export interface CultureAddition {
   name: string;
-  type: "ale" | "lager" | "wheat" | "wild" | "kveik" | "lacto" | "pedio" | "brett" | "mixed-culture" | "champagne" | "wine" | "bacteria" | "malolactic" | "other" | "spontaneous";
+  type: CultureType;
   form: "liquid" | "dry" | "slant" | "culture" | "dregs";
   producer?: string;
   product_id?: string;
   /** Cultures can be measured by mass (dry yeast), volume (slurry), or unit count (packs). */
   amount?: MassType | VolumeType | UnitCountType;
   attenuation?: PercentType;
+  /** Recommended fermentation temperature range (BeerJSON spec). */
+  temperature_range?: {
+    minimum?: TempType;
+    maximum?: TempType;
+  };
 }
 
 /** BeerJSON UnitType — for unitless counts like "1.2 packs", "1 each". */

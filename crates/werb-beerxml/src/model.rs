@@ -369,6 +369,12 @@ pub struct Yeast {
     /// Apparent attenuation, in percent.
     #[serde(default)]
     pub attenuation: Option<f64>,
+    /// Minimum recommended fermentation temperature, in °C.
+    #[serde(default)]
+    pub min_temperature: Option<f64>,
+    /// Maximum recommended fermentation temperature, in °C.
+    #[serde(default)]
+    pub max_temperature: Option<f64>,
 }
 
 impl Yeast {

@@ -265,6 +265,16 @@ fn yeast_to_beerjson(y: &Yeast) -> Value {
     if let Some(att) = y.attenuation {
         obj.insert("attenuation".into(), percent(att));
     }
+    let mut range = Map::new();
+    if let Some(min) = y.min_temperature {
+        range.insert("minimum".into(), temperature_c(min));
+    }
+    if let Some(max) = y.max_temperature {
+        range.insert("maximum".into(), temperature_c(max));
+    }
+    if !range.is_empty() {
+        obj.insert("temperature_range".into(), Value::Object(range));
+    }
     Value::Object(obj)
 }
 

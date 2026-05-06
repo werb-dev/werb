@@ -13,6 +13,7 @@ import {
   fitMashToTun,
   recipeToStrikeTempInput,
 } from "../src/index.js";
+import { pitchTempC } from "../src/recipe-to-session.js";
 import type { BeerJsonFile } from "../src/index.js";
 import { computeIbu, computeWater, computeColor, computeGravity, computeScale } from "@werb/calc";
 
@@ -375,5 +376,51 @@ describe("recipeToStrikeTempInput — Double IPA fixture", () => {
   it("returns null when there's no mash defined", () => {
     const noMash = { ...recipe, mash: undefined };
     expect(recipeToStrikeTempInput(noMash)).toBeNull();
+  });
+});
+
+describe("pitchTempC — fixture + synthetic cases", () => {
+  it("uses BeerJSON temperature_range.minimum when present (max across cultures)", () => {
+    const cultures = [
+      {
+        name: "Lager strain",
+        type: "lager" as const,
+        form: "dry" as const,
+        temperature_range: { minimum: { value: 10, unit: "C" as const } },
+      },
+      {
+        name: "Ale strain",
+        type: "ale" as const,
+        form: "dry" as const,
+        temperature_range: { minimum: { value: 18, unit: "C" as const } },
+      },
+    ];
+    // Max of the two mins → 18 °C, ensures both are at or above their range.
+    expect(pitchTempC(cultures)).toBe(18);
+  });
+
+  it("falls back to type defaults when no culture has a temperature_range", () => {
+    const ale = [{ name: "X", type: "ale" as const, form: "dry" as const }];
+    const lager = [{ name: "X", type: "lager" as const, form: "dry" as const }];
+    const kveik = [{ name: "X", type: "kveik" as const, form: "dry" as const }];
+    expect(pitchTempC(ale)).toBe(18);
+    expect(pitchTempC(lager)).toBe(10);
+    expect(pitchTempC(kveik)).toBe(30);
+  });
+
+  it("type-fallback also uses max-of-mins when multiple cultures conflict", () => {
+    const mixed = [
+      { name: "A", type: "ale" as const, form: "dry" as const },
+      { name: "L", type: "lager" as const, form: "dry" as const },
+    ];
+    expect(pitchTempC(mixed)).toBe(18);
+  });
+
+  it("returns 20 °C when there are no cultures at all", () => {
+    expect(pitchTempC([])).toBe(20);
+  });
+
+  it("Mandarina fixture (ale yeasts, no temperature_range) defaults to 18°C", () => {
+    expect(pitchTempC(recipe.ingredients.culture_additions ?? [])).toBe(18);
   });
 });
