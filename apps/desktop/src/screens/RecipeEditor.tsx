@@ -686,7 +686,10 @@ function InlineNumber({
           const n = Number(e.target.value);
           onChange(Number.isFinite(n) ? n : 0);
         }}
-        className="w-full bg-transparent text-body font-mono tabular-nums text-text focus:outline-none min-w-0"
+        // Hide native browser spinner buttons — they steal column space
+        // and overlap the value in narrow cells (Time, Alpha, Yield, …).
+        // Keyboard arrows still work for nudging values.
+        className="w-full bg-transparent text-body font-mono tabular-nums text-text focus:outline-none min-w-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-inner-spin-button]:m-0 [&::-webkit-outer-spin-button]:m-0"
       />
       <span className="text-caption font-mono text-text-muted shrink-0">{unit}</span>
     </div>
