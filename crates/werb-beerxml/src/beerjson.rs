@@ -180,7 +180,9 @@ fn fermentable_to_beerjson(f: &Fermentable) -> Value {
         obj.insert("yield".into(), json!({ "fine_grind": percent(y) }));
     }
     if let Some(c) = f.color {
-        obj.insert("color".into(), json!({ "value": c, "unit": "Lovibond" }));
+        // BeerJSON's ColorUnitType enum is {"EBC", "Lovi", "SRM"}; the
+        // spec uses the abbreviation "Lovi", not "Lovibond".
+        obj.insert("color".into(), json!({ "value": c, "unit": "Lovi" }));
     }
     if let Some(o) = &f.origin {
         obj.insert("origin".into(), Value::String(o.clone()));

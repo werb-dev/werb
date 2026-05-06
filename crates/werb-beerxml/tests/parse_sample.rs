@@ -198,6 +198,7 @@ fn beerjson_conversion_round_trip() {
     assert_eq!(json["style"]["type"], "ale");
     assert_eq!(json["ingredients"]["fermentable_additions"][0]["name"], "Pale 2-Row");
     assert_eq!(json["ingredients"]["fermentable_additions"][0]["amount"]["unit"], "kg");
+    assert_eq!(json["ingredients"]["fermentable_additions"][0]["color"]["unit"], "Lovi");
     assert_eq!(json["ingredients"]["hop_additions"][1]["timing"]["use"], "add_to_fermentation");
     assert_eq!(json["ingredients"]["culture_additions"][0]["form"], "dry");
     assert_eq!(json["ingredients"]["culture_additions"][0]["amount"]["unit"], "kg"); // amount_is_weight
