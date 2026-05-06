@@ -92,13 +92,17 @@ export function profileToWaterOverrides(profile: ProfileWithId | undefined): Equ
 export const DEFAULT_PROFILE_VALUES = {
   batch_size_l: 20,
   efficiency_pct: 75,
+  hlt: {
+    capacity_l: 50,
+    dead_space_l: 0,
+  },
   mash_tun: {
-    capacity_l: 30,
+    capacity_l: 50,
     dead_space_l: 0,
     grain_absorption_l_per_kg: 0.96,
   },
   kettle: {
-    capacity_l: 30,
+    capacity_l: 72,
     dead_space_l: 0,
     evaporation_rate_l_per_hour: 3,
     post_boil_shrinkage_pct: 4,

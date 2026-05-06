@@ -5,7 +5,7 @@
  */
 
 /**
- * Profile of a brewing setup (mash tun, kettle, fermenter) used to compute volumes, losses, and efficiency for a brew session.
+ * Profile of a brewing setup (HLT, mash tun, kettle, fermenter) used to compute volumes, losses, and efficiency for a brew session.
  */
 export interface WerbEquipmentProfile {
   /**
@@ -21,6 +21,13 @@ export interface WerbEquipmentProfile {
    * Total brewhouse efficiency, percent (mash + lauter + boil losses considered).
    */
   efficiency_pct: number;
+  /**
+   * Hot liquor tank — vessel where strike and sparge water are heated.
+   */
+  hlt?: {
+    capacity_l: number;
+    dead_space_l?: number;
+  };
   mash_tun?: {
     capacity_l: number;
     dead_space_l?: number;

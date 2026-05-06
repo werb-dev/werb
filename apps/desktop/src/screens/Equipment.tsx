@@ -15,6 +15,7 @@ export function EquipmentScreen() {
       name: `Profile ${eq.profiles.length + 1}`,
       batch_size_l: DEFAULT_PROFILE_VALUES.batch_size_l,
       efficiency_pct: DEFAULT_PROFILE_VALUES.efficiency_pct,
+      hlt: { ...DEFAULT_PROFILE_VALUES.hlt },
       mash_tun: { ...DEFAULT_PROFILE_VALUES.mash_tun },
       kettle: { ...DEFAULT_PROFILE_VALUES.kettle },
       fermenter: { ...DEFAULT_PROFILE_VALUES.fermenter },
@@ -152,7 +153,7 @@ function ProfileForm({
   };
 
   const updateNested = <
-    Section extends "mash_tun" | "kettle" | "fermenter",
+    Section extends "hlt" | "mash_tun" | "kettle" | "fermenter",
     Field extends keyof NonNullable<(typeof draft)[Section]>,
   >(
     section: Section,
@@ -207,6 +208,25 @@ function ProfileForm({
           onBlur={commit}
         />
       </div>
+
+      <Section title="Hot liquor tank">
+        <div className="grid grid-cols-2 gap-4">
+          <NumberField
+            label="Capacity"
+            unit="L"
+            value={draft.hlt?.capacity_l ?? DEFAULT_PROFILE_VALUES.hlt.capacity_l}
+            onChange={(v) => updateNested("hlt", "capacity_l", v)}
+            onBlur={commit}
+          />
+          <NumberField
+            label="Dead space"
+            unit="L"
+            value={draft.hlt?.dead_space_l ?? DEFAULT_PROFILE_VALUES.hlt.dead_space_l}
+            onChange={(v) => updateNested("hlt", "dead_space_l", v)}
+            onBlur={commit}
+          />
+        </div>
+      </Section>
 
       <Section title="Mash tun">
         <div className="grid grid-cols-3 gap-4">

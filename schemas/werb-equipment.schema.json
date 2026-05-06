@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://werb.dev/schemas/werb-equipment.schema.json",
   "title": "WerbEquipmentProfile",
-  "description": "Profile of a brewing setup (mash tun, kettle, fermenter) used to compute volumes, losses, and efficiency for a brew session.",
+  "description": "Profile of a brewing setup (HLT, mash tun, kettle, fermenter) used to compute volumes, losses, and efficiency for a brew session.",
   "type": "object",
   "additionalProperties": false,
   "required": ["name", "batch_size_l", "efficiency_pct"],
@@ -24,6 +24,16 @@
       "minimum": 0,
       "maximum": 100,
       "description": "Total brewhouse efficiency, percent (mash + lauter + boil losses considered)."
+    },
+    "hlt": {
+      "type": "object",
+      "description": "Hot liquor tank — vessel where strike and sparge water are heated.",
+      "additionalProperties": false,
+      "required": ["capacity_l"],
+      "properties": {
+        "capacity_l": { "type": "number", "exclusiveMinimum": 0 },
+        "dead_space_l": { "type": "number", "minimum": 0, "default": 0 }
+      }
     },
     "mash_tun": {
       "type": "object",

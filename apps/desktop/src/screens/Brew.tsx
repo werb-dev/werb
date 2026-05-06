@@ -33,6 +33,31 @@ interface BrewContext {
   totalMashedKg: number;
   boilHops: BoilHop[];
   cultures: BeerJsonRecipe["ingredients"]["culture_additions"];
+  hltFit: HltFit | null;
+}
+
+/**
+ * Verdict on whether the HLT can hold the planned water.
+ *
+ * The brewer heats strike water first, drains it to the mash tun, then heats
+ * sparge water in the same vessel. So the binding constraint is the *larger*
+ * of the two volumes, not their sum — a combined check is informational only.
+ */
+type HltFit =
+  | { kind: "ok" }
+  | { kind: "two_heats"; strikeL: number; spargeL: number; capacityL: number }
+  | { kind: "overflow"; volumeL: number; capacityL: number; which: "strike" | "sparge" };
+
+function checkHltFit(water: WaterOutput, profile: ProfileWithId | undefined): HltFit | null {
+  const capacityL = profile?.hlt?.capacity_l;
+  if (!capacityL || capacityL <= 0) return null;
+  const usableL = capacityL - (profile.hlt?.dead_space_l ?? 0);
+  const strikeL = water.mash_water_l;
+  const spargeL = water.sparge_water_l;
+  if (strikeL > usableL) return { kind: "overflow", volumeL: strikeL, capacityL: usableL, which: "strike" };
+  if (spargeL > usableL) return { kind: "overflow", volumeL: spargeL, capacityL: usableL, which: "sparge" };
+  if (strikeL + spargeL > usableL) return { kind: "two_heats", strikeL, spargeL, capacityL: usableL };
+  return { kind: "ok" };
 }
 
 export function BrewScreen({ recipeId, recipe, activeProfile, onBack }: BrewScreenProps) {
@@ -60,7 +85,8 @@ export function BrewScreen({ recipeId, recipe, activeProfile, onBack }: BrewScre
         notes: h.notes,
       }));
     const cultures = recipe.ingredients.culture_additions;
-    return { water, totalGrainKg, totalMashedKg, boilHops, cultures };
+    const hltFit = checkHltFit(water, activeProfile);
+    return { water, totalGrainKg, totalMashedKg, boilHops, cultures, hltFit };
   }, [recipe, activeProfile]);
 
   if (!brew.session) {
@@ -78,6 +104,8 @@ export function BrewScreen({ recipeId, recipe, activeProfile, onBack }: BrewScre
           wakeLockHeld={wakeLockHeld}
           onBack={onBack}
         />
+
+        {ctx.hltFit && ctx.hltFit.kind !== "ok" && <HltFitBanner fit={ctx.hltFit} />}
 
         {activeStep ? (
           <ActiveStepCard
@@ -177,6 +205,37 @@ function Header({
         <WakeLockBadge held={wakeLockHeld} />
       </div>
     </header>
+  );
+}
+
+function HltFitBanner({ fit }: { fit: Exclude<HltFit, { kind: "ok" }> }) {
+  if (fit.kind === "overflow") {
+    const label = fit.which === "strike" ? "Strike water" : "Sparge water";
+    return (
+      <section className="mb-8 rounded-xl border border-danger bg-danger/10 px-5 py-4">
+        <p className="text-caption uppercase tracking-widest text-danger font-medium">
+          HLT too small
+        </p>
+        <p className="text-body-sm text-text mt-1">
+          {label} ({fit.volumeL.toFixed(1)} L) exceeds your HLT usable capacity (
+          {fit.capacityL.toFixed(1)} L). You can't heat this batch in one pass — split the
+          heat or use a larger vessel.
+        </p>
+      </section>
+    );
+  }
+  return (
+    <section className="mb-8 rounded-xl border border-warning bg-warning/10 px-5 py-4">
+      <p className="text-caption uppercase tracking-widest text-warning font-medium">
+        Two-heat session
+      </p>
+      <p className="text-body-sm text-text mt-1">
+        Strike ({fit.strikeL.toFixed(1)} L) + sparge ({fit.spargeL.toFixed(1)} L) =
+        {" "}
+        {(fit.strikeL + fit.spargeL).toFixed(1)} L exceeds your HLT capacity (
+        {fit.capacityL.toFixed(1)} L). Heat strike first, drain to mash, then heat sparge.
+      </p>
+    </section>
   );
 }
 
