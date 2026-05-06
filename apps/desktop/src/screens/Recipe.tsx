@@ -4,6 +4,9 @@ import {
   recipeToWaterInput,
   recipeToColorInput,
   recipeToGravityInput,
+  recipeToScaleInput,
+  applyScale,
+  fitMashToTun,
   toGrams,
   toKilograms,
   toLiters,
@@ -14,7 +17,7 @@ import {
   isVolume,
   type BeerJsonRecipe,
 } from "@werb/adapters";
-import { computeIbu, computeWater, computeAbv, computeColor, computeGravity } from "@werb/calc";
+import { computeIbu, computeWater, computeAbv, computeColor, computeGravity, computeScale } from "@werb/calc";
 import { profileToWaterOverrides, type ProfileWithId } from "../data/equipment.ts";
 
 const TIMING_LABEL: Record<string, string> = {
@@ -29,11 +32,11 @@ interface RecipeScreenProps {
   activeProfile?: ProfileWithId | undefined;
   onBack?: (() => void) | undefined;
   onStartBrewing?: (() => void) | undefined;
-  onScaleToProfile?: (() => void) | undefined;
+  onApplyScaled?: ((scaled: BeerJsonRecipe) => void) | undefined;
   hasActiveSession?: boolean | undefined;
 }
 
-export function RecipeScreen({ recipe, activeProfile, onBack, onStartBrewing, onScaleToProfile, hasActiveSession }: RecipeScreenProps) {
+export function RecipeScreen({ recipe, activeProfile, onBack, onStartBrewing, onApplyScaled, hasActiveSession }: RecipeScreenProps) {
   const computed = useMemo(() => {
     const ibu = computeIbu(recipeToIbuInput(recipe));
     const water = computeWater(recipeToWaterInput(recipe, profileToWaterOverrides(activeProfile)));
@@ -106,9 +109,9 @@ export function RecipeScreen({ recipe, activeProfile, onBack, onStartBrewing, on
                 {hasActiveSession ? "Resume brewing →" : "Start brewing →"}
               </button>
             )}
-            {onScaleToProfile && activeProfile && (
+            {onApplyScaled && activeProfile && (
               <ScaleButton
-                onScale={onScaleToProfile}
+                onApply={onApplyScaled}
                 recipe={recipe}
                 profile={activeProfile}
               />
@@ -340,11 +343,11 @@ export function RecipeScreen({ recipe, activeProfile, onBack, onStartBrewing, on
 // ─── Subcomponents ─────────────────────────────────────────────────────
 
 function ScaleButton({
-  onScale,
+  onApply,
   recipe,
   profile,
 }: {
-  onScale: () => void;
+  onApply: (scaled: BeerJsonRecipe) => void;
   recipe: BeerJsonRecipe;
   profile: ProfileWithId;
 }) {
@@ -355,15 +358,24 @@ function ScaleButton({
   const isNoOp = sameBatch && sameEff;
 
   const handleClick = () => {
-    if (isNoOp) return; // nothing to do
-    const summary = [
+    if (isNoOp) return;
+    // Preview the full pipeline: scale → fit-to-tun.
+    const out = computeScale(recipeToScaleInput(recipe, profile));
+    const scaled = applyScale(recipe, out);
+    const fit = profile.mash_tun
+      ? fitMashToTun(scaled, profile.mash_tun)
+      : { recipe: scaled, capped: null };
+
+    const lines = [
       `Batch: ${fromBatch.toFixed(0)} L → ${profile.batch_size_l} L`,
       fromEff !== null ? `Efficiency: ${fromEff}% → ${profile.efficiency_pct}%` : null,
-    ]
-      .filter(Boolean)
-      .join("\n");
-    if (confirm(`Adapt this recipe to "${profile.name}"?\n\n${summary}\n\nIngredient amounts will be rescaled in place.`)) {
-      onScale();
+      fit.capped
+        ? `Strike water capped: ${fit.capped.from_l.toFixed(1)} L → ${fit.capped.to_l.toFixed(1)} L (won't fit ${profile.mash_tun?.capacity_l} L mash tun otherwise — sparge picks up the rest)`
+        : null,
+    ].filter(Boolean);
+
+    if (confirm(`Adapt this recipe to "${profile.name}"?\n\n${lines.join("\n")}\n\nIngredient amounts will be rescaled in place.`)) {
+      onApply(fit.recipe);
     }
   };
 
@@ -374,7 +386,7 @@ function ScaleButton({
       title={
         isNoOp
           ? "Recipe already matches your rig — nothing to scale."
-          : `Rescale fermentables, hops, yeast, miscs and volumes for ${profile.name}.`
+          : `Rescale fermentables, hops, yeast and mash water for ${profile.name}, capping strike water to your mash tun if needed.`
       }
       className="px-4 py-3 rounded-xl bg-surface-raised border border-border text-body-sm font-medium hover:border-accent hover:text-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
     >

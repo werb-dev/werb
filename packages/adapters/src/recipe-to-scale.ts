@@ -1,6 +1,21 @@
 import type { ScaleInput, ScaleOutput } from "@werb/types";
 import type { BeerJsonRecipe } from "./beerjson.js";
-import { toLiters } from "./units.js";
+import { isMass } from "./beerjson.js";
+import { toKilograms, toLiters } from "./units.js";
+
+/**
+ * Approximate volume taken up by 1 kg of crushed grain in a mash, in
+ * liters. Derived from the homebrew rule of thumb that 1 lb of grain
+ * occupies ~0.32 qt of mash space (≈0.67 L/kg). Used to estimate how
+ * much water actually fits in a mash tun of a given capacity.
+ */
+const GRAIN_VOLUME_L_PER_KG = 0.67;
+
+/**
+ * Reserve a fraction of the mash tun's usable capacity for headspace
+ * (foam, stir-room). 15% is a conservative homebrew default.
+ */
+const MASH_TUN_HEADSPACE_FRACTION = 0.15;
 
 /**
  * Map a BeerJSON Recipe + an equipment-profile target to a ScaleInput
@@ -107,5 +122,79 @@ export function applyScale(
         ),
       }),
     },
+  };
+}
+
+/**
+ * Result of [`fitMashToTun`]: the (possibly modified) recipe plus a
+ * record of any cap applied to strike water. `capped` is `null` when
+ * no clamp was needed.
+ */
+export interface MashFitResult {
+  recipe: BeerJsonRecipe;
+  capped: { from_l: number; to_l: number } | null;
+}
+
+/**
+ * Clamp the recipe's first mash step's strike water volume to fit a
+ * given mash tun. Useful as a follow-up to [`applyScale`] when a
+ * scaled recipe's intended thickness would overflow the brewer's
+ * mash tun — typically when scaling a commercial-sized recipe down
+ * to a homebrew rig.
+ *
+ * The cap is computed as:
+ *
+ *   max_strike_l =
+ *     (mash_tun.capacity_l − mash_tun.dead_space_l) × (1 − headspace)
+ *     − total_grain_kg × GRAIN_VOLUME_L_PER_KG
+ *
+ * If the recipe's current strike water is already at or below this
+ * limit, the recipe passes through untouched (`capped: null`). Only
+ * the *first* mash step is clamped — later infusion steps are left
+ * alone since the tun is already partially drained between rests in
+ * practice.
+ */
+export function fitMashToTun(
+  recipe: BeerJsonRecipe,
+  mashTun: { capacity_l: number; dead_space_l?: number | undefined },
+): MashFitResult {
+  if (!recipe.mash || recipe.mash.mash_steps.length === 0) {
+    return { recipe, capped: null };
+  }
+  const firstStep = recipe.mash.mash_steps[0];
+  if (!firstStep?.amount) {
+    return { recipe, capped: null };
+  }
+
+  const grainKg = recipe.ingredients.fermentable_additions
+    .filter((f) => f.type === "grain")
+    .reduce((sum, f) => {
+      if (!isMass(f.amount)) return sum;
+      return sum + toKilograms(f.amount);
+    }, 0);
+
+  const grainVolumeL = grainKg * GRAIN_VOLUME_L_PER_KG;
+  const usableL = mashTun.capacity_l - (mashTun.dead_space_l ?? 0);
+  const maxStrikeL = Math.max(0, usableL * (1 - MASH_TUN_HEADSPACE_FRACTION) - grainVolumeL);
+
+  const currentStrikeL = toLiters(firstStep.amount);
+
+  if (currentStrikeL <= maxStrikeL || maxStrikeL <= 0) {
+    return { recipe, capped: null };
+  }
+
+  return {
+    recipe: {
+      ...recipe,
+      mash: {
+        ...recipe.mash,
+        mash_steps: recipe.mash.mash_steps.map((s, i) =>
+          i === 0 && s.amount
+            ? { ...s, amount: { ...s.amount, value: maxStrikeL } }
+            : s,
+        ),
+      },
+    },
+    capped: { from_l: currentStrikeL, to_l: maxStrikeL },
   };
 }

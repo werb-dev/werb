@@ -7,8 +7,6 @@ import { EquipmentScreen } from "./screens/Equipment.tsx";
 import { useRecipes } from "./hooks/useRecipes.ts";
 import { useEquipment } from "./hooks/useEquipment.ts";
 import { BUNDLED_SAMPLES, importBeerJsonFromDisk, importBeerXmlFromDisk } from "./data/recipes.ts";
-import { applyScale, recipeToScaleInput } from "@werb/adapters";
-import { computeScale } from "@werb/calc";
 
 type AppState =
   | { view: "library" }
@@ -51,12 +49,9 @@ export function App() {
           activeProfile={profile}
           onBack={goLibrary}
           onStartBrewing={() => goBrew(state.recipeId)}
-          onScaleToProfile={
+          onApplyScaled={
             profile
-              ? () => {
-                  const out = computeScale(recipeToScaleInput(loaded.recipe, profile));
-                  recipesApi.update(state.recipeId, applyScale(loaded.recipe, out));
-                }
+              ? (scaled) => recipesApi.update(state.recipeId, scaled)
               : undefined
           }
           hasActiveSession={hasSessionFor(state.recipeId)}

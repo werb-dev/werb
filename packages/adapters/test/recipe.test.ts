@@ -10,6 +10,7 @@ import {
   recipeToSessionPlan,
   recipeToScaleInput,
   applyScale,
+  fitMashToTun,
 } from "../src/index.js";
 import type { BeerJsonFile } from "../src/index.js";
 import { computeIbu, computeWater, computeColor, computeGravity, computeScale } from "@werb/calc";
@@ -266,5 +267,51 @@ describe("recipeToScaleInput / applyScale — Double IPA fixture", () => {
     if ("value" in orig && "value" in next) {
       expect(next.value).toBeCloseTo(orig.value, 6);
     }
+  });
+});
+
+describe("fitMashToTun — Double IPA fixture", () => {
+  it("passes through unchanged when strike water already fits", () => {
+    const result = fitMashToTun(recipe, { capacity_l: 100 });
+    expect(result.capped).toBeNull();
+    expect(result.recipe).toBe(recipe);
+  });
+
+  it("caps strike water when it exceeds the tun capacity", () => {
+    // Mandarina fixture has ~7 kg grain → ~5 L grain volume.
+    // A 30 L tun, 15% headspace → 30*0.85 - 5 = 20.5 L max strike.
+    // The fixture's actual strike is ~25 L, so it should clamp.
+    const result = fitMashToTun(recipe, { capacity_l: 30 });
+    expect(result.capped).not.toBeNull();
+    if (result.capped) {
+      expect(result.capped.to_l).toBeLessThan(result.capped.from_l);
+      const newStep = result.recipe.mash!.mash_steps[0]!;
+      if (newStep.amount && "value" in newStep.amount) {
+        expect(newStep.amount.value).toBeCloseTo(result.capped.to_l, 6);
+      }
+    }
+  });
+
+  it("respects dead_space_l when computing usable capacity", () => {
+    const without = fitMashToTun(recipe, { capacity_l: 30 });
+    const withDead = fitMashToTun(recipe, { capacity_l: 30, dead_space_l: 5 });
+    if (without.capped && withDead.capped) {
+      // Less usable space → tighter cap.
+      expect(withDead.capped.to_l).toBeLessThan(without.capped.to_l);
+    }
+  });
+
+  it("leaves the original recipe unmutated", () => {
+    const before = JSON.stringify(recipe.mash);
+    fitMashToTun(recipe, { capacity_l: 10 });
+    const after = JSON.stringify(recipe.mash);
+    expect(before).toBe(after);
+  });
+
+  it("returns the recipe untouched when there's no mash or no first-step amount", () => {
+    const noMash = { ...recipe, mash: undefined };
+    const result = fitMashToTun(noMash, { capacity_l: 10 });
+    expect(result.capped).toBeNull();
+    expect(result.recipe).toBe(noMash);
   });
 });
