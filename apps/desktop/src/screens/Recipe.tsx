@@ -95,6 +95,9 @@ export function RecipeScreen({ recipe, activeProfile, onBack, onStartBrewing, on
             </p>
           )}
           <h1 className="text-h1 font-semibold mt-3 capitalize">{recipe.name.toLowerCase()}</h1>
+          {recipe.author && recipe.author !== "Unknown" && (
+            <p className="text-caption text-text-muted mt-1">by {recipe.author}</p>
+          )}
           <p className="text-body text-text-muted mt-2 font-mono">
             {toLiters(recipe.batch_size).toFixed(0)} L
             {recipe.boil?.boil_time && ` · ${toMinutes(recipe.boil.boil_time).toFixed(0)} min boil`}

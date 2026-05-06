@@ -151,8 +151,6 @@ const FERMENTABLE_TYPES: FermentableAddition["type"][] = [
   "other",
 ];
 
-const COLOR_UNITS = ["Lovi", "SRM", "EBC"] as const;
-
 function FermentablesSection({
   draft,
   updateIngredients,
@@ -187,84 +185,72 @@ function FermentablesSection({
 
   return (
     <Section title="Fermentables">
-      <ul className="rounded-xl bg-surface border border-border divide-y divide-border">
+      <div className="rounded-xl bg-surface border border-border overflow-hidden">
+        <RowHeader
+          cols={[
+            { label: "Name", span: "col-span-4" },
+            { label: "Type", span: "col-span-2" },
+            { label: "Amount", span: "col-span-2" },
+            { label: "Color", span: "col-span-2" },
+            { label: "Yield", span: "col-span-1" },
+            { label: "", span: "col-span-1" },
+          ]}
+        />
         {items.map((f, i) => (
-          <li key={i} className="px-5 py-4">
-            <div className="grid grid-cols-12 gap-3">
-              <Field
-                className="col-span-5"
-                label="Name"
-                value={f.name}
-                onChange={(v) => updateRow(i, { ...f, name: v })}
-              />
-              <SelectField
-                className="col-span-3"
-                label="Type"
-                value={f.type}
-                onChange={(v) =>
-                  updateRow(i, { ...f, type: v as FermentableAddition["type"] })
-                }
-                options={FERMENTABLE_TYPES}
-              />
-              <NumberField
-                className="col-span-3"
-                label="Amount"
-                unit="kg"
-                value={f.amount.value}
-                step={0.05}
-                onChange={(v) => updateRow(i, { ...f, amount: { ...f.amount, value: v } })}
-              />
-              <DeleteButton className="col-span-1" onClick={() => removeRow(i)} />
+          <div
+            key={i}
+            className="grid grid-cols-12 gap-2 px-4 py-2 border-b border-border last:border-b-0 items-center hover:bg-surface-raised/40 transition-colors"
+          >
+            <InlineInput
+              className="col-span-4"
+              value={f.name}
+              onChange={(v) => updateRow(i, { ...f, name: v })}
+            />
+            <InlineSelect
+              className="col-span-2"
+              value={f.type}
+              onChange={(v) =>
+                updateRow(i, { ...f, type: v as FermentableAddition["type"] })
+              }
+              options={FERMENTABLE_TYPES}
+            />
+            <InlineNumber
+              className="col-span-2"
+              value={f.amount.value}
+              unit="kg"
+              step={0.05}
+              onChange={(v) => updateRow(i, { ...f, amount: { ...f.amount, value: v } })}
+            />
+            <InlineNumber
+              className="col-span-2"
+              value={f.color?.value ?? 0}
+              unit={f.color?.unit ?? "Lovi"}
+              step={0.5}
+              onChange={(v) =>
+                updateRow(i, {
+                  ...f,
+                  color: { value: v, unit: f.color?.unit ?? "Lovi" },
+                })
+              }
+            />
+            <InlineNumber
+              className="col-span-1"
+              value={f.yield?.fine_grind?.value ?? 0}
+              unit="%"
+              step={1}
+              onChange={(v) =>
+                updateRow(i, {
+                  ...f,
+                  yield: { ...f.yield, fine_grind: { value: v, unit: "%" } },
+                })
+              }
+            />
+            <div className="col-span-1 flex justify-end">
+              <InlineDeleteButton onClick={() => removeRow(i)} />
             </div>
-            <div className="grid grid-cols-12 gap-3 mt-3">
-              <NumberField
-                className="col-span-3"
-                label="Color"
-                unit={f.color?.unit ?? "Lovi"}
-                value={f.color?.value ?? 0}
-                step={0.5}
-                onChange={(v) =>
-                  updateRow(i, {
-                    ...f,
-                    color: { value: v, unit: f.color?.unit ?? "Lovi" },
-                  })
-                }
-              />
-              <SelectField
-                className="col-span-3"
-                label="Color unit"
-                value={f.color?.unit ?? "Lovi"}
-                onChange={(v) =>
-                  updateRow(i, {
-                    ...f,
-                    color: {
-                      value: f.color?.value ?? 0,
-                      unit: v as (typeof COLOR_UNITS)[number],
-                    },
-                  })
-                }
-                options={[...COLOR_UNITS]}
-              />
-              <NumberField
-                className="col-span-3"
-                label="Yield (fine grind)"
-                unit="%"
-                value={f.yield?.fine_grind?.value ?? 0}
-                step={1}
-                onChange={(v) =>
-                  updateRow(i, {
-                    ...f,
-                    yield: {
-                      ...f.yield,
-                      fine_grind: { value: v, unit: "%" },
-                    },
-                  })
-                }
-              />
-            </div>
-          </li>
+          </div>
         ))}
-      </ul>
+      </div>
       <AddRowButton label="+ Add fermentable" onClick={addRow} />
     </Section>
   );
@@ -313,81 +299,84 @@ function HopsSection({
 
   return (
     <Section title="Hops">
-      <ul className="rounded-xl bg-surface border border-border divide-y divide-border">
+      <div className="rounded-xl bg-surface border border-border overflow-hidden">
+        <RowHeader
+          cols={[
+            { label: "Name", span: "col-span-3" },
+            { label: "Use", span: "col-span-2" },
+            { label: "Time", span: "col-span-1" },
+            { label: "Alpha", span: "col-span-1" },
+            { label: "Amount", span: "col-span-2" },
+            { label: "Form", span: "col-span-2" },
+            { label: "", span: "col-span-1" },
+          ]}
+        />
         {items.map((h, i) => (
-          <li key={i} className="px-5 py-4">
-            <div className="grid grid-cols-12 gap-3">
-              <Field
-                className="col-span-5"
-                label="Name"
-                value={h.name}
-                onChange={(v) => updateRow(i, { ...h, name: v })}
-              />
-              <NumberField
-                className="col-span-3"
-                label="Alpha"
-                unit="%"
-                value={h.alpha_acid?.value ?? 0}
-                step={0.1}
-                onChange={(v) =>
-                  updateRow(i, { ...h, alpha_acid: { value: v, unit: "%" } })
-                }
-              />
-              <NumberField
-                className="col-span-3"
-                label="Amount"
-                unit="g"
-                value={h.amount.value * (h.amount.unit === "kg" ? 1000 : 1)}
-                step={1}
-                onChange={(v) =>
-                  updateRow(i, {
-                    ...h,
-                    amount: { value: v / 1000, unit: "kg" },
-                  })
-                }
-              />
-              <DeleteButton className="col-span-1" onClick={() => removeRow(i)} />
+          <div
+            key={i}
+            className="grid grid-cols-12 gap-2 px-4 py-2 border-b border-border last:border-b-0 items-center hover:bg-surface-raised/40 transition-colors"
+          >
+            <InlineInput
+              className="col-span-3"
+              value={h.name}
+              onChange={(v) => updateRow(i, { ...h, name: v })}
+            />
+            <InlineSelect
+              className="col-span-2"
+              value={h.timing.use ?? "add_to_boil"}
+              onChange={(v) =>
+                updateRow(i, {
+                  ...h,
+                  timing: { ...h.timing, use: v as (typeof HOP_USES)[number] },
+                })
+              }
+              options={[...HOP_USES]}
+              labels={HOP_USE_LABELS}
+            />
+            <InlineNumber
+              className="col-span-1"
+              value={h.timing.time?.value ?? 0}
+              unit="min"
+              step={1}
+              onChange={(v) =>
+                updateRow(i, {
+                  ...h,
+                  timing: { ...h.timing, time: { value: v, unit: "min" } },
+                })
+              }
+            />
+            <InlineNumber
+              className="col-span-1"
+              value={h.alpha_acid?.value ?? 0}
+              unit="%"
+              step={0.1}
+              onChange={(v) =>
+                updateRow(i, { ...h, alpha_acid: { value: v, unit: "%" } })
+              }
+            />
+            <InlineNumber
+              className="col-span-2"
+              value={h.amount.value * (h.amount.unit === "kg" ? 1000 : 1)}
+              unit="g"
+              step={1}
+              onChange={(v) =>
+                updateRow(i, { ...h, amount: { value: v / 1000, unit: "kg" } })
+              }
+            />
+            <InlineSelect
+              className="col-span-2"
+              value={h.form ?? "pellet"}
+              onChange={(v) =>
+                updateRow(i, { ...h, form: v as (typeof HOP_FORMS)[number] })
+              }
+              options={[...HOP_FORMS]}
+            />
+            <div className="col-span-1 flex justify-end">
+              <InlineDeleteButton onClick={() => removeRow(i)} />
             </div>
-            <div className="grid grid-cols-12 gap-3 mt-3">
-              <SelectField
-                className="col-span-3"
-                label="Use"
-                value={h.timing.use ?? "add_to_boil"}
-                onChange={(v) =>
-                  updateRow(i, {
-                    ...h,
-                    timing: { ...h.timing, use: v as (typeof HOP_USES)[number] },
-                  })
-                }
-                options={[...HOP_USES]}
-                labels={HOP_USE_LABELS}
-              />
-              <NumberField
-                className="col-span-3"
-                label="Time"
-                unit="min"
-                value={h.timing.time?.value ?? 0}
-                step={1}
-                onChange={(v) =>
-                  updateRow(i, {
-                    ...h,
-                    timing: { ...h.timing, time: { value: v, unit: "min" } },
-                  })
-                }
-              />
-              <SelectField
-                className="col-span-3"
-                label="Form"
-                value={h.form ?? "pellet"}
-                onChange={(v) =>
-                  updateRow(i, { ...h, form: v as (typeof HOP_FORMS)[number] })
-                }
-                options={[...HOP_FORMS]}
-              />
-            </div>
-          </li>
+          </div>
         ))}
-      </ul>
+      </div>
       <AddRowButton label="+ Add hop" onClick={addRow} />
     </Section>
   );
@@ -447,65 +436,69 @@ function CulturesSection({
 
   return (
     <Section title="Cultures">
-      <ul className="rounded-xl bg-surface border border-border divide-y divide-border">
+      <div className="rounded-xl bg-surface border border-border overflow-hidden">
+        <RowHeader
+          cols={[
+            { label: "Name", span: "col-span-4" },
+            { label: "Type", span: "col-span-2" },
+            { label: "Form", span: "col-span-2" },
+            { label: "Amount", span: "col-span-2" },
+            { label: "Attenuation", span: "col-span-1" },
+            { label: "", span: "col-span-1" },
+          ]}
+        />
         {items.map((c, i) => (
-          <li key={i} className="px-5 py-4">
-            <div className="grid grid-cols-12 gap-3">
-              <Field
-                className="col-span-5"
-                label="Name"
-                value={c.name}
-                onChange={(v) => updateRow(i, { ...c, name: v })}
-              />
-              <SelectField
-                className="col-span-3"
-                label="Type"
-                value={c.type}
-                onChange={(v) => updateRow(i, { ...c, type: v as CultureType })}
-                options={CULTURE_TYPES}
-              />
-              <SelectField
-                className="col-span-3"
-                label="Form"
-                value={c.form}
-                onChange={(v) =>
-                  updateRow(i, { ...c, form: v as CultureAddition["form"] })
-                }
-                options={CULTURE_FORMS}
-              />
-              <DeleteButton className="col-span-1" onClick={() => removeRow(i)} />
+          <div
+            key={i}
+            className="grid grid-cols-12 gap-2 px-4 py-2 border-b border-border last:border-b-0 items-center hover:bg-surface-raised/40 transition-colors"
+          >
+            <InlineInput
+              className="col-span-4"
+              value={c.name}
+              onChange={(v) => updateRow(i, { ...c, name: v })}
+            />
+            <InlineSelect
+              className="col-span-2"
+              value={c.type}
+              onChange={(v) => updateRow(i, { ...c, type: v as CultureType })}
+              options={CULTURE_TYPES}
+            />
+            <InlineSelect
+              className="col-span-2"
+              value={c.form}
+              onChange={(v) => updateRow(i, { ...c, form: v as CultureAddition["form"] })}
+              options={CULTURE_FORMS}
+            />
+            <InlineNumber
+              className="col-span-2"
+              value={c.amount && "value" in c.amount ? c.amount.value : 0}
+              unit={c.amount && "unit" in c.amount ? c.amount.unit : "g"}
+              step={0.1}
+              onChange={(v) =>
+                updateRow(i, {
+                  ...c,
+                  amount:
+                    c.amount && "unit" in c.amount
+                      ? { ...c.amount, value: v }
+                      : { value: v, unit: "g" },
+                })
+              }
+            />
+            <InlineNumber
+              className="col-span-1"
+              value={c.attenuation?.value ?? 75}
+              unit="%"
+              step={1}
+              onChange={(v) =>
+                updateRow(i, { ...c, attenuation: { value: v, unit: "%" } })
+              }
+            />
+            <div className="col-span-1 flex justify-end">
+              <InlineDeleteButton onClick={() => removeRow(i)} />
             </div>
-            <div className="grid grid-cols-12 gap-3 mt-3">
-              <NumberField
-                className="col-span-3"
-                label="Attenuation"
-                unit="%"
-                value={c.attenuation?.value ?? 75}
-                step={1}
-                onChange={(v) =>
-                  updateRow(i, { ...c, attenuation: { value: v, unit: "%" } })
-                }
-              />
-              <NumberField
-                className="col-span-3"
-                label="Amount"
-                unit={c.amount && "unit" in c.amount ? c.amount.unit : "g"}
-                value={c.amount && "value" in c.amount ? c.amount.value : 0}
-                step={0.1}
-                onChange={(v) =>
-                  updateRow(i, {
-                    ...c,
-                    amount:
-                      c.amount && "unit" in c.amount
-                        ? { ...c.amount, value: v }
-                        : { value: v, unit: "g" },
-                  })
-                }
-              />
-            </div>
-          </li>
+          </div>
         ))}
-      </ul>
+      </div>
       <AddRowButton label="+ Add culture" onClick={addRow} />
     </Section>
   );
@@ -635,18 +628,109 @@ function SelectField({
   );
 }
 
-function DeleteButton({ onClick, className }: { onClick: () => void; className?: string }) {
+// ─── Inline (table-style) primitives for ingredient rows ──────────────────
+
+function RowHeader({ cols }: { cols: { label: string; span: string }[] }) {
   return (
-    <div className={`flex items-end ${className ?? ""}`}>
-      <button
-        type="button"
-        onClick={onClick}
-        title="Delete"
-        className="w-full h-10 rounded-lg bg-surface-raised border border-border text-text-muted hover:text-danger hover:border-danger transition-colors"
-      >
-        ×
-      </button>
+    <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-surface-raised text-caption uppercase tracking-widest text-text-muted border-b border-border">
+      {cols.map((c, i) => (
+        <div key={i} className={c.span}>
+          {c.label}
+        </div>
+      ))}
     </div>
+  );
+}
+
+function InlineInput({
+  value,
+  onChange,
+  className,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  className?: string;
+}) {
+  return (
+    <input
+      type="text"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className={`bg-transparent border-b border-transparent px-1 py-1 text-body text-text placeholder:text-text-muted focus:outline-none focus:border-accent hover:border-border transition-colors min-w-0 ${className ?? ""}`}
+    />
+  );
+}
+
+function InlineNumber({
+  value,
+  unit,
+  onChange,
+  step = 1,
+  className,
+}: {
+  value: number;
+  unit: string;
+  onChange: (v: number) => void;
+  step?: number;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`flex items-baseline gap-1 border-b border-transparent px-1 py-1 focus-within:border-accent hover:border-border transition-colors min-w-0 ${className ?? ""}`}
+    >
+      <input
+        type="number"
+        value={Number.isFinite(value) ? value : ""}
+        step={step}
+        onChange={(e) => {
+          const n = Number(e.target.value);
+          onChange(Number.isFinite(n) ? n : 0);
+        }}
+        className="w-full bg-transparent text-body font-mono tabular-nums text-text focus:outline-none min-w-0"
+      />
+      <span className="text-caption font-mono text-text-muted shrink-0">{unit}</span>
+    </div>
+  );
+}
+
+function InlineSelect({
+  value,
+  onChange,
+  options,
+  labels,
+  className,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  options: string[];
+  labels?: Record<string, string>;
+  className?: string;
+}) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className={`bg-transparent border-b border-transparent px-1 py-1 text-body text-text focus:outline-none focus:border-accent hover:border-border transition-colors capitalize min-w-0 ${className ?? ""}`}
+    >
+      {options.map((opt) => (
+        <option key={opt} value={opt}>
+          {labels?.[opt] ?? opt}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+function InlineDeleteButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title="Delete"
+      className="w-7 h-7 rounded-pill flex items-center justify-center text-text-muted hover:text-danger hover:bg-danger/10 transition-colors"
+    >
+      ×
+    </button>
   );
 }
 
