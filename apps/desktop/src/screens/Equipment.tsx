@@ -1,9 +1,13 @@
 import { useState } from "react";
 import { DEFAULT_PROFILE_VALUES, type ProfileWithId } from "../data/equipment.ts";
-import { useEquipment } from "../hooks/useEquipment.ts";
+import type { useEquipment } from "../hooks/useEquipment.ts";
 
-export function EquipmentScreen() {
-  const eq = useEquipment();
+interface EquipmentScreenProps {
+  api: ReturnType<typeof useEquipment>;
+}
+
+export function EquipmentScreen({ api }: EquipmentScreenProps) {
+  const eq = api;
   const [selectedId, setSelectedId] = useState<string | null>(
     eq.activeId ?? eq.profiles[0]?.id ?? null,
   );

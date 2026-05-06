@@ -73,7 +73,7 @@ export function App() {
       );
     }
   } else if (state.view === "equipment") {
-    screen = <EquipmentScreen />;
+    screen = <EquipmentScreen api={equipmentApi} />;
   } else if (state.view === "tokens") {
     screen = <DesignTokensShowcase />;
   } else {
