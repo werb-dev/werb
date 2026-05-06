@@ -14,6 +14,7 @@ import { profileToWaterOverrides, type ProfileWithId } from "../data/equipment.t
 interface LibraryScreenProps {
   recipes: StoredRecipe[];
   onSelect: (id: string) => void;
+  onDelete: (id: string) => void;
   onImportSamples: () => number;
   onImportBeerJsonFile: () => Promise<{ count: number; error?: string | undefined }>;
   onImportBeerXmlFile: () => Promise<{ count: number; error?: string | undefined }>;
@@ -24,6 +25,7 @@ interface LibraryScreenProps {
 export function LibraryScreen({
   recipes,
   onSelect,
+  onDelete,
   onImportSamples,
   onImportBeerJsonFile,
   onImportBeerXmlFile,
@@ -106,6 +108,9 @@ export function LibraryScreen({
                   recipe={recipe}
                   activeProfile={activeProfile}
                   onSelect={() => onSelect(id)}
+                  onDelete={() => {
+                    if (confirm(`Delete "${recipe.name}"?`)) onDelete(id);
+                  }}
                 />
               </li>
             ))}
@@ -120,10 +125,12 @@ function RecipeCard({
   recipe,
   activeProfile,
   onSelect,
+  onDelete,
 }: {
   recipe: BeerJsonRecipe;
   activeProfile?: ProfileWithId | undefined;
   onSelect: () => void;
+  onDelete: () => void;
 }) {
   const beerColor = recipe.color_estimate ? srmToHex(toSrm(recipe.color_estimate)) : null;
   const computedIbu = (() => {
@@ -144,9 +151,18 @@ function RecipeCard({
   const claimedIbu = recipe.ibu_estimate?.ibu?.value ?? null;
 
   return (
+    <div className="group relative">
+      <button
+        onClick={onDelete}
+        aria-label={`Delete ${recipe.name}`}
+        title="Delete recipe"
+        className="absolute top-3 right-3 z-10 w-7 h-7 rounded-pill flex items-center justify-center text-text-muted bg-surface-raised border border-border opacity-0 group-hover:opacity-100 hover:text-danger hover:border-danger transition-all focus:outline-none focus:opacity-100 focus:ring-2 focus:ring-danger"
+      >
+        <span aria-hidden className="text-body-sm font-mono leading-none">×</span>
+      </button>
     <button
       onClick={onSelect}
-      className="group w-full text-left rounded-xl bg-surface border border-border hover:bg-surface-raised hover:border-border-strong transition-colors p-6 flex flex-col gap-4 focus:outline-none focus:ring-2 focus:ring-accent"
+      className="w-full text-left rounded-xl bg-surface border border-border hover:bg-surface-raised hover:border-border-strong transition-colors p-6 flex flex-col gap-4 focus:outline-none focus:ring-2 focus:ring-accent"
     >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
@@ -213,6 +229,7 @@ function RecipeCard({
         />
       </dl>
     </button>
+    </div>
   );
 }
 

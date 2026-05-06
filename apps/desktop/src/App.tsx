@@ -75,6 +75,7 @@ export function App() {
       <LibraryScreen
         recipes={recipesApi.recipes}
         onSelect={goRecipe}
+        onDelete={recipesApi.remove}
         onImportSamples={() => recipesApi.createMany(BUNDLED_SAMPLES).length}
         onImportBeerJsonFile={async () => {
           const { recipes, error } = await importBeerJsonFromDisk();
