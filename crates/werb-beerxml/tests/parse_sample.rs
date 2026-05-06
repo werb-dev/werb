@@ -6,16 +6,37 @@ const SAMPLE: &str = include_str!("fixtures/sample_ipa.beerxml");
 fn parses_top_level_recipe_metadata() {
     let r = parse_one(SAMPLE).expect("parse");
     assert_eq!(r.name, "Cascade IPA");
-    assert_eq!(r.recipe_type, RecipeType::AllGrain);
+    assert_eq!(r.effective_recipe_type(), RecipeType::AllGrain);
     assert_eq!(r.brewer.as_deref(), Some("Test Brewer"));
     assert!((r.batch_size - 20.0).abs() < 1e-9);
-    assert!((r.boil_size - 26.0).abs() < 1e-9);
-    assert_eq!(r.boil_time, 60.0);
+    assert!((r.effective_boil_size() - 26.0).abs() < 1e-9);
+    assert_eq!(r.effective_boil_time(), 60.0);
     assert_eq!(r.efficiency, Some(75.0));
     assert_eq!(r.ibu, Some(52.5));
     assert_eq!(r.est_og_value(), Some(1.062));
     assert_eq!(r.est_fg_value(), Some(1.012));
     assert_eq!(r.est_color_value(), Some(9.5));
+}
+
+#[test]
+fn missing_optional_fields_use_sensible_defaults() {
+    let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+<RECIPES>
+  <RECIPE>
+    <NAME>Sparse Recipe</NAME>
+    <VERSION>1</VERSION>
+    <BATCH_SIZE>19.0</BATCH_SIZE>
+  </RECIPE>
+</RECIPES>"#;
+    let r = parse_one(xml).expect("missing TYPE/BOIL_SIZE/BOIL_TIME should still parse");
+    assert!(r.recipe_type.is_none());
+    assert_eq!(r.effective_recipe_type(), RecipeType::AllGrain);
+    assert!(r.boil_size.is_none());
+    assert!((r.effective_boil_size() - 19.0 * 1.25).abs() < 1e-9);
+    assert_eq!(r.effective_boil_time(), 60.0);
+    let json = r.to_beerjson();
+    assert_eq!(json["type"], "all grain");
+    assert_eq!(json["boil"]["boil_time"]["value"], 60.0);
 }
 
 #[test]

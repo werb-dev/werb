@@ -25,14 +25,14 @@ impl Recipe {
     pub fn to_beerjson(&self) -> Value {
         let mut recipe = Map::new();
         recipe.insert("name".into(), Value::String(self.name.clone()));
-        recipe.insert("type".into(), Value::String(recipe_type_to_beerjson(&self.recipe_type)));
+        recipe.insert("type".into(), Value::String(recipe_type_to_beerjson(&self.effective_recipe_type())));
         if let Some(brewer) = &self.brewer {
             recipe.insert("author".into(), Value::String(brewer.clone()));
         }
         recipe.insert("batch_size".into(), volume_l(self.batch_size));
         recipe.insert("boil".into(), json!({
-            "pre_boil_size": volume_l(self.boil_size),
-            "boil_time": minutes(self.boil_time),
+            "pre_boil_size": volume_l(self.effective_boil_size()),
+            "boil_time": minutes(self.effective_boil_time()),
         }));
         if let Some(eff) = self.efficiency {
             recipe.insert("efficiency".into(), json!({ "brewhouse": percent(eff) }));

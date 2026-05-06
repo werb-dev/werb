@@ -21,17 +21,23 @@ pub struct Recipe {
     #[serde(default = "default_version")]
     pub version: u32,
     /// Recipe construction style — extract, partial mash, or all-grain.
-    #[serde(rename = "TYPE")]
-    pub recipe_type: RecipeType,
+    /// Optional in practice: many exporters omit this even though the
+    /// spec lists it as required.
+    #[serde(default, rename = "TYPE")]
+    pub recipe_type: Option<RecipeType>,
     /// Optional brewer name.
     #[serde(default)]
     pub brewer: Option<String>,
     /// Batch (post-boil, into-fermenter) volume, in liters.
     pub batch_size: f64,
-    /// Boil-kettle starting volume, in liters.
-    pub boil_size: f64,
-    /// Boil duration, in minutes.
-    pub boil_time: f64,
+    /// Boil-kettle starting volume, in liters. Optional — defaults to
+    /// `batch_size * 1.25` in [`Recipe::effective_boil_size`] when absent.
+    #[serde(default)]
+    pub boil_size: Option<f64>,
+    /// Boil duration, in minutes. Optional — defaults to 60 in
+    /// [`Recipe::effective_boil_time`] when absent.
+    #[serde(default)]
+    pub boil_time: Option<f64>,
     /// Brewhouse efficiency, in percent (0–100).
     #[serde(default)]
     pub efficiency: Option<f64>,
@@ -77,6 +83,25 @@ fn default_version() -> u32 {
 }
 
 impl Recipe {
+    /// Returns [`recipe_type`](Self::recipe_type) or, when absent, falls
+    /// back to [`RecipeType::AllGrain`] — the most common shape of
+    /// recipe in BeerXML exports.
+    pub fn effective_recipe_type(&self) -> RecipeType {
+        self.recipe_type.clone().unwrap_or(RecipeType::AllGrain)
+    }
+
+    /// Returns [`boil_size`](Self::boil_size) or, when absent, falls
+    /// back to `batch_size * 1.25` — a reasonable estimate for the
+    /// pre-boil kettle volume.
+    pub fn effective_boil_size(&self) -> f64 {
+        self.boil_size.unwrap_or(self.batch_size * 1.25)
+    }
+
+    /// Returns [`boil_time`](Self::boil_time) or 60 minutes when absent.
+    pub fn effective_boil_time(&self) -> f64 {
+        self.boil_time.unwrap_or(60.0)
+    }
+
     /// Parses [`est_og`](Self::est_og) as a float, dropping any unit suffix.
     pub fn est_og_value(&self) -> Option<f64> {
         parse_leading_f64(self.est_og.as_deref()?)
