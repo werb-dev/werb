@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   recipeToIbuInput,
   recipeToWaterInput,
@@ -13,6 +14,8 @@ import { profileToWaterOverrides, type ProfileWithId } from "../data/equipment.t
 interface LibraryScreenProps {
   recipes: StoredRecipe[];
   onSelect: (id: string) => void;
+  onImportSamples: () => number;
+  onImportBeerJsonFile: () => Promise<{ count: number; error?: string | undefined }>;
   activeProfile?: ProfileWithId | undefined;
   onGoEquipment: () => void;
 }
@@ -20,9 +23,31 @@ interface LibraryScreenProps {
 export function LibraryScreen({
   recipes,
   onSelect,
+  onImportSamples,
+  onImportBeerJsonFile,
   activeProfile,
   onGoEquipment,
 }: LibraryScreenProps) {
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
+
+  const handleImportSamples = () => {
+    setImportError(null);
+    const count = onImportSamples();
+    if (count === 0) setImportError("No bundled samples found.");
+  };
+
+  const handleImportFile = async () => {
+    setImportError(null);
+    setImporting(true);
+    try {
+      const { error } = await onImportBeerJsonFile();
+      if (error) setImportError(error);
+    } finally {
+      setImporting(false);
+    }
+  };
+
   return (
     <div className="min-h-dvh bg-bg text-text">
       <main className="mx-auto max-w-5xl px-8 py-12">
@@ -32,6 +57,31 @@ export function LibraryScreen({
           </p>
           <h1 className="text-h1 font-semibold mt-3">Library</h1>
           <ProfileBadge profile={activeProfile} onGoEquipment={onGoEquipment} />
+
+          <div className="flex flex-wrap gap-2 mt-5">
+            <button
+              onClick={handleImportFile}
+              disabled={importing}
+              className="px-4 py-2 rounded-lg bg-accent text-bg text-body-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
+            >
+              {importing ? "Importing…" : "Import .beerjson"}
+            </button>
+            <button
+              onClick={handleImportSamples}
+              className="px-4 py-2 rounded-lg bg-surface-raised border border-border text-body-sm font-medium hover:border-border-strong transition-colors"
+            >
+              Import samples
+            </button>
+          </div>
+
+          {importError && (
+            <div className="mt-5 rounded-lg border border-warning bg-surface p-4">
+              <p className="text-caption uppercase tracking-widest text-warning font-medium">
+                Import failed
+              </p>
+              <p className="text-body-sm text-text mt-2 font-mono break-all">{importError}</p>
+            </div>
+          )}
         </header>
 
         {recipes.length === 0 ? (
@@ -215,8 +265,8 @@ function EmptyState() {
     <div className="rounded-xl bg-surface border border-border border-dashed p-12 text-center">
       <p className="text-body text-text">No recipes yet.</p>
       <p className="text-body-sm text-text-muted mt-2 max-w-md mx-auto">
-        Import a sample, open a <code className="font-mono">.beerjson</code> file, or paste
-        a BeerXML — coming up next.
+        Use the buttons above to import a <code className="font-mono">.beerjson</code> file
+        from disk, or load the bundled sample recipes to get started.
       </p>
     </div>
   );

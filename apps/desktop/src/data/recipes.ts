@@ -83,3 +83,61 @@ function parseAndCollect(path: string, raw: string): BeerJsonRecipe[] {
 export const BUNDLED_SAMPLES: BeerJsonRecipe[] = Object.entries(bundledRaw)
   .flatMap(([path, raw]) => parseAndCollect(path, raw))
   .sort((a, b) => a.name.localeCompare(b.name));
+
+// ─── Import from disk (Tauri only) ────────────────────────────────────────
+
+export interface ImportResult {
+  recipes: BeerJsonRecipe[];
+  error?: string;
+}
+
+/**
+ * Parse a raw BeerJSON file string and return its recipes. Either the JSON
+ * fails parsing, or it fails BeerJSON 2.x validation, or it has no recipes —
+ * each case surfaces a human-readable error.
+ */
+export function parseBeerJsonText(raw: string): ImportResult {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (err) {
+    return { recipes: [], error: `Invalid JSON: ${(err as Error).message}` };
+  }
+  const result = validateBeerJson(parsed);
+  if (!result.valid) {
+    const first = result.errors[0];
+    const detail = first ? `${first.path}: ${first.message}` : "unknown";
+    return { recipes: [], error: `Not valid BeerJSON 2.x — ${detail}` };
+  }
+  const recipes = (parsed as BeerJsonFile).beerjson?.recipes ?? [];
+  if (recipes.length === 0) {
+    return { recipes: [], error: "File is valid BeerJSON but contains no recipes." };
+  }
+  return { recipes };
+}
+
+/**
+ * Open a native file dialog filtered to .beerjson, read the file, and parse
+ * it. Returns `{ recipes: [] }` with no error if the user cancels.
+ */
+export async function importBeerJsonFromDisk(): Promise<ImportResult> {
+  const { isTauri } = await import("@tauri-apps/api/core");
+  if (!isTauri()) {
+    return { recipes: [], error: "File import requires the desktop app (run pnpm tauri:dev)." };
+  }
+  const { open } = await import("@tauri-apps/plugin-dialog");
+  const selected = await open({
+    multiple: false,
+    filters: [{ name: "BeerJSON", extensions: ["beerjson", "json"] }],
+    title: "Import a .beerjson recipe",
+  });
+  if (typeof selected !== "string") return { recipes: [] }; // cancelled
+  const { readTextFile } = await import("@tauri-apps/plugin-fs");
+  let raw: string;
+  try {
+    raw = await readTextFile(selected);
+  } catch (err) {
+    return { recipes: [], error: `Read failed: ${(err as Error).message}` };
+  }
+  return parseBeerJsonText(raw);
+}
