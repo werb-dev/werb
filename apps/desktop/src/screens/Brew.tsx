@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   isMass,
   recipeToWaterInput,
@@ -27,10 +27,17 @@ interface BoilHop {
   notes: string | undefined;
 }
 
+interface MashFermentable {
+  name: string;
+  type: string;
+  amount_kg: number;
+}
+
 interface BrewContext {
   water: WaterOutput;
   totalGrainKg: number;
   totalMashedKg: number;
+  mashFermentables: MashFermentable[];
   boilHops: BoilHop[];
   cultures: BeerJsonRecipe["ingredients"]["culture_additions"];
   hltFit: HltFit | null;
@@ -89,6 +96,13 @@ export function BrewScreen({ recipeId, recipe, activeProfile, onBack }: BrewScre
     const totalMashedKg = fermentables
       .filter((f) => f.type === "grain" && isMass(f.amount))
       .reduce((sum, f) => sum + toKilograms(f.amount as Parameters<typeof toKilograms>[0]), 0);
+    const mashFermentables: MashFermentable[] = fermentables
+      .filter((f) => isMass(f.amount))
+      .map((f) => ({
+        name: f.name,
+        type: f.type,
+        amount_kg: toKilograms(f.amount as Parameters<typeof toKilograms>[0]),
+      }));
     const boilHops: BoilHop[] = (recipe.ingredients.hop_additions ?? [])
       .filter((h) => h.timing?.use === "add_to_boil")
       .map((h) => ({
@@ -101,7 +115,7 @@ export function BrewScreen({ recipeId, recipe, activeProfile, onBack }: BrewScre
     const cultures = recipe.ingredients.culture_additions;
     const hltFit = checkHltFit(water, activeProfile);
     const kettleFit = checkKettleFit(water, activeProfile);
-    return { water, totalGrainKg, totalMashedKg, boilHops, cultures, hltFit, kettleFit };
+    return { water, totalGrainKg, totalMashedKg, mashFermentables, boilHops, cultures, hltFit, kettleFit };
   }, [recipe, activeProfile]);
 
   if (!brew.session) {
@@ -128,6 +142,7 @@ export function BrewScreen({ recipeId, recipe, activeProfile, onBack }: BrewScre
             step={activeStep}
             now={tick}
             ctx={ctx}
+            sessionId={session.id}
             onFinish={() => brew.finishStep(activeStep.id)}
           />
         ) : session.status === "completed" ? (
@@ -299,11 +314,13 @@ function ActiveStepCard({
   step,
   now,
   ctx,
+  sessionId,
   onFinish,
 }: {
   step: SessionStep;
   now: number;
   ctx: BrewContext;
+  sessionId: string;
   onFinish: () => void;
 }) {
   const elapsedSec = step.started_at
@@ -341,7 +358,7 @@ function ActiveStepCard({
         </div>
       </div>
 
-      <StepInfo step={step} ctx={ctx} elapsedSec={elapsedSec} variant="active" />
+      <StepInfo step={step} ctx={ctx} elapsedSec={elapsedSec} variant="active" sessionId={sessionId} />
 
       <button
         onClick={onFinish}
@@ -363,18 +380,22 @@ function StepInfo({
   ctx,
   elapsedSec,
   variant,
+  sessionId,
 }: {
   step: SessionStep;
   ctx: BrewContext;
   elapsedSec: number;
   variant: "active" | "row";
+  sessionId?: string | undefined;
 }) {
   const stats = stepStats(step, ctx);
   const showHops = step.kind === "boil" && variant === "active" && ctx.boilHops.length > 0;
   const showCultures =
     step.kind === "ferment_pitch" && variant === "active" && ctx.cultures && ctx.cultures.length > 0;
+  const showMashIn =
+    step.kind === "mash_in" && variant === "active" && ctx.mashFermentables.length > 0;
 
-  if (stats.length === 0 && !showHops && !showCultures && step.target_temperature_c === undefined) {
+  if (stats.length === 0 && !showHops && !showCultures && !showMashIn && step.target_temperature_c === undefined) {
     return null;
   }
 
@@ -400,9 +421,11 @@ function StepInfo({
             hops={ctx.boilHops}
             boilDurationMin={step.target_duration_min ?? 60}
             elapsedSec={elapsedSec}
+            storageKey={`werb.session.${sessionId}.hopAdded.${step.id}`}
           />
         )}
         {showCultures && <CultureList cultures={ctx.cultures!} />}
+        {showMashIn && <MashInList items={ctx.mashFermentables} />}
       </div>
     );
   }
@@ -442,6 +465,12 @@ function stepStats(step: SessionStep, ctx: BrewContext): StatLine[] {
           value: `${(ctx.water.mash_water_l / ctx.totalMashedKg).toFixed(2)} L/kg`,
           label: "Thickness",
         },
+      ];
+    case "mash_in":
+      if (ctx.totalMashedKg <= 0) return [];
+      return [
+        { value: `${ctx.totalMashedKg.toFixed(2)} kg`, label: "Total grain" },
+        { value: `${ctx.mashFermentables.length}`, label: "Items" },
       ];
     case "mash":
       if (ctx.totalMashedKg <= 0) return [];
@@ -512,19 +541,49 @@ function HopSchedule({
   hops,
   boilDurationMin,
   elapsedSec,
+  storageKey,
 }: {
   hops: BoilHop[];
   boilDurationMin: number;
   elapsedSec: number;
+  storageKey: string;
 }) {
+  // Per-hop "added" marks, persisted in localStorage so they survive a
+  // navigation away and back during the boil.
+  const [added, setAdded] = useState<Set<number>>(() => {
+    try {
+      const raw = localStorage.getItem(storageKey);
+      return raw ? new Set(JSON.parse(raw) as number[]) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+  const toggle = (i: number) => {
+    setAdded((prev) => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
+      try {
+        localStorage.setItem(storageKey, JSON.stringify([...next]));
+      } catch {}
+      return next;
+    });
+  };
+
   // Sort by addition order (earliest first). BeerXML TIME=X means "X min
   // before flameout" → addition at minute (boilDuration - X) of the boil.
   const events = hops
-    .map((h) => ({
+    .map((h, originalIndex) => ({
       ...h,
+      originalIndex,
       additionAtMin: Math.max(0, boilDurationMin - h.time_min),
     }))
     .sort((a, b) => a.additionAtMin - b.additionAtMin);
+
+  // The "next" highlight is the earliest unmarked addition that's either
+  // already due or coming up — once you've marked it added, the highlight
+  // moves to the next one.
+  const nextIdx = events.findIndex((e) => !added.has(e.originalIndex));
 
   return (
     <div className="rounded-lg bg-bg border border-border p-4">
@@ -533,21 +592,22 @@ function HopSchedule({
       </p>
       <ul className="space-y-2">
         {events.map((h, i) => {
+          const isAdded = added.has(h.originalIndex);
           const additionAtSec = h.additionAtMin * 60;
           const remainingSec = additionAtSec - elapsedSec;
-          const due = remainingSec <= 0;
-          const next = !due && events.findIndex((e) => e.additionAtMin * 60 - elapsedSec > 0) === i;
+          const due = !isAdded && remainingSec <= 0;
+          const isNext = !isAdded && i === nextIdx;
           return (
             <li
-              key={i}
-              className={`flex items-baseline justify-between gap-4 px-2 py-2 rounded ${
-                next ? "bg-accent/10 ring-1 ring-accent/40" : ""
+              key={h.originalIndex}
+              className={`flex items-center justify-between gap-4 px-2 py-2 rounded ${
+                isNext && due ? "bg-accent/10 ring-1 ring-accent/40" : ""
               }`}
             >
               <div className="min-w-0">
                 <p
                   className={`text-body-sm font-medium ${
-                    due ? "text-text-muted line-through" : "text-text"
+                    isAdded ? "text-text-muted line-through" : "text-text"
                   }`}
                 >
                   {h.amount_g.toFixed(0)} g {h.name}
@@ -560,16 +620,50 @@ function HopSchedule({
                 {h.notes && (
                   <p className="text-caption text-text-muted mt-0.5">{h.notes}</p>
                 )}
-              </div>
-              <div className="text-right shrink-0 font-mono">
-                <p className={`text-mono-lg tabular-nums ${due ? "text-success" : next ? "text-accent" : "text-text-muted"}`}>
-                  {due ? "✓ added" : `in ${formatDuration(remainingSec)}`}
+                <p className="font-mono text-caption text-text-muted mt-0.5">
+                  @ {h.additionAtMin} min
+                  {!isAdded && !due && ` · in ${formatDuration(remainingSec)}`}
                 </p>
-                <p className="text-caption text-text-muted">@ {h.additionAtMin} min</p>
               </div>
+              <button
+                onClick={() => toggle(h.originalIndex)}
+                title={isAdded ? "Tap to undo" : "Tap when added to the boil"}
+                className={`shrink-0 px-3 py-1.5 rounded-pill border text-caption font-medium transition-colors ${
+                  isAdded
+                    ? "border-success text-success bg-success/10 hover:bg-success/20"
+                    : due
+                    ? "border-accent text-accent bg-accent/10 hover:bg-accent/20"
+                    : "border-border text-text-muted hover:border-border-strong hover:text-text"
+                }`}
+              >
+                {isAdded ? "✓ added" : "Mark added"}
+              </button>
             </li>
           );
         })}
+      </ul>
+    </div>
+  );
+}
+
+function MashInList({ items }: { items: MashFermentable[] }) {
+  return (
+    <div className="rounded-lg bg-bg border border-border p-4">
+      <p className="text-caption uppercase tracking-widest text-text-muted mb-3">
+        Grain bill
+      </p>
+      <ul className="space-y-2">
+        {items.map((f, i) => (
+          <li key={i} className="flex items-baseline justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-body-sm font-medium truncate">{f.name}</p>
+              <p className="text-caption text-text-muted capitalize">{f.type}</p>
+            </div>
+            <p className="font-mono text-mono-lg shrink-0 tabular-nums">
+              {f.amount_kg.toFixed(2)} kg
+            </p>
+          </li>
+        ))}
       </ul>
     </div>
   );
@@ -794,6 +888,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function kindLabel(kind: SessionStep["kind"]): string {
   switch (kind) {
     case "prepare_water": return "Prepare water";
+    case "mash_in": return "Mash in";
     case "mash": return "Mash";
     case "sparge": return "Sparge";
     case "boil": return "Boil";

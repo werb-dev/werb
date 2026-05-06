@@ -34,6 +34,7 @@ export interface SessionStep {
   id: string;
   kind:
     | "prepare_water"
+    | "mash_in"
     | "mash"
     | "sparge"
     | "boil"

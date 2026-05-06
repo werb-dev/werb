@@ -11,6 +11,7 @@ import {
   recipeToScaleInput,
   applyScale,
   fitMashToTun,
+  recipeToStrikeTempInput,
 } from "../src/index.js";
 import type { BeerJsonFile } from "../src/index.js";
 import { computeIbu, computeWater, computeColor, computeGravity, computeScale } from "@werb/calc";
@@ -159,11 +160,44 @@ describe("recipeToSessionPlan — Double IPA fixture", () => {
     const kinds = session.steps.map((s) => s.kind);
     // Mandarina recipe has 2 mash steps (saccharification, smash out)
     expect(kinds.filter((k) => k === "mash")).toHaveLength(2);
+    expect(kinds).toContain("prepare_water");
+    expect(kinds).toContain("mash_in");
     expect(kinds).toContain("sparge");
     expect(kinds).toContain("boil");
     expect(kinds).toContain("chill");
     expect(kinds).toContain("transfer");
     expect(kinds).toContain("ferment_pitch");
+  });
+
+  it("orders prepare_water → mash_in → mash so the brewer hits each phase in sequence", () => {
+    reset();
+    const session = recipeToSessionPlan(recipe, "x", deps);
+    const kinds = session.steps.map((s) => s.kind);
+    const prepIdx = kinds.indexOf("prepare_water");
+    const mashInIdx = kinds.indexOf("mash_in");
+    const firstMashIdx = kinds.indexOf("mash");
+    expect(prepIdx).toBeGreaterThanOrEqual(0);
+    expect(mashInIdx).toBeGreaterThan(prepIdx);
+    expect(firstMashIdx).toBeGreaterThan(mashInIdx);
+  });
+
+  it("prepare_water step carries the computed strike temperature", () => {
+    reset();
+    const session = recipeToSessionPlan(recipe, "x", deps);
+    const prep = session.steps.find((s) => s.kind === "prepare_water")!;
+    // Mandarina: 25.5 L / 7.4 kg = 3.4459 L/kg, target 67°C, grain 20°C default.
+    // T_strike = (0.41 / 3.4459) × (67 − 20) + 67 ≈ 72.59°C
+    expect(prep.target_temperature_c).toBeCloseTo(72.59, 1);
+  });
+
+  it("strike-temp options propagate through to prepare_water", () => {
+    reset();
+    const cold = recipeToSessionPlan(recipe, "x", { ...deps, strikeTemp: { grain_temp_c: 5 } });
+    const warm = recipeToSessionPlan(recipe, "x", { ...deps, strikeTemp: { grain_temp_c: 25 } });
+    const coldTemp = cold.steps.find((s) => s.kind === "prepare_water")!.target_temperature_c!;
+    const warmTemp = warm.steps.find((s) => s.kind === "prepare_water")!.target_temperature_c!;
+    // Colder grain → hotter strike water needed.
+    expect(coldTemp).toBeGreaterThan(warmTemp);
   });
 
   it("carries mash temperature + duration onto the session step", () => {
@@ -313,5 +347,33 @@ describe("fitMashToTun — Double IPA fixture", () => {
     const result = fitMashToTun(noMash, { capacity_l: 10 });
     expect(result.capped).toBeNull();
     expect(result.recipe).toBe(noMash);
+  });
+});
+
+describe("recipeToStrikeTempInput — Double IPA fixture", () => {
+  it("derives the mash target from the first mash step's step_temperature", () => {
+    const input = recipeToStrikeTempInput(recipe);
+    expect(input?.mash_target_c).toBe(67);
+  });
+
+  it("derives thickness from first-step amount / total grain weight", () => {
+    const input = recipeToStrikeTempInput(recipe);
+    // 25.5 L / 7.4 kg = 3.4459 L/kg
+    expect(input?.thickness_l_per_kg).toBeCloseTo(25.5 / 7.4, 4);
+  });
+
+  it("defaults grain_temp_c to 20°C when no option is provided", () => {
+    const input = recipeToStrikeTempInput(recipe);
+    expect(input?.grain_temp_c).toBe(20);
+  });
+
+  it("respects an explicit grain_temp_c option", () => {
+    const input = recipeToStrikeTempInput(recipe, { grain_temp_c: 12 });
+    expect(input?.grain_temp_c).toBe(12);
+  });
+
+  it("returns null when there's no mash defined", () => {
+    const noMash = { ...recipe, mash: undefined };
+    expect(recipeToStrikeTempInput(noMash)).toBeNull();
   });
 });

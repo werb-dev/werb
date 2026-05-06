@@ -46,6 +46,7 @@ export function recipeToSessionPlan(
   // target once cool grain is added. Inserted before mash so the brewer
   // gets a dedicated timer/temperature target during the heat-up phase.
   const strikeInput = recipeToStrikeTempInput(recipe, deps.strikeTemp ?? {});
+  const hasMashSteps = (recipe.mash?.mash_steps?.length ?? 0) > 0;
   if (strikeInput) {
     const out = computeStrikeTemp(strikeInput);
     steps.push({
@@ -54,6 +55,18 @@ export function recipeToSessionPlan(
       label: "Heat strike water",
       status: "pending",
       target_temperature_c: out.strike_temp_c,
+    });
+  }
+
+  // Mash in: pour the grain bill into the strike water. Distinct from the
+  // mash rest so the brewer gets a dedicated step to weigh / dump grain
+  // before the rest timer starts.
+  if (hasMashSteps) {
+    steps.push({
+      id: id(),
+      kind: "mash_in",
+      label: "Mash in",
+      status: "pending",
     });
   }
 
