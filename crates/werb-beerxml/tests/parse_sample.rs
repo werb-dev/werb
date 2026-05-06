@@ -221,6 +221,68 @@ fn beerjson_conversion_round_trip() {
 }
 
 #[test]
+fn empty_numeric_elements_do_not_break_the_parse() {
+    // Real-world BeerXML exports sometimes leave numeric elements
+    // empty (e.g. <COLOR></COLOR>, <MIN_TEMPERATURE/>) — that should
+    // parse cleanly with None / 0.0 fallbacks, not blow up the import.
+    let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+<RECIPES>
+  <RECIPE>
+    <NAME>Sparse</NAME>
+    <VERSION>1</VERSION>
+    <BATCH_SIZE>20.0</BATCH_SIZE>
+    <BOIL_SIZE></BOIL_SIZE>
+    <BOIL_TIME></BOIL_TIME>
+    <EFFICIENCY></EFFICIENCY>
+    <FERMENTABLES>
+      <FERMENTABLE>
+        <NAME>Mystery</NAME>
+        <VERSION>1</VERSION>
+        <TYPE>Grain</TYPE>
+        <AMOUNT>5.0</AMOUNT>
+        <YIELD></YIELD>
+        <COLOR></COLOR>
+      </FERMENTABLE>
+    </FERMENTABLES>
+    <HOPS>
+      <HOP>
+        <NAME>Mystery hop</NAME>
+        <VERSION>1</VERSION>
+        <ALPHA>5.0</ALPHA>
+        <AMOUNT>0.028</AMOUNT>
+        <TIME></TIME>
+      </HOP>
+    </HOPS>
+    <YEASTS>
+      <YEAST>
+        <NAME>Mystery yeast</NAME>
+        <VERSION>1</VERSION>
+        <AMOUNT>0.011</AMOUNT>
+        <ATTENUATION></ATTENUATION>
+        <MIN_TEMPERATURE></MIN_TEMPERATURE>
+        <MAX_TEMPERATURE/>
+      </YEAST>
+    </YEASTS>
+    <IBU></IBU>
+  </RECIPE>
+</RECIPES>"#;
+    let r = parse_one(xml).expect("empty numeric elements should not fail the parse");
+    assert!(r.boil_size.is_none());
+    assert!(r.boil_time.is_none());
+    assert!(r.efficiency.is_none());
+    assert!(r.ibu.is_none());
+    let f = &r.fermentables.unwrap().items[0];
+    assert!(f.color.is_none());
+    assert!(f.yield_pct.is_none());
+    let h = &r.hops.unwrap().items[0];
+    assert!(h.time.is_none());
+    let y = &r.yeasts.unwrap().items[0];
+    assert!(y.attenuation.is_none());
+    assert!(y.min_temperature.is_none());
+    assert!(y.max_temperature.is_none());
+}
+
+#[test]
 fn color_unit_falls_back_to_ebc_when_est_color_missing() {
     let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
 <RECIPES>

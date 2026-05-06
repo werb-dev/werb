@@ -4,7 +4,39 @@
 //! `snake_case` (the Rust idiom); serde renames them back to the
 //! `SCREAMING_SNAKE_CASE` BeerXML form during (de)serialization.
 
-use serde::{Deserialize, Serialize};
+use serde::{de, Deserialize, Deserializer, Serialize};
+
+/// Serde helper: treat an empty / whitespace-only XML element value
+/// as `None` rather than failing the parse. Many BeerXML files in the
+/// wild contain placeholder fields like `<COLOR></COLOR>` or
+/// `<MIN_TEMPERATURE/>` that are technically illegal numbers but
+/// should not derail an entire import.
+fn empty_str_to_none_f64<'de, D>(de: D) -> Result<Option<f64>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    match Option::<String>::deserialize(de)? {
+        Some(s) if !s.trim().is_empty() => {
+            s.trim().parse::<f64>().map(Some).map_err(de::Error::custom)
+        }
+        _ => Ok(None),
+    }
+}
+
+/// Serde helper for required `f64` fields: empty string falls back to
+/// `0.0` instead of failing. Used for fields the BeerXML spec calls
+/// required but real exports occasionally leave blank.
+fn empty_str_to_zero_f64<'de, D>(de: D) -> Result<f64, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s = String::deserialize(de)?;
+    if s.trim().is_empty() {
+        Ok(0.0)
+    } else {
+        s.trim().parse::<f64>().map_err(de::Error::custom)
+    }
+}
 
 /// A single brewing recipe — the top-level `<RECIPE>` element.
 ///
@@ -29,17 +61,18 @@ pub struct Recipe {
     #[serde(default)]
     pub brewer: Option<String>,
     /// Batch (post-boil, into-fermenter) volume, in liters.
+    #[serde(deserialize_with = "empty_str_to_zero_f64")]
     pub batch_size: f64,
     /// Boil-kettle starting volume, in liters. Optional — defaults to
     /// `batch_size * 1.25` in [`Recipe::effective_boil_size`] when absent.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "empty_str_to_none_f64")]
     pub boil_size: Option<f64>,
     /// Boil duration, in minutes. Optional — defaults to 60 in
     /// [`Recipe::effective_boil_time`] when absent.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "empty_str_to_none_f64")]
     pub boil_time: Option<f64>,
     /// Brewhouse efficiency, in percent (0–100).
-    #[serde(default)]
+    #[serde(default, deserialize_with = "empty_str_to_none_f64")]
     pub efficiency: Option<f64>,
     /// Style match for this recipe.
     #[serde(default)]
@@ -71,7 +104,7 @@ pub struct Recipe {
     #[serde(default)]
     pub est_color: Option<String>,
     /// Estimated bitterness, in IBU.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "empty_str_to_none_f64")]
     pub ibu: Option<f64>,
     /// Free-form recipe notes.
     #[serde(default)]
@@ -195,28 +228,28 @@ pub struct Style {
     #[serde(default, rename = "TYPE")]
     pub style_type: Option<String>,
     /// Minimum target original gravity.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "empty_str_to_none_f64")]
     pub og_min: Option<f64>,
     /// Maximum target original gravity.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "empty_str_to_none_f64")]
     pub og_max: Option<f64>,
     /// Minimum target final gravity.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "empty_str_to_none_f64")]
     pub fg_min: Option<f64>,
     /// Maximum target final gravity.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "empty_str_to_none_f64")]
     pub fg_max: Option<f64>,
     /// Minimum target IBU.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "empty_str_to_none_f64")]
     pub ibu_min: Option<f64>,
     /// Maximum target IBU.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "empty_str_to_none_f64")]
     pub ibu_max: Option<f64>,
     /// Minimum target color (SRM).
-    #[serde(default)]
+    #[serde(default, deserialize_with = "empty_str_to_none_f64")]
     pub color_min: Option<f64>,
     /// Maximum target color (SRM).
-    #[serde(default)]
+    #[serde(default, deserialize_with = "empty_str_to_none_f64")]
     pub color_max: Option<f64>,
 }
 
@@ -240,14 +273,16 @@ pub struct Hop {
     #[serde(default = "default_version")]
     pub version: u32,
     /// Alpha-acid percentage.
+    #[serde(deserialize_with = "empty_str_to_zero_f64")]
     pub alpha: f64,
     /// Amount, in kilograms.
+    #[serde(deserialize_with = "empty_str_to_zero_f64")]
     pub amount: f64,
     /// Where in the brew the hop is added.
     #[serde(default, rename = "USE")]
     pub hop_use: Option<HopUse>,
     /// Boil time (or dry-hop duration), in minutes.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "empty_str_to_none_f64")]
     pub time: Option<f64>,
     /// Pellet / leaf / plug.
     #[serde(default)]
@@ -313,12 +348,13 @@ pub struct Fermentable {
     #[serde(default, rename = "TYPE")]
     pub fermentable_type: Option<FermentableType>,
     /// Amount, in kilograms.
+    #[serde(deserialize_with = "empty_str_to_zero_f64")]
     pub amount: f64,
     /// Yield percentage — sugar potential as a fraction of dry weight.
-    #[serde(default, rename = "YIELD")]
+    #[serde(default, rename = "YIELD", deserialize_with = "empty_str_to_none_f64")]
     pub yield_pct: Option<f64>,
     /// Color, in degrees Lovibond (BeerXML uses Lovibond, not SRM).
-    #[serde(default)]
+    #[serde(default, deserialize_with = "empty_str_to_none_f64")]
     pub color: Option<f64>,
     /// Country / region of origin.
     #[serde(default)]
@@ -384,6 +420,7 @@ pub struct Yeast {
     pub form: Option<YeastForm>,
     /// Amount in liters (for liquid) or kilograms (for dry, when
     /// `amount_is_weight` is true).
+    #[serde(deserialize_with = "empty_str_to_zero_f64")]
     pub amount: f64,
     /// `true` when [`amount`](Self::amount) is in kg rather than L.
     #[serde(default)]
@@ -395,13 +432,13 @@ pub struct Yeast {
     #[serde(default)]
     pub product_id: Option<String>,
     /// Apparent attenuation, in percent.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "empty_str_to_none_f64")]
     pub attenuation: Option<f64>,
     /// Minimum recommended fermentation temperature, in °C.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "empty_str_to_none_f64")]
     pub min_temperature: Option<f64>,
     /// Maximum recommended fermentation temperature, in °C.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "empty_str_to_none_f64")]
     pub max_temperature: Option<f64>,
 }
 
@@ -473,9 +510,10 @@ pub struct Misc {
     #[serde(default, rename = "USE")]
     pub misc_use: Option<MiscUse>,
     /// Time at addition, in minutes.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "empty_str_to_none_f64")]
     pub time: Option<f64>,
     /// Amount in liters or kilograms (see [`amount_is_weight`](Self::amount_is_weight)).
+    #[serde(deserialize_with = "empty_str_to_zero_f64")]
     pub amount: f64,
     /// `true` when [`amount`](Self::amount) is in kg rather than L.
     #[serde(default)]
@@ -509,7 +547,7 @@ pub struct Mash {
     #[serde(default = "default_version")]
     pub version: u32,
     /// Initial grain temperature, in °C.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "empty_str_to_none_f64")]
     pub grain_temp: Option<f64>,
     /// Steps that make up the mash schedule.
     #[serde(default)]
@@ -538,17 +576,19 @@ pub struct MashStep {
     #[serde(default, rename = "TYPE")]
     pub step_type: Option<MashStepType>,
     /// Volume of water added at this step, in liters (for infusion steps).
-    #[serde(default)]
+    #[serde(default, deserialize_with = "empty_str_to_none_f64")]
     pub infuse_amount: Option<f64>,
     /// Target rest temperature, in °C.
+    #[serde(deserialize_with = "empty_str_to_zero_f64")]
     pub step_temp: f64,
     /// Rest duration, in minutes.
+    #[serde(deserialize_with = "empty_str_to_zero_f64")]
     pub step_time: f64,
     /// Time spent ramping to [`step_temp`](Self::step_temp), in minutes.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "empty_str_to_none_f64")]
     pub ramp_time: Option<f64>,
     /// End temperature for ramped steps, in °C.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "empty_str_to_none_f64")]
     pub end_temp: Option<f64>,
 }
 
