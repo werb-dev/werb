@@ -19,6 +19,7 @@ import {
 } from "@werb/adapters";
 import { computeIbu, computeWater, computeAbv, computeColor, computeGravity, computeScale } from "@werb/calc";
 import { profileToWaterOverrides, type ProfileWithId } from "../data/equipment.ts";
+import { exportBeerJson, exportBeerXml } from "../data/recipe-export.ts";
 
 const TIMING_LABEL: Record<string, string> = {
   add_to_boil: "Boil",
@@ -77,7 +78,7 @@ export function RecipeScreen({ recipe, activeProfile, onBack, onStartBrewing, on
         {onBack && (
           <button
             onClick={onBack}
-            className="mb-8 text-caption font-medium text-text-muted hover:text-text transition-colors flex items-center gap-2"
+            className="no-print mb-8 text-caption font-medium text-text-muted hover:text-text transition-colors flex items-center gap-2"
           >
             <span aria-hidden>←</span> Library
           </button>
@@ -104,7 +105,7 @@ export function RecipeScreen({ recipe, activeProfile, onBack, onStartBrewing, on
             {recipe.efficiency?.brewhouse && ` · ${recipe.efficiency.brewhouse.value}% efficiency`}
             {recipe.type && ` · ${recipe.type}`}
           </p>
-          <div className="mt-6 flex flex-wrap gap-3 items-center">
+          <div className="no-print mt-6 flex flex-wrap gap-3 items-center">
             {onStartBrewing && (
               <button
                 onClick={onStartBrewing}
@@ -123,11 +124,12 @@ export function RecipeScreen({ recipe, activeProfile, onBack, onStartBrewing, on
             {onEdit && (
               <button
                 onClick={onEdit}
-                className="px-4 py-3 rounded-xl bg-surface-raised border border-border text-body-sm font-medium hover:border-accent hover:text-accent transition-colors"
+                className="no-print px-4 py-3 rounded-xl bg-surface-raised border border-border text-body-sm font-medium hover:border-accent hover:text-accent transition-colors"
               >
                 Edit recipe
               </button>
             )}
+            <ExportMenu recipe={recipe} />
           </div>
         </header>
 
@@ -385,6 +387,43 @@ export function RecipeScreen({ recipe, activeProfile, onBack, onStartBrewing, on
 }
 
 // ─── Subcomponents ─────────────────────────────────────────────────────
+
+function ExportMenu({ recipe }: { recipe: BeerJsonRecipe }) {
+  const handleBeerJson = async () => {
+    const r = await exportBeerJson(recipe);
+    if (r.error) alert(r.error);
+  };
+  const handleBeerXml = async () => {
+    const r = await exportBeerXml(recipe);
+    if (r.error) alert(r.error);
+  };
+  return (
+    <div className="no-print flex gap-2">
+      <button
+        onClick={handleBeerJson}
+        className="px-3 py-3 rounded-xl bg-surface-raised border border-border text-body-sm font-medium hover:border-accent hover:text-accent transition-colors"
+        title="Export as BeerJSON 2.x"
+      >
+        .beerjson
+      </button>
+      <button
+        onClick={handleBeerXml}
+        className="px-3 py-3 rounded-xl bg-surface-raised border border-border text-body-sm font-medium hover:border-accent hover:text-accent transition-colors"
+        title="Export as BeerXML 1.0"
+      >
+        .xml
+      </button>
+      <button
+        onClick={() => window.print()}
+        className="px-3 py-3 rounded-xl bg-surface-raised border border-border text-body-sm font-medium hover:border-accent hover:text-accent transition-colors"
+        title="Open the print dialog (Save as PDF on every modern OS)"
+      >
+        Print / PDF
+      </button>
+    </div>
+  );
+}
+
 
 function ScaleButton({
   onApply,

@@ -15,6 +15,7 @@ interface LibraryScreenProps {
   recipes: StoredRecipe[];
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
+  onDuplicate: (id: string) => void;
   onImportSamples: () => number;
   onImportBeerJsonFile: () => Promise<{ count: number; error?: string | undefined }>;
   onImportBeerXmlFile: () => Promise<{ count: number; error?: string | undefined }>;
@@ -22,10 +23,13 @@ interface LibraryScreenProps {
   onGoEquipment: () => void;
 }
 
+type SortKey = "updated" | "name" | "style";
+
 export function LibraryScreen({
   recipes,
   onSelect,
   onDelete,
+  onDuplicate,
   onImportSamples,
   onImportBeerJsonFile,
   onImportBeerXmlFile,
@@ -34,6 +38,10 @@ export function LibraryScreen({
 }: LibraryScreenProps) {
   const [importError, setImportError] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
+  const [query, setQuery] = useState("");
+  const [sortKey, setSortKey] = useState<SortKey>("updated");
+
+  const visible = filterAndSort(recipes, query, sortKey);
 
   const handleImportSamples = () => {
     setImportError(null);
@@ -88,6 +96,27 @@ export function LibraryScreen({
             </button>
           </div>
 
+          {recipes.length > 1 && (
+            <div className="mt-5 flex flex-wrap gap-3 items-center">
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search recipes…"
+                className="flex-1 min-w-[12rem] bg-surface border border-border rounded-lg px-3 py-2 text-body-sm text-text placeholder:text-text-muted focus:outline-none focus:border-accent"
+              />
+              <select
+                value={sortKey}
+                onChange={(e) => setSortKey(e.target.value as SortKey)}
+                className="bg-surface border border-border rounded-lg px-3 py-2 text-body-sm text-text focus:outline-none focus:border-accent"
+              >
+                <option value="updated">Recently updated</option>
+                <option value="name">Name (A→Z)</option>
+                <option value="style">Style</option>
+              </select>
+            </div>
+          )}
+
           {importError && (
             <div className="mt-5 rounded-lg border border-warning bg-surface p-4">
               <p className="text-caption uppercase tracking-widest text-warning font-medium">
@@ -100,14 +129,19 @@ export function LibraryScreen({
 
         {recipes.length === 0 ? (
           <EmptyState />
+        ) : visible.length === 0 ? (
+          <p className="text-body text-text-muted text-center py-12">
+            No recipes match "{query}".
+          </p>
         ) : (
           <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {recipes.map(({ id, recipe }) => (
+            {visible.map(({ id, recipe }) => (
               <li key={id}>
                 <RecipeCard
                   recipe={recipe}
                   activeProfile={activeProfile}
                   onSelect={() => onSelect(id)}
+                  onDuplicate={() => onDuplicate(id)}
                   onDelete={() => {
                     if (confirm(`Delete "${recipe.name}"?`)) onDelete(id);
                   }}
@@ -125,11 +159,13 @@ function RecipeCard({
   recipe,
   activeProfile,
   onSelect,
+  onDuplicate,
   onDelete,
 }: {
   recipe: BeerJsonRecipe;
   activeProfile?: ProfileWithId | undefined;
   onSelect: () => void;
+  onDuplicate: () => void;
   onDelete: () => void;
 }) {
   const beerColor = recipe.color_estimate ? srmToHex(toSrm(recipe.color_estimate)) : null;
@@ -152,14 +188,24 @@ function RecipeCard({
 
   return (
     <div className="group relative">
-      <button
-        onClick={onDelete}
-        aria-label={`Delete ${recipe.name}`}
-        title="Delete recipe"
-        className="absolute top-3 right-3 z-10 w-7 h-7 rounded-pill flex items-center justify-center text-text-muted bg-surface-raised border border-border opacity-0 group-hover:opacity-100 hover:text-danger hover:border-danger transition-all focus:outline-none focus:opacity-100 focus:ring-2 focus:ring-danger"
-      >
-        <span aria-hidden className="text-body-sm font-mono leading-none">×</span>
-      </button>
+      <div className="absolute top-3 right-3 z-10 flex gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+        <button
+          onClick={onDuplicate}
+          aria-label={`Duplicate ${recipe.name}`}
+          title="Duplicate recipe"
+          className="w-7 h-7 rounded-pill flex items-center justify-center text-text-muted bg-surface-raised border border-border hover:text-accent hover:border-accent transition-colors focus:outline-none focus:ring-2 focus:ring-accent"
+        >
+          <span aria-hidden className="text-caption font-mono leading-none">+</span>
+        </button>
+        <button
+          onClick={onDelete}
+          aria-label={`Delete ${recipe.name}`}
+          title="Delete recipe"
+          className="w-7 h-7 rounded-pill flex items-center justify-center text-text-muted bg-surface-raised border border-border hover:text-danger hover:border-danger transition-colors focus:outline-none focus:ring-2 focus:ring-danger"
+        >
+          <span aria-hidden className="text-body-sm font-mono leading-none">×</span>
+        </button>
+      </div>
     <button
       onClick={onSelect}
       className="w-full text-left rounded-xl bg-surface border border-border hover:bg-surface-raised hover:border-border-strong transition-colors p-6 flex flex-col gap-4 focus:outline-none focus:ring-2 focus:ring-accent"
@@ -299,4 +345,38 @@ function EmptyState() {
       </p>
     </div>
   );
+}
+
+function filterAndSort(
+  recipes: StoredRecipe[],
+  query: string,
+  sortKey: SortKey,
+): StoredRecipe[] {
+  const q = query.trim().toLowerCase();
+  const filtered = q
+    ? recipes.filter(({ recipe }) => {
+        const haystack = [
+          recipe.name,
+          recipe.style?.name,
+          recipe.style?.category,
+          recipe.author,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return haystack.includes(q);
+      })
+    : recipes.slice();
+
+  switch (sortKey) {
+    case "name":
+      return filtered.sort((a, b) => a.recipe.name.localeCompare(b.recipe.name));
+    case "style":
+      return filtered.sort((a, b) =>
+        (a.recipe.style?.name ?? "").localeCompare(b.recipe.style?.name ?? ""),
+      );
+    case "updated":
+    default:
+      return filtered.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  }
 }
