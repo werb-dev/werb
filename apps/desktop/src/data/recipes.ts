@@ -177,7 +177,10 @@ export async function parseBeerXmlText(raw: string): Promise<ImportResult> {
       "../../../../crates/werb-beerxml-wasm/pkg/werb_beerxml_wasm.js"
     );
     await wasm.default(); // wasm-bindgen init — no-op after the first call
-    const recipes = wasm.parseBeerXml(raw) as BeerJsonRecipe[];
+    // The WASM returns a JSON string, not a JS object, so plain
+    // `recipe.name` access works without serde_wasm_bindgen's Map
+    // gotchas. See the crate's lib.rs for the rationale.
+    const recipes = JSON.parse(wasm.parseBeerXmlJson(raw)) as BeerJsonRecipe[];
     if (recipes.length === 0) {
       return { recipes: [], error: "File parsed but contained no recipes." };
     }

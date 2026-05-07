@@ -15,7 +15,6 @@ crate-type = ["cdylib"]
 [dependencies]
 werb-beerxml = { path = "../werb-beerxml" }
 wasm-bindgen = "0.2"
-serde-wasm-bindgen = "0.6"
 serde_json = "1"
 
 # Slightly smaller .wasm at the cost of a bit more compile time. Worth
