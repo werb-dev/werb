@@ -1,15 +1,17 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Default capability for the Werb desktop app — read recipes from a user-picked working directory.",
+  "description": "Default capability for the Werb desktop app — read recipes from a user-picked working directory; export recipes (BeerJSON / BeerXML) to user-picked save targets.",
   "windows": ["main"],
   "permissions": [
     "core:default",
     "dialog:default",
     "dialog:allow-open",
+    "dialog:allow-save",
     "fs:default",
     "fs:allow-read-text-file",
     "fs:allow-read-dir",
+    "fs:allow-write-text-file",
     {
       "identifier": "fs:scope",
       "allow": [

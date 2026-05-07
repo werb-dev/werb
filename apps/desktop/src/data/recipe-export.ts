@@ -37,7 +37,7 @@ function slugify(name: string): string {
 
 async function pickSavePath(
   recipe: BeerJsonRecipe,
-  extension: "beerjson" | "xml",
+  extension: "beerjson" | "xml" | "html",
   filterName: string,
 ): Promise<string | null> {
   const { isTauri } = await import("@tauri-apps/api/core");
@@ -70,8 +70,198 @@ export async function exportBeerJson(recipe: BeerJsonRecipe): Promise<ExportResu
     await writeTextFile(path, json);
     return { written: true, path };
   } catch (err) {
-    return { written: false, error: `Write failed: ${(err as Error).message}` };
+    const detail = err instanceof Error ? err.message : String(err);
+    return { written: false, error: `Write failed: ${detail || "unknown error"}` };
   }
+}
+
+/**
+ * Export the recipe as a standalone, print-friendly `.html` file.
+ * Tauri's webview `window.print()` is unreliable on macOS / Linux —
+ * generating a self-contained HTML doc that the brewer opens in any
+ * browser and prints to PDF from there is more dependable and
+ * portable.
+ */
+export async function exportRecipeHtml(recipe: BeerJsonRecipe): Promise<ExportResult> {
+  const { isTauri } = await import("@tauri-apps/api/core");
+  if (!isTauri()) {
+    return { written: false, error: "Export requires the desktop app (run pnpm tauri:dev)." };
+  }
+  const path = await pickSavePath(recipe, "html", "HTML");
+  if (!path) return { written: false };
+  const html = recipeToPrintableHtml(recipe);
+  const { writeTextFile } = await import("@tauri-apps/plugin-fs");
+  try {
+    await writeTextFile(path, html);
+    return { written: true, path };
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
+    return { written: false, error: `Write failed: ${detail || "unknown error"}` };
+  }
+}
+
+/** Standalone HTML document for printing — black on white, no externals. */
+export function recipeToPrintableHtml(r: BeerJsonRecipe): string {
+  const sections: string[] = [];
+  const metaTag =
+    r.style?.category_number !== undefined && r.style?.style_letter
+      ? `${r.style.style_guide ?? "BJCP"} ${r.style.category_number}${r.style.style_letter}`
+      : null;
+
+  sections.push(`<header>
+    ${r.style ? `<p class="kicker">${[metaTag, r.style.category, r.style.name].filter((x): x is string => Boolean(x)).map(esc).join(" · ")}</p>` : ""}
+    <h1>${esc(r.name)}</h1>
+    ${r.author && r.author !== "Unknown" ? `<p class="author">by ${esc(r.author)}</p>` : ""}
+    <p class="meta">
+      ${esc(String(Math.round(toL(r.batch_size))))} L
+      ${r.boil?.boil_time ? ` · ${Math.round(r.boil.boil_time.value)} min boil` : ""}
+      ${r.efficiency?.brewhouse ? ` · ${r.efficiency.brewhouse.value}% efficiency` : ""}
+      ${r.type ? ` · ${esc(r.type)}` : ""}
+    </p>
+  </header>`);
+
+  // Targets strip
+  const targets: string[] = [];
+  if (r.original_gravity) targets.push(tile("OG", r.original_gravity.value.toFixed(3)));
+  if (r.final_gravity) targets.push(tile("FG", r.final_gravity.value.toFixed(3)));
+  if (r.ibu_estimate?.ibu) targets.push(tile("IBU", String(r.ibu_estimate.ibu.value)));
+  if (r.alcohol_by_volume) targets.push(tile("ABV", `${r.alcohol_by_volume.value.toFixed(1)}%`));
+  if (r.color_estimate) targets.push(tile("Color", `${r.color_estimate.value} ${r.color_estimate.unit}`));
+  if (targets.length > 0) sections.push(`<section class="tiles">${targets.join("")}</section>`);
+
+  if (r.ingredients.fermentable_additions.length > 0) {
+    sections.push(`<section><h2>Fermentables</h2>${
+      table(
+        ["Name", "Type", "Amount", "Color", "Yield"],
+        r.ingredients.fermentable_additions.map((f) => [
+          f.name,
+          f.type,
+          "value" in f.amount ? `${f.amount.value} ${f.amount.unit}` : "—",
+          f.color ? `${f.color.value} ${f.color.unit}` : "—",
+          f.yield?.fine_grind ? `${f.yield.fine_grind.value}%` : "—",
+        ]),
+      )
+    }</section>`);
+  }
+
+  if (r.ingredients.hop_additions && r.ingredients.hop_additions.length > 0) {
+    sections.push(`<section><h2>Hops</h2>${
+      table(
+        ["Name", "Use", "Time", "Alpha", "Amount", "Form"],
+        r.ingredients.hop_additions.map((h) => [
+          h.name,
+          h.timing?.use ? h.timing.use.replace("add_to_", "").replace("_", " ") : "—",
+          h.timing?.time ? `${h.timing.time.value} ${h.timing.time.unit}` : "—",
+          h.alpha_acid ? `${h.alpha_acid.value}%` : "—",
+          "value" in h.amount
+            ? h.amount.unit === "kg"
+              ? `${Math.round(h.amount.value * 1000)} g`
+              : `${h.amount.value} ${h.amount.unit}`
+            : "—",
+          h.form ?? "—",
+        ]),
+      )
+    }</section>`);
+  }
+
+  if (r.ingredients.culture_additions && r.ingredients.culture_additions.length > 0) {
+    sections.push(`<section><h2>Cultures</h2>${
+      table(
+        ["Name", "Type", "Form", "Amount", "Attenuation"],
+        r.ingredients.culture_additions.map((c) => [
+          c.name,
+          c.type,
+          c.form,
+          c.amount && "value" in c.amount ? `${c.amount.value} ${c.amount.unit}` : "—",
+          c.attenuation ? `${c.attenuation.value}%` : "—",
+        ]),
+      )
+    }</section>`);
+  }
+
+  if (r.ingredients.miscellaneous_additions && r.ingredients.miscellaneous_additions.length > 0) {
+    sections.push(`<section><h2>Miscellaneous</h2>${
+      table(
+        ["Name", "Type", "Use", "Time", "Amount"],
+        r.ingredients.miscellaneous_additions.map((m) => [
+          m.name,
+          m.type ?? "—",
+          m.timing?.use ? m.timing.use.replace("add_to_", "").replace("_", " ") : "—",
+          m.timing?.time ? `${m.timing.time.value} ${m.timing.time.unit}` : "—",
+          "value" in m.amount ? `${m.amount.value} ${m.amount.unit}` : "—",
+        ]),
+      )
+    }</section>`);
+  }
+
+  if (r.mash && r.mash.mash_steps.length > 0) {
+    sections.push(`<section><h2>Mash schedule</h2>${
+      table(
+        ["Step", "Type", "Volume", "Temp", "Time"],
+        r.mash.mash_steps.map((s) => [
+          s.name,
+          s.type,
+          s.amount ? `${s.amount.value} ${s.amount.unit}` : "—",
+          `${s.step_temperature.value} ${s.step_temperature.unit}`,
+          `${s.step_time.value} ${s.step_time.unit}`,
+        ]),
+      )
+    }</section>`);
+  }
+
+  if (r.notes) {
+    sections.push(`<section><h2>Notes</h2><p class="notes">${esc(r.notes).replace(/\n/g, "<br>")}</p></section>`);
+  }
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>${esc(r.name)} — Werb recipe</title>
+<style>
+  :root { color-scheme: light; }
+  body { margin: 2cm; max-width: 80ch; font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; color: #111; background: #fff; }
+  header { margin-bottom: 2rem; }
+  .kicker { text-transform: uppercase; letter-spacing: 0.1em; font-size: 11px; color: #666; margin: 0 0 0.5rem; }
+  h1 { font-size: 28px; margin: 0 0 0.25rem; line-height: 1.2; text-transform: capitalize; }
+  .author { color: #666; font-size: 12px; margin: 0 0 0.5rem; }
+  .meta { color: #444; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; margin: 0; }
+  h2 { font-size: 16px; margin: 1.75rem 0 0.5rem; border-bottom: 1px solid #ddd; padding-bottom: 0.25rem; }
+  section.tiles { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.5rem; margin-bottom: 1.5rem; }
+  .tile { border: 1px solid #ddd; padding: 0.5rem 0.75rem; border-radius: 4px; }
+  .tile-label { text-transform: uppercase; letter-spacing: 0.08em; font-size: 10px; color: #666; }
+  .tile-value { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 18px; margin-top: 0.15rem; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th, td { text-align: left; padding: 0.4rem 0.5rem; border-bottom: 1px solid #eee; }
+  th { background: #f7f7f7; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; font-size: 10px; color: #555; }
+  td.num { font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+  .notes { white-space: pre-wrap; }
+  @page { margin: 1.5cm; }
+  @media print { body { margin: 0; } section { break-inside: avoid; } }
+</style>
+</head>
+<body>
+${sections.join("\n")}
+<footer style="margin-top:2rem;font-size:10px;color:#999">Exported from Werb</footer>
+</body>
+</html>`;
+}
+
+function tile(label: string, value: string): string {
+  return `<div class="tile"><div class="tile-label">${esc(label)}</div><div class="tile-value">${esc(value)}</div></div>`;
+}
+
+function table(headers: string[], rows: string[][]): string {
+  return `<table><thead><tr>${headers.map((h) => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${
+    rows.map((r) => `<tr>${r.map((c) => `<td>${esc(c)}</td>`).join("")}</tr>`).join("")
+  }</tbody></table>`;
+}
+
+function toL(v: { value: number; unit: string }): number {
+  if (v.unit === "l") return v.value;
+  if (v.unit === "ml") return v.value / 1000;
+  if (v.unit === "gal") return v.value * 3.78541;
+  return v.value;
 }
 
 /** Export the recipe as a `.xml` (BeerXML 1.0) file. */
@@ -88,7 +278,8 @@ export async function exportBeerXml(recipe: BeerJsonRecipe): Promise<ExportResul
     await writeTextFile(path, xml);
     return { written: true, path };
   } catch (err) {
-    return { written: false, error: `Write failed: ${(err as Error).message}` };
+    const detail = err instanceof Error ? err.message : String(err);
+    return { written: false, error: `Write failed: ${detail || "unknown error"}` };
   }
 }
 

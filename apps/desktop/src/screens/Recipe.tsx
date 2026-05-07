@@ -19,7 +19,7 @@ import {
 } from "@werb/adapters";
 import { computeIbu, computeWater, computeAbv, computeColor, computeGravity, computeScale } from "@werb/calc";
 import { profileToWaterOverrides, type ProfileWithId } from "../data/equipment.ts";
-import { exportBeerJson, exportBeerXml } from "../data/recipe-export.ts";
+import { exportBeerJson, exportBeerXml, exportRecipeHtml } from "../data/recipe-export.ts";
 
 const TIMING_LABEL: Record<string, string> = {
   add_to_boil: "Boil",
@@ -397,6 +397,10 @@ function ExportMenu({ recipe }: { recipe: BeerJsonRecipe }) {
     const r = await exportBeerXml(recipe);
     if (r.error) alert(r.error);
   };
+  const handleHtml = async () => {
+    const r = await exportRecipeHtml(recipe);
+    if (r.error) alert(r.error);
+  };
   return (
     <div className="no-print flex gap-2">
       <button
@@ -414,11 +418,11 @@ function ExportMenu({ recipe }: { recipe: BeerJsonRecipe }) {
         .xml
       </button>
       <button
-        onClick={() => window.print()}
+        onClick={handleHtml}
         className="px-3 py-3 rounded-xl bg-surface-raised border border-border text-body-sm font-medium hover:border-accent hover:text-accent transition-colors"
-        title="Open the print dialog (Save as PDF on every modern OS)"
+        title="Save as a printable HTML file. Open it in any browser and print to PDF from there."
       >
-        Print / PDF
+        .html / PDF
       </button>
     </div>
   );
