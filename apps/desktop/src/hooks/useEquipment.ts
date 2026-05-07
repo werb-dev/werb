@@ -7,62 +7,75 @@ import {
   type ProfileWithId,
 } from "../data/equipment.ts";
 
+interface EquipmentStore {
+  profiles: ProfileWithId[];
+  activeId: string | null;
+}
+
 /**
  * Equipment profile state. Mirrors localStorage; every mutation persists.
+ *
+ * Mutations use functional updates so consecutive calls in the same React
+ * tick (e.g. create + setActive in one handler) compose cleanly without
+ * stale-closure issues.
+ *
  * Returned API: list of profiles, active profile (or undefined), and
  * CRUD + activation actions.
  */
 export function useEquipment() {
-  const [store, setStore] = useState(() => loadStore());
+  const [store, setStore] = useState<EquipmentStore>(() => loadStore());
 
-  const persist = useCallback((next: typeof store) => {
-    saveStore(next);
-    setStore(next);
-  }, []);
+  const persist = useCallback(
+    (updater: (prev: EquipmentStore) => EquipmentStore) => {
+      setStore((prev) => {
+        const next = updater(prev);
+        saveStore(next);
+        return next;
+      });
+    },
+    [],
+  );
 
   const create = useCallback(
     (profile: Omit<ProfileWithId, "id">): ProfileWithId => {
       const fresh: ProfileWithId = { ...profile, id: generateId() };
-      const next = {
-        profiles: [...store.profiles, fresh],
+      persist((prev) => ({
+        profiles: [...prev.profiles, fresh],
         // First profile auto-activates so the user sees its effect immediately.
-        activeId: store.activeId ?? fresh.id,
-      };
-      persist(next);
+        activeId: prev.activeId ?? fresh.id,
+      }));
       return fresh;
     },
-    [store, persist],
+    [persist],
   );
 
   const update = useCallback(
     (id: string, patch: Partial<Omit<ProfileWithId, "id">>) => {
-      const next = {
-        ...store,
-        profiles: store.profiles.map((p) =>
+      persist((prev) => ({
+        ...prev,
+        profiles: prev.profiles.map((p) =>
           p.id === id ? ({ ...p, ...patch, id } as ProfileWithId) : p,
         ),
-      };
-      persist(next);
+      }));
     },
-    [store, persist],
+    [persist],
   );
 
   const remove = useCallback(
     (id: string) => {
-      const next = {
-        profiles: store.profiles.filter((p) => p.id !== id),
-        activeId: store.activeId === id ? null : store.activeId,
-      };
-      persist(next);
+      persist((prev) => ({
+        profiles: prev.profiles.filter((p) => p.id !== id),
+        activeId: prev.activeId === id ? null : prev.activeId,
+      }));
     },
-    [store, persist],
+    [persist],
   );
 
   const setActive = useCallback(
     (id: string | null) => {
-      persist({ ...store, activeId: id });
+      persist((prev) => ({ ...prev, activeId: id }));
     },
-    [store, persist],
+    [persist],
   );
 
   return {

@@ -12,6 +12,7 @@ import {
   applyScale,
   fitMashToTun,
   recipeToStrikeTempInput,
+  recipeToCarbonationInput,
 } from "../src/index.js";
 import { pitchTempC } from "../src/recipe-to-session.js";
 import type { BeerJsonFile } from "../src/index.js";
@@ -422,5 +423,48 @@ describe("pitchTempC — fixture + synthetic cases", () => {
 
   it("Mandarina fixture (ale yeasts, no temperature_range) defaults to 18°C", () => {
     expect(pitchTempC(recipe.ingredients.culture_additions ?? [])).toBe(18);
+  });
+});
+
+describe("recipeToCarbonationInput — Double IPA fixture", () => {
+  it("pulls beer_volume_l from the recipe's batch_size by default", () => {
+    const input = recipeToCarbonationInput(recipe, {
+      target_volumes_co2: 2.4,
+      package_temp_c: 20,
+    });
+    expect(input.beer_volume_l).toBeCloseTo(22, 1);
+  });
+
+  it("respects beer_volume_l override (e.g. some batch lost to trub)", () => {
+    const input = recipeToCarbonationInput(recipe, {
+      target_volumes_co2: 2.4,
+      package_temp_c: 20,
+      beer_volume_l: 18.5,
+    });
+    expect(input.beer_volume_l).toBe(18.5);
+  });
+
+  it("echoes target_volumes_co2 and package_temp_c verbatim", () => {
+    const input = recipeToCarbonationInput(recipe, {
+      target_volumes_co2: 3.1,
+      package_temp_c: 22,
+    });
+    expect(input.target_volumes_co2).toBe(3.1);
+    expect(input.package_temp_c).toBe(22);
+  });
+
+  it("only emits serving_temp_c when explicitly provided", () => {
+    const without = recipeToCarbonationInput(recipe, {
+      target_volumes_co2: 2.4,
+      package_temp_c: 20,
+    });
+    expect(without.serving_temp_c).toBeUndefined();
+
+    const with4 = recipeToCarbonationInput(recipe, {
+      target_volumes_co2: 2.4,
+      package_temp_c: 20,
+      serving_temp_c: 4,
+    });
+    expect(with4.serving_temp_c).toBe(4);
   });
 });
