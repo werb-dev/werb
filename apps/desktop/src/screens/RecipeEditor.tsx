@@ -1018,7 +1018,10 @@ function Combobox<T>({
   className?: string;
 }) {
   const [focused, setFocused] = useState(false);
-  const items = focused && value.trim().length > 0 ? suggest(value) : [];
+  // Suggest on focus regardless of whether the field has text yet —
+  // catalog search returns the top N for an empty query, giving the
+  // brewer a browse list when they don't know what to type yet.
+  const items = focused ? suggest(value) : [];
 
   return (
     <div className={`relative ${className ?? ""}`}>
