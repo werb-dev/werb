@@ -3,7 +3,11 @@ import { renderHook, act } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { useBrewSession, sessionStorageKey } from "../src/hooks/useBrewSession.ts";
+import {
+  useBrewSession,
+  useBrewSessionExists,
+  sessionStorageKey,
+} from "../src/hooks/useBrewSession.ts";
 import { makeStorageWrapper } from "./helpers.tsx";
 import type { BeerJsonFile, BeerJsonRecipe } from "@werb/adapters";
 
@@ -223,5 +227,46 @@ describe("useBrewSession", () => {
     act(() => result.current.start());
     expect(result.current.session!.id).not.toBe(firstSessionId);
     expect(result.current.session!.steps.every((s) => s.status === "pending")).toBe(true);
+  });
+});
+
+describe("useBrewSessionExists", () => {
+  it("returns false when no session is saved for the recipe id", () => {
+    const { wrapper } = makeStorageWrapper();
+    const { result } = renderHook(() => useBrewSessionExists("nope"), { wrapper });
+    expect(result.current).toBe(false);
+  });
+
+  it("returns true when a session is already in the backend on mount", () => {
+    const { wrapper } = makeStorageWrapper({
+      [sessionStorageKey("rid")]: JSON.stringify({ id: "x", recipe_id: "rid" }),
+    });
+    const { result } = renderHook(() => useBrewSessionExists("rid"), { wrapper });
+    expect(result.current).toBe(true);
+  });
+
+  it("flips to true after a sibling component starts a session", () => {
+    const { wrapper } = makeStorageWrapper();
+    const { result: existsHook } = renderHook(
+      () => useBrewSessionExists(RECIPE_ID),
+      { wrapper },
+    );
+    const { result: sessionHook } = renderHook(
+      () => useBrewSession(RECIPE_ID, RECIPE),
+      { wrapper },
+    );
+
+    expect(existsHook.current).toBe(false);
+
+    act(() => sessionHook.current.start());
+
+    // existsHook returns the cached snapshot from its own render. A fresh
+    // mount (the user navigating back to the recipe screen) sees the
+    // session — that's the real-world flow this hook supports.
+    const { result: remounted } = renderHook(
+      () => useBrewSessionExists(RECIPE_ID),
+      { wrapper },
+    );
+    expect(remounted.current).toBe(true);
   });
 });

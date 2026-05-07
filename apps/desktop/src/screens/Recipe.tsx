@@ -29,6 +29,8 @@ import {
 } from "@werb/calc";
 import { profileToWaterOverrides, type ProfileWithId } from "../data/equipment.ts";
 import { exportBeerJson, exportBeerXml, exportRecipeHtml } from "../data/recipe-export.ts";
+import { useBrewSessionExists } from "../hooks/useBrewSession.ts";
+import { usePersistedJson } from "../storage/index.ts";
 
 const TIMING_LABEL: Record<string, string> = {
   add_to_boil: "Boil",
@@ -38,16 +40,17 @@ const TIMING_LABEL: Record<string, string> = {
 };
 
 interface RecipeScreenProps {
+  recipeId: string;
   recipe: BeerJsonRecipe;
   activeProfile?: ProfileWithId | undefined;
   onBack?: (() => void) | undefined;
   onStartBrewing?: (() => void) | undefined;
   onEdit?: (() => void) | undefined;
   onApplyScaled?: ((scaled: BeerJsonRecipe) => void) | undefined;
-  hasActiveSession?: boolean | undefined;
 }
 
-export function RecipeScreen({ recipe, activeProfile, onBack, onStartBrewing, onEdit, onApplyScaled, hasActiveSession }: RecipeScreenProps) {
+export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartBrewing, onEdit, onApplyScaled }: RecipeScreenProps) {
+  const hasActiveSession = useBrewSessionExists(recipeId);
   const computed = useMemo(() => {
     const ibu = computeIbu(recipeToIbuInput(recipe));
     const water = computeWater(recipeToWaterInput(recipe, profileToWaterOverrides(activeProfile)));
@@ -527,28 +530,6 @@ interface CarbonationFormState {
   beer_volume_l_override: number | null;
 }
 
-function loadCarbForm(recipeName: string): CarbonationFormState | null {
-  try {
-    const raw = localStorage.getItem(`${CARBONATION_STORAGE_PREFIX}${recipeName}`);
-    if (!raw) return null;
-    return JSON.parse(raw) as CarbonationFormState;
-  } catch {
-    return null;
-  }
-}
-
-function saveCarbForm(recipeName: string, state: CarbonationFormState): void {
-  try {
-    localStorage.setItem(
-      `${CARBONATION_STORAGE_PREFIX}${recipeName}`,
-      JSON.stringify(state),
-    );
-  } catch {
-    // Storage quota / disabled — silently ignore. The form just won't
-    // remember between visits, no functional impact.
-  }
-}
-
 function defaultPackageTemp(recipe: BeerJsonRecipe): number {
   // Use the active culture's max fermentation temp as a starting point —
   // that's the highest temp the beer reached, which sets residual CO2.
@@ -561,26 +542,21 @@ function defaultPackageTemp(recipe: BeerJsonRecipe): number {
 }
 
 function CarbonationSection({ recipe }: { recipe: BeerJsonRecipe }) {
-  const [form, setForm] = useState<CarbonationFormState>(() => {
-    const saved = loadCarbForm(recipe.name);
-    if (saved) return saved;
-    return {
+  const [form, setForm] = usePersistedJson<CarbonationFormState>(
+    `${CARBONATION_STORAGE_PREFIX}${recipe.name}`,
+    {
       target_volumes_co2: 2.4,
       package_temp_c: defaultPackageTemp(recipe),
       serving_temp_c: 4,
       beer_volume_l_override: null,
-    };
-  });
+    },
+  );
 
   const update = <K extends keyof CarbonationFormState>(
     key: K,
     value: CarbonationFormState[K],
   ) => {
-    setForm((prev) => {
-      const next = { ...prev, [key]: value };
-      saveCarbForm(recipe.name, next);
-      return next;
-    });
+    setForm((prev) => ({ ...prev, [key]: value }));
   };
 
   const out = useMemo(

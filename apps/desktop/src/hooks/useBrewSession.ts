@@ -195,6 +195,38 @@ export function useBrewSession(recipeId: string, recipe: BeerJsonRecipe) {
   };
 }
 
+/**
+ * Returns true when a brew session is currently saved for the given
+ * recipe id. Drives the "Resume brewing" / "Start brewing" label on
+ * the Recipe screen.
+ *
+ * Sync-capable backends answer on the first render; async backends
+ * resolve in a follow-up effect.
+ */
+export function useBrewSessionExists(recipeId: string): boolean {
+  const backend = useStorage();
+  const [exists, setExists] = useState<boolean>(() => {
+    if (!backend.readSync) return false;
+    return backend.readSync(sessionStorageKey(recipeId)) !== null;
+  });
+
+  useEffect(() => {
+    if (backend.readSync) {
+      setExists(backend.readSync(sessionStorageKey(recipeId)) !== null);
+      return;
+    }
+    let cancelled = false;
+    void backend.read(sessionStorageKey(recipeId)).then((raw) => {
+      if (!cancelled) setExists(raw !== null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [backend, recipeId]);
+
+  return exists;
+}
+
 // ─── Helper hooks ─────────────────────────────────────────────────────────
 
 /**

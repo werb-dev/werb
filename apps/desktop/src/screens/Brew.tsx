@@ -11,6 +11,7 @@ import type { Measurement, SessionStep, WaterOutput, WerbSession } from "@werb/t
 import { computeWater } from "@werb/calc";
 import { useBrewSession, useScreenWakeLock, useTick } from "../hooks/useBrewSession.ts";
 import { profileToWaterOverrides, type ProfileWithId } from "../data/equipment.ts";
+import { usePersistedJson } from "../storage/index.ts";
 
 interface BrewScreenProps {
   recipeId: string;
@@ -555,25 +556,18 @@ function HopSchedule({
   elapsedSec: number;
   storageKey: string;
 }) {
-  // Per-hop "added" marks, persisted in localStorage so they survive a
-  // navigation away and back during the boil.
-  const [added, setAdded] = useState<Set<number>>(() => {
-    try {
-      const raw = localStorage.getItem(storageKey);
-      return raw ? new Set(JSON.parse(raw) as number[]) : new Set();
-    } catch {
-      return new Set();
-    }
-  });
+  // Per-hop "added" marks, persisted via the active StorageBackend so
+  // they survive a navigation away and back during the boil. Stored as
+  // an array (Set isn't JSON-serializable); converted back to a Set for
+  // O(1) lookups in the render path.
+  const [addedArr, setAddedArr] = usePersistedJson<number[]>(storageKey, []);
+  const added = new Set(addedArr);
   const toggle = (i: number) => {
-    setAdded((prev) => {
+    setAddedArr((prev) => {
       const next = new Set(prev);
       if (next.has(i)) next.delete(i);
       else next.add(i);
-      try {
-        localStorage.setItem(storageKey, JSON.stringify([...next]));
-      } catch {}
-      return next;
+      return [...next];
     });
   };
 

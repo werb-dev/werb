@@ -18,16 +18,6 @@ type AppState =
   | { view: "equipment" }
   | { view: "tokens" };
 
-const SESSION_STORAGE_PREFIX = "werb.session.";
-
-function hasSessionFor(recipeId: string): boolean {
-  try {
-    return localStorage.getItem(`${SESSION_STORAGE_PREFIX}${recipeId}`) !== null;
-  } catch {
-    return false;
-  }
-}
-
 export function App() {
   const [state, setState] = useState<AppState>({ view: "library" });
   const recipesApi = useRecipes();
@@ -49,6 +39,7 @@ export function App() {
       const profile = equipmentApi.activeProfile;
       screen = (
         <RecipeScreen
+          recipeId={state.recipeId}
           recipe={loaded.recipe}
           activeProfile={profile}
           onBack={goLibrary}
@@ -59,7 +50,6 @@ export function App() {
               ? (scaled) => recipesApi.update(state.recipeId, scaled)
               : undefined
           }
-          hasActiveSession={hasSessionFor(state.recipeId)}
         />
       );
     }
