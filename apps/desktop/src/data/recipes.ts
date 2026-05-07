@@ -133,41 +133,55 @@ export function parseBeerJsonText(raw: string): ImportResult {
 }
 
 /**
- * Open a native file dialog filtered to .beerjson, read the file, and parse
- * it. Returns `{ recipes: [] }` with no error if the user cancels.
+ * Open a file dialog filtered to .beerjson, read the file, and parse it.
+ * In the desktop build this goes through Tauri's native dialog +
+ * filesystem; in a browser build it falls back to a hidden
+ * `<input type="file">`. Returns `{ recipes: [] }` with no error if the
+ * user cancels.
  */
 export async function importBeerJsonFromDisk(): Promise<ImportResult> {
   const { isTauri } = await import("@tauri-apps/api/core");
-  if (!isTauri()) {
-    return { recipes: [], error: "File import requires the desktop app (run pnpm tauri:dev)." };
+  if (isTauri()) {
+    const { open } = await import("@tauri-apps/plugin-dialog");
+    const selected = await open({
+      multiple: false,
+      filters: [{ name: "BeerJSON", extensions: ["beerjson", "json"] }],
+      title: "Import a .beerjson recipe",
+    });
+    if (typeof selected !== "string") return { recipes: [] }; // cancelled
+    const { readTextFile } = await import("@tauri-apps/plugin-fs");
+    let raw: string;
+    try {
+      raw = await readTextFile(selected);
+    } catch (err) {
+      return { recipes: [], error: `Read failed: ${(err as Error).message}` };
+    }
+    return parseBeerJsonText(raw);
   }
-  const { open } = await import("@tauri-apps/plugin-dialog");
-  const selected = await open({
-    multiple: false,
-    filters: [{ name: "BeerJSON", extensions: ["beerjson", "json"] }],
-    title: "Import a .beerjson recipe",
-  });
-  if (typeof selected !== "string") return { recipes: [] }; // cancelled
-  const { readTextFile } = await import("@tauri-apps/plugin-fs");
-  let raw: string;
-  try {
-    raw = await readTextFile(selected);
-  } catch (err) {
-    return { recipes: [], error: `Read failed: ${(err as Error).message}` };
-  }
-  return parseBeerJsonText(raw);
+
+  // Browser fallback.
+  const { pickAndReadTextFile } = await import("./browser-fs.ts");
+  const picked = await pickAndReadTextFile(".beerjson,.json,application/json");
+  if (!picked) return { recipes: [] };
+  return parseBeerJsonText(picked.text);
 }
 
 /**
- * Open a native file dialog filtered to .xml/.beerxml, read the file, and
- * convert it to BeerJSON via the `parse_beerxml` Tauri command (backed by
- * the werb-beerxml crate). Returns `{ recipes: [] }` with no error if the
- * user cancels.
+ * Open a file dialog filtered to .xml/.beerxml, read the file, and
+ * convert it to BeerJSON via the `parse_beerxml` Tauri command (backed
+ * by the werb-beerxml crate). Returns `{ recipes: [] }` with no error
+ * if the user cancels. BeerXML import is desktop-only — the parser is
+ * the Rust crate exposed through Tauri's invoke; a future WASM build
+ * could lift this restriction.
  */
 export async function importBeerXmlFromDisk(): Promise<ImportResult> {
   const { isTauri, invoke } = await import("@tauri-apps/api/core");
   if (!isTauri()) {
-    return { recipes: [], error: "File import requires the desktop app (run pnpm tauri:dev)." };
+    return {
+      recipes: [],
+      error:
+        "BeerXML import is only available in the desktop app (the parser runs in native Rust). Use BeerJSON for browser imports.",
+    };
   }
   const { open } = await import("@tauri-apps/plugin-dialog");
   const selected = await open({

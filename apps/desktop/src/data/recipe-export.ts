@@ -35,44 +35,68 @@ function slugify(name: string): string {
     .slice(0, 60) || "recipe";
 }
 
-async function pickSavePath(
+/**
+ * Save text contents to a file. Desktop: native save dialog + Tauri-fs
+ * write, returning the chosen path. Browser: fall back to a Blob +
+ * anchor click download — no path to report back, so `path` is omitted.
+ *
+ * Returns `{ written: false }` (no error) when the user cancels.
+ */
+async function saveTextFile(
   recipe: BeerJsonRecipe,
   extension: "beerjson" | "xml" | "html",
   filterName: string,
-): Promise<string | null> {
+  mime: string,
+  contents: string,
+): Promise<ExportResult> {
+  const filename = `${slugify(recipe.name)}.${extension}`;
   const { isTauri } = await import("@tauri-apps/api/core");
-  if (!isTauri()) return null;
-  const { save } = await import("@tauri-apps/plugin-dialog");
-  const selected = await save({
-    defaultPath: `${slugify(recipe.name)}.${extension}`,
-    filters: [{ name: filterName, extensions: [extension] }],
-  });
-  return typeof selected === "string" ? selected : null;
+
+  if (isTauri()) {
+    const { save } = await import("@tauri-apps/plugin-dialog");
+    const selected = await save({
+      defaultPath: filename,
+      filters: [{ name: filterName, extensions: [extension] }],
+    });
+    if (typeof selected !== "string") return { written: false }; // cancelled
+    const { writeTextFile } = await import("@tauri-apps/plugin-fs");
+    try {
+      await writeTextFile(selected, contents);
+      return { written: true, path: selected };
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      return { written: false, error: `Write failed: ${detail || "unknown error"}` };
+    }
+  }
+
+  // Browser: trigger a download. No way to confirm where the user saved
+  // it (or whether they did), so we report success once the download
+  // anchor has been clicked.
+  const { downloadTextFile } = await import("./browser-fs.ts");
+  try {
+    downloadTextFile(filename, contents, mime);
+    return { written: true };
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
+    return { written: false, error: `Download failed: ${detail || "unknown error"}` };
+  }
 }
 
 /** Export the recipe as a `.beerjson` file. */
 export async function exportBeerJson(recipe: BeerJsonRecipe): Promise<ExportResult> {
-  const { isTauri } = await import("@tauri-apps/api/core");
-  if (!isTauri()) {
-    return { written: false, error: "Export requires the desktop app (run pnpm tauri:dev)." };
-  }
-  const path = await pickSavePath(recipe, "beerjson", "BeerJSON");
-  if (!path) return { written: false };
   const file = {
     beerjson: {
       version: 2.06,
       recipes: [recipe],
     },
   };
-  const json = JSON.stringify(file, null, 2);
-  const { writeTextFile } = await import("@tauri-apps/plugin-fs");
-  try {
-    await writeTextFile(path, json);
-    return { written: true, path };
-  } catch (err) {
-    const detail = err instanceof Error ? err.message : String(err);
-    return { written: false, error: `Write failed: ${detail || "unknown error"}` };
-  }
+  return saveTextFile(
+    recipe,
+    "beerjson",
+    "BeerJSON",
+    "application/json",
+    JSON.stringify(file, null, 2),
+  );
 }
 
 /**
@@ -83,21 +107,13 @@ export async function exportBeerJson(recipe: BeerJsonRecipe): Promise<ExportResu
  * portable.
  */
 export async function exportRecipeHtml(recipe: BeerJsonRecipe): Promise<ExportResult> {
-  const { isTauri } = await import("@tauri-apps/api/core");
-  if (!isTauri()) {
-    return { written: false, error: "Export requires the desktop app (run pnpm tauri:dev)." };
-  }
-  const path = await pickSavePath(recipe, "html", "HTML");
-  if (!path) return { written: false };
-  const html = recipeToPrintableHtml(recipe);
-  const { writeTextFile } = await import("@tauri-apps/plugin-fs");
-  try {
-    await writeTextFile(path, html);
-    return { written: true, path };
-  } catch (err) {
-    const detail = err instanceof Error ? err.message : String(err);
-    return { written: false, error: `Write failed: ${detail || "unknown error"}` };
-  }
+  return saveTextFile(
+    recipe,
+    "html",
+    "HTML",
+    "text/html",
+    recipeToPrintableHtml(recipe),
+  );
 }
 
 /** Standalone HTML document for printing — black on white, no externals. */
@@ -266,21 +282,13 @@ function toL(v: { value: number; unit: string }): number {
 
 /** Export the recipe as a `.xml` (BeerXML 1.0) file. */
 export async function exportBeerXml(recipe: BeerJsonRecipe): Promise<ExportResult> {
-  const { isTauri } = await import("@tauri-apps/api/core");
-  if (!isTauri()) {
-    return { written: false, error: "Export requires the desktop app (run pnpm tauri:dev)." };
-  }
-  const path = await pickSavePath(recipe, "xml", "BeerXML");
-  if (!path) return { written: false };
-  const xml = recipeToBeerXml(recipe);
-  const { writeTextFile } = await import("@tauri-apps/plugin-fs");
-  try {
-    await writeTextFile(path, xml);
-    return { written: true, path };
-  } catch (err) {
-    const detail = err instanceof Error ? err.message : String(err);
-    return { written: false, error: `Write failed: ${detail || "unknown error"}` };
-  }
+  return saveTextFile(
+    recipe,
+    "xml",
+    "BeerXML",
+    "application/xml",
+    recipeToBeerXml(recipe),
+  );
 }
 
 // ─── BeerXML serializer ───────────────────────────────────────────────────
