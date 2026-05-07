@@ -3,7 +3,7 @@ import {
   recipeToSessionPlan,
   type BeerJsonRecipe,
 } from "@werb/adapters";
-import type { WerbSession, SessionStep } from "@werb/types";
+import type { WerbSession, SessionStep, Measurement } from "@werb/types";
 
 const STORAGE_PREFIX = "werb.session.";
 
@@ -129,6 +129,33 @@ export function useBrewSession(recipeId: string, recipe: BeerJsonRecipe) {
     setSession(null);
   }, [session]);
 
+  const addMeasurement = useCallback(
+    (m: Omit<Measurement, "at">) => {
+      update((s) => {
+        const at = new Date().toISOString();
+        const entry: Measurement = { at, ...m };
+        // Auto-attach to the currently active step if the caller didn't
+        // pass a step_id explicitly — that's the common case (you log
+        // mash pH while the mash step is running).
+        if (entry.step_id === undefined) {
+          const active = s.steps.find((st) => st.status === "active");
+          if (active) entry.step_id = active.id;
+        }
+        s.measurements = [...(s.measurements ?? []), entry];
+      });
+    },
+    [update],
+  );
+
+  const removeMeasurement = useCallback(
+    (at: string) => {
+      update((s) => {
+        s.measurements = (s.measurements ?? []).filter((m) => m.at !== at);
+      });
+    },
+    [update],
+  );
+
   return {
     session,
     activeStep: session?.steps.find((s) => s.status === "active") ?? null,
@@ -138,6 +165,8 @@ export function useBrewSession(recipeId: string, recipe: BeerJsonRecipe) {
     setStepNotes,
     completeSession,
     abandon,
+    addMeasurement,
+    removeMeasurement,
   };
 }
 
