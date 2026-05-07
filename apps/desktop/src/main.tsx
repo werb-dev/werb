@@ -10,6 +10,7 @@ import {
   browserOpfsBackend,
   isOpfsAvailable,
   localStorageBackend,
+  migrateBackend,
   StorageProvider,
   type StorageBackend,
 } from "./storage/index.ts";
@@ -22,10 +23,30 @@ const backend: StorageBackend = isOpfsAvailable()
   ? browserOpfsBackend()
   : localStorageBackend;
 
-createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <StorageProvider backend={backend}>
-      <App />
-    </StorageProvider>
-  </StrictMode>,
-);
+const root = createRoot(document.getElementById("root")!);
+
+async function boot() {
+  // One-shot, idempotent migration: any werb.* key still living in
+  // localStorage gets copied into OPFS if OPFS doesn't already have
+  // it. Carries data forward for users (or developers) who had data
+  // in localStorage before OPFS became the default. Cheap on a fresh
+  // install (no source keys → no-op).
+  if (backend !== localStorageBackend) {
+    try {
+      const copied = await migrateBackend(localStorageBackend, backend);
+      if (copied > 0) console.info(`[storage] migrated ${copied} keys → OPFS`);
+    } catch (err) {
+      console.warn("[storage] migration failed; using OPFS as-is", err);
+    }
+  }
+
+  root.render(
+    <StrictMode>
+      <StorageProvider backend={backend}>
+        <App />
+      </StorageProvider>
+    </StrictMode>,
+  );
+}
+
+void boot();
