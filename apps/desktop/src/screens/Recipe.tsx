@@ -62,15 +62,55 @@ export function RecipeScreen({ recipe, activeProfile, onBack, onStartBrewing, on
 
   const claimedIbu = recipe.ibu_estimate?.ibu?.value ?? null;
   const claimedOg = recipe.original_gravity?.value ?? null;
+  const claimedFg = recipe.final_gravity?.value ?? null;
   const claimedAbv = recipe.alcohol_by_volume?.value ?? null;
   const claimedSrm = recipe.color_estimate ? toSrm(recipe.color_estimate) : null;
   const claimedColorDisplay = recipe.color_estimate
     ? `${recipe.color_estimate.value.toFixed(0)} ${recipe.color_estimate.unit}`
     : null;
-  const computedColorDisplay =
-    recipe.color_estimate?.unit === "EBC"
-      ? `${computed.color.ebc.toFixed(0)} EBC`
-      : `${computed.color.srm.toFixed(1)} SRM`;
+  const useEbc = recipe.color_estimate?.unit === "EBC";
+  const computedColorDisplay = useEbc
+    ? `${computed.color.ebc.toFixed(0)} EBC`
+    : `${computed.color.srm.toFixed(1)} SRM`;
+
+  // BJCP range hints. `current` prefers the recipe's claimed value and falls
+  // back to our computed estimate so the indicator works on bare imports.
+  const styleHints = {
+    og: rangeHint({
+      current: claimedOg ?? computed.gravity.og,
+      min: recipe.style?.original_gravity?.minimum?.value,
+      max: recipe.style?.original_gravity?.maximum?.value,
+      format: (v) => v.toFixed(3),
+    }),
+    fg: rangeHint({
+      current: claimedFg,
+      min: recipe.style?.final_gravity?.minimum?.value,
+      max: recipe.style?.final_gravity?.maximum?.value,
+      format: (v) => v.toFixed(3),
+    }),
+    ibu: rangeHint({
+      current: claimedIbu ?? computed.ibu.total_ibu,
+      min: recipe.style?.international_bitterness_units?.minimum?.value,
+      max: recipe.style?.international_bitterness_units?.maximum?.value,
+      format: (v) => `${v.toFixed(0)} IBU`,
+    }),
+    abv: rangeHint({
+      current: claimedAbv ?? computed.abv,
+      min: recipe.style?.alcohol_by_volume?.minimum?.value,
+      max: recipe.style?.alcohol_by_volume?.maximum?.value,
+      format: (v) => `${v.toFixed(1)}%`,
+    }),
+    color: rangeHint({
+      current: claimedSrm ?? computed.color.srm,
+      min: recipe.style?.color?.minimum
+        ? toSrm(recipe.style.color.minimum)
+        : undefined,
+      max: recipe.style?.color?.maximum
+        ? toSrm(recipe.style.color.maximum)
+        : undefined,
+      format: (srm) => (useEbc ? `${(srm * 1.97).toFixed(0)} EBC` : `${srm.toFixed(1)} SRM`),
+    }),
+  };
 
   return (
     <div className="min-h-dvh bg-bg text-text">
@@ -142,13 +182,19 @@ export function RecipeScreen({ recipe, activeProfile, onBack, onStartBrewing, on
             warn={
               claimedOg !== null && Math.abs(computed.gravity.og - claimedOg) > 0.008
             }
+            styleHint={styleHints.og}
           />
-          <Tile label="FG" value={recipe.final_gravity?.value.toFixed(3) ?? "—"} />
+          <Tile
+            label="FG"
+            value={claimedFg?.toFixed(3) ?? "—"}
+            styleHint={styleHints.fg}
+          />
           <Tile
             label="IBU"
             value={claimedIbu?.toString() ?? "—"}
             sub={`≈${computed.ibu.total_ibu.toFixed(0)}`}
             warn={claimedIbu !== null && Math.abs(computed.ibu.total_ibu - claimedIbu) > 15}
+            styleHint={styleHints.ibu}
           />
           <Tile
             label="ABV"
@@ -159,6 +205,7 @@ export function RecipeScreen({ recipe, activeProfile, onBack, onStartBrewing, on
               computed.abv !== null &&
               Math.abs(computed.abv - claimedAbv) > 0.5
             }
+            styleHint={styleHints.abv}
           />
           <Tile
             label="Color"
@@ -167,6 +214,7 @@ export function RecipeScreen({ recipe, activeProfile, onBack, onStartBrewing, on
             warn={
               claimedSrm !== null && Math.abs(computed.color.srm - claimedSrm) > 3
             }
+            styleHint={styleHints.color}
           />
         </section>
 
@@ -534,12 +582,14 @@ function Tile({
   sub,
   highlight,
   warn,
+  styleHint,
 }: {
   label: string;
   value: string;
   sub?: string | undefined;
   highlight?: boolean | undefined;
   warn?: boolean | undefined;
+  styleHint?: RangeHint | null | undefined;
 }) {
   return (
     <div className="bg-surface px-5 py-4">
@@ -556,6 +606,50 @@ function Tile({
           {sub}
         </p>
       )}
+      {styleHint && (
+        <p
+          className={`font-mono text-caption mt-1 ${
+            styleHint.status === "in" ? "text-success" : "text-warning"
+          }`}
+          title={styleHint.tooltip}
+        >
+          {styleHint.label}
+        </p>
+      )}
     </div>
   );
+}
+
+interface RangeHint {
+  status: "in" | "low" | "high";
+  label: string;
+  tooltip: string;
+}
+
+function rangeHint({
+  current,
+  min,
+  max,
+  format,
+}: {
+  current: number | null | undefined;
+  min: number | undefined;
+  max: number | undefined;
+  format: (v: number) => string;
+}): RangeHint | null {
+  if (current === null || current === undefined) return null;
+  if (min === undefined && max === undefined) return null;
+  const rangeStr =
+    min !== undefined && max !== undefined
+      ? `${format(min)}–${format(max)}`
+      : min !== undefined
+      ? `≥ ${format(min)}`
+      : `≤ ${format(max!)}`;
+  if (min !== undefined && current < min) {
+    return { status: "low", label: `↓ under style`, tooltip: `BJCP range: ${rangeStr}` };
+  }
+  if (max !== undefined && current > max) {
+    return { status: "high", label: `↑ over style`, tooltip: `BJCP range: ${rangeStr}` };
+  }
+  return { status: "in", label: `✓ in style`, tooltip: `BJCP range: ${rangeStr}` };
 }
