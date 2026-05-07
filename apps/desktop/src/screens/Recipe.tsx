@@ -5,6 +5,7 @@ import {
   recipeToColorInput,
   recipeToGravityInput,
   recipeToScaleInput,
+  recipeToCarbonationInput,
   applyScale,
   fitMashToTun,
   toGrams,
@@ -17,7 +18,15 @@ import {
   isVolume,
   type BeerJsonRecipe,
 } from "@werb/adapters";
-import { computeIbu, computeWater, computeAbv, computeColor, computeGravity, computeScale } from "@werb/calc";
+import {
+  computeIbu,
+  computeWater,
+  computeAbv,
+  computeColor,
+  computeGravity,
+  computeScale,
+  computeCarbonation,
+} from "@werb/calc";
 import { profileToWaterOverrides, type ProfileWithId } from "../data/equipment.ts";
 import { exportBeerJson, exportBeerXml, exportRecipeHtml } from "../data/recipe-export.ts";
 
@@ -409,6 +418,9 @@ export function RecipeScreen({ recipe, activeProfile, onBack, onStartBrewing, on
             </Section>
           )}
 
+        {/* ─── Carbonation calculator ───────────────────────────────────── */}
+        <CarbonationSection recipe={recipe} />
+
         {/* ─── Footer note about IBU discrepancy ──────────────────────── */}
         {claimedIbu !== null && Math.abs(computed.ibu.total_ibu - claimedIbu) > 15 && (
           <aside className="mt-12 rounded-xl border border-border bg-surface p-6">
@@ -503,6 +515,275 @@ function ExportMenu({ recipe }: { recipe: BeerJsonRecipe }) {
   );
 }
 
+
+// ─── Carbonation ───────────────────────────────────────────────────────
+
+const CARBONATION_STORAGE_PREFIX = "werb.carbonation.";
+
+interface CarbonationFormState {
+  target_volumes_co2: number;
+  package_temp_c: number;
+  serving_temp_c: number;
+  beer_volume_l_override: number | null;
+}
+
+function loadCarbForm(recipeName: string): CarbonationFormState | null {
+  try {
+    const raw = localStorage.getItem(`${CARBONATION_STORAGE_PREFIX}${recipeName}`);
+    if (!raw) return null;
+    return JSON.parse(raw) as CarbonationFormState;
+  } catch {
+    return null;
+  }
+}
+
+function saveCarbForm(recipeName: string, state: CarbonationFormState): void {
+  try {
+    localStorage.setItem(
+      `${CARBONATION_STORAGE_PREFIX}${recipeName}`,
+      JSON.stringify(state),
+    );
+  } catch {
+    // Storage quota / disabled — silently ignore. The form just won't
+    // remember between visits, no functional impact.
+  }
+}
+
+function defaultPackageTemp(recipe: BeerJsonRecipe): number {
+  // Use the active culture's max fermentation temp as a starting point —
+  // that's the highest temp the beer reached, which sets residual CO2.
+  const cultures = recipe.ingredients.culture_additions ?? [];
+  for (const c of cultures) {
+    const max = c.temperature_range?.maximum;
+    if (max) return toCelsius(max);
+  }
+  return 20;
+}
+
+function CarbonationSection({ recipe }: { recipe: BeerJsonRecipe }) {
+  const [form, setForm] = useState<CarbonationFormState>(() => {
+    const saved = loadCarbForm(recipe.name);
+    if (saved) return saved;
+    return {
+      target_volumes_co2: 2.4,
+      package_temp_c: defaultPackageTemp(recipe),
+      serving_temp_c: 4,
+      beer_volume_l_override: null,
+    };
+  });
+
+  const update = <K extends keyof CarbonationFormState>(
+    key: K,
+    value: CarbonationFormState[K],
+  ) => {
+    setForm((prev) => {
+      const next = { ...prev, [key]: value };
+      saveCarbForm(recipe.name, next);
+      return next;
+    });
+  };
+
+  const out = useMemo(
+    () =>
+      computeCarbonation(
+        recipeToCarbonationInput(recipe, {
+          target_volumes_co2: form.target_volumes_co2,
+          package_temp_c: form.package_temp_c,
+          serving_temp_c: form.serving_temp_c,
+          ...(form.beer_volume_l_override !== null && {
+            beer_volume_l: form.beer_volume_l_override,
+          }),
+        }),
+      ),
+    [recipe, form],
+  );
+
+  const overCarbed = out.volumes_to_add < 0;
+  const beerVolume = form.beer_volume_l_override ?? toLiters(recipe.batch_size);
+
+  return (
+    <Section
+      title="Carbonation"
+      subtitle="Priming sugar amounts for bottle conditioning, plus the regulator pressure for force-carbonation in a keg."
+    >
+      <div className="rounded-xl bg-surface border border-border p-6">
+        {/* Input row */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <CarbField
+            label="Target"
+            unit="vols"
+            value={form.target_volumes_co2}
+            step={0.1}
+            onChange={(v) => update("target_volumes_co2", v)}
+            hint="2.4 typical · 1.7 cask · 3.0 wheat"
+          />
+          <CarbField
+            label="Package temp"
+            unit="°C"
+            value={form.package_temp_c}
+            step={0.5}
+            onChange={(v) => update("package_temp_c", v)}
+            hint="Highest fermentation temp"
+          />
+          <CarbField
+            label="Beer volume"
+            unit="L"
+            value={beerVolume}
+            step={0.5}
+            onChange={(v) =>
+              update(
+                "beer_volume_l_override",
+                Math.abs(v - toLiters(recipe.batch_size)) < 0.01 ? null : v,
+              )
+            }
+            hint={`Batch ${toLiters(recipe.batch_size).toFixed(1)} L`}
+          />
+          <CarbField
+            label="Serving temp"
+            unit="°C"
+            value={form.serving_temp_c}
+            step={0.5}
+            onChange={(v) => update("serving_temp_c", v)}
+            hint="For force-carb pressure"
+          />
+        </div>
+
+        {/* Residual + needed strip */}
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <CarbStat
+            label="Residual at package"
+            value={`${out.residual_volumes_co2.toFixed(2)} vols`}
+            sub={`Already dissolved at ${form.package_temp_c.toFixed(1)} °C`}
+          />
+          <CarbStat
+            label="Needs to add"
+            value={`${out.volumes_to_add.toFixed(2)} vols`}
+            sub={
+              overCarbed
+                ? "Beer is already over the target — no priming"
+                : `Target − residual = ${out.volumes_to_add.toFixed(2)} vols`
+            }
+            warn={overCarbed}
+          />
+        </div>
+
+        {/* Priming sugar grid */}
+        <div className="mb-6">
+          <p className="text-caption uppercase tracking-widest text-text-muted mb-3">
+            Priming sugar (bottle / keg conditioning)
+          </p>
+          <div className="grid grid-cols-3 gap-px bg-border rounded-xl overflow-hidden">
+            <CarbResult label="Corn sugar" value={out.priming.dextrose_g} note="dextrose" />
+            <CarbResult label="Table sugar" value={out.priming.sucrose_g} note="sucrose" />
+            <CarbResult label="DME" value={out.priming.dme_g} note="dry malt extract" />
+          </div>
+        </div>
+
+        {/* Force carb */}
+        <div>
+          <p className="text-caption uppercase tracking-widest text-text-muted mb-3">
+            Force-carbonation pressure
+          </p>
+          <div className="grid grid-cols-2 gap-px bg-border rounded-xl overflow-hidden">
+            <div className="bg-surface px-5 py-4">
+              <p className="text-caption uppercase tracking-widest text-text-muted">PSI</p>
+              <p className="font-mono text-h2 mt-1 text-accent">
+                {out.force_pressure_psi.toFixed(1)}
+              </p>
+              <p className="font-mono text-caption mt-1 text-text-muted">
+                regulator at {form.serving_temp_c.toFixed(1)} °C
+              </p>
+            </div>
+            <div className="bg-surface px-5 py-4">
+              <p className="text-caption uppercase tracking-widest text-text-muted">Bar</p>
+              <p className="font-mono text-h2 mt-1">{out.force_pressure_bar.toFixed(2)}</p>
+              <p className="font-mono text-caption mt-1 text-text-muted">same pressure, metric</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Section>
+  );
+}
+
+function CarbField({
+  label,
+  unit,
+  value,
+  step,
+  onChange,
+  hint,
+}: {
+  label: string;
+  unit: string;
+  value: number;
+  step: number;
+  onChange: (v: number) => void;
+  hint?: string;
+}) {
+  return (
+    <label className="block">
+      <span className="block text-caption uppercase tracking-widest text-text-muted mb-1">
+        {label}
+      </span>
+      <div className="flex items-baseline gap-1 bg-bg border border-border rounded-lg px-3 py-2 focus-within:border-accent">
+        <input
+          type="number"
+          value={Number.isFinite(value) ? value : ""}
+          step={step}
+          onChange={(e) => {
+            const n = Number(e.target.value);
+            onChange(Number.isFinite(n) ? n : 0);
+          }}
+          className="w-full bg-transparent text-body font-mono tabular-nums text-text focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
+        />
+        <span className="text-caption font-mono text-text-muted shrink-0">{unit}</span>
+      </div>
+      {hint && <span className="block text-caption text-text-muted mt-1">{hint}</span>}
+    </label>
+  );
+}
+
+function CarbStat({
+  label,
+  value,
+  sub,
+  warn,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  warn?: boolean;
+}) {
+  return (
+    <div className="bg-surface-raised border border-border rounded-lg px-4 py-3">
+      <p className="text-caption uppercase tracking-widest text-text-muted">{label}</p>
+      <p className={`font-mono text-h3 mt-1 ${warn ? "text-warning" : "text-text"}`}>
+        {value}
+      </p>
+      {sub && <p className="text-caption text-text-muted mt-1">{sub}</p>}
+    </div>
+  );
+}
+
+function CarbResult({
+  label,
+  value,
+  note,
+}: {
+  label: string;
+  value: number;
+  note: string;
+}) {
+  const display = value > 0 ? `${value.toFixed(0)} g` : "—";
+  return (
+    <div className="bg-surface px-5 py-4">
+      <p className="text-caption uppercase tracking-widest text-text-muted">{label}</p>
+      <p className="font-mono text-h3 mt-1 text-text">{display}</p>
+      <p className="font-mono text-caption mt-1 text-text-muted">{note}</p>
+    </div>
+  );
+}
 
 function ScaleButton({
   onApply,

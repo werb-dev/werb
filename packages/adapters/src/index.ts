@@ -45,5 +45,9 @@ export {
   recipeToStrikeTempInput,
   type StrikeTempOptions,
 } from "./recipe-to-strike-temp.js";
+export {
+  recipeToCarbonationInput,
+  type CarbonationOptions,
+} from "./recipe-to-carbonation.js";
 export { recipeToSessionPlan, type SessionPlanDeps } from "./recipe-to-session.js";
 export { srmToHex } from "./srm-color.js";

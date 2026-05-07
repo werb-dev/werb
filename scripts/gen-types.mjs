@@ -39,6 +39,8 @@ const TARGETS = [
   { schema: "tools/scale.output.schema.json", name: "ScaleOutput" },
   { schema: "tools/strike-temp.input.schema.json", name: "StrikeTempInput" },
   { schema: "tools/strike-temp.output.schema.json", name: "StrikeTempOutput" },
+  { schema: "tools/carbonation.input.schema.json", name: "CarbonationInput" },
+  { schema: "tools/carbonation.output.schema.json", name: "CarbonationOutput" },
 ];
 
 const compileOpts = {

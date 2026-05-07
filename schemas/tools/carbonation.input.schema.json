@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://werb.dev/schemas/tools/carbonation.input.schema.json",
+  "title": "CarbonationInput",
+  "description": "Normalized input for computing priming sugar amounts and force-carbonation pressure for a finished beer.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "target_volumes_co2",
+    "beer_volume_l",
+    "package_temp_c"
+  ],
+  "properties": {
+    "target_volumes_co2": {
+      "type": "number",
+      "minimum": 0.5,
+      "maximum": 5,
+      "description": "Target carbonation level in volumes of CO2. Typical: 1.8 (English ale) to 3.0 (German wheat / Belgian)."
+    },
+    "beer_volume_l": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Volume of beer being packaged, in liters."
+    },
+    "package_temp_c": {
+      "type": "number",
+      "description": "Highest temperature the beer reached during fermentation, in °C. Determines the residual CO2 already dissolved in the beer (Henry's law)."
+    },
+    "serving_temp_c": {
+      "type": "number",
+      "default": 4,
+      "description": "Keg / serving temperature in °C. Used only for the force-carbonation pressure output. Default 4 °C (typical kegerator)."
+    }
+  }
+}

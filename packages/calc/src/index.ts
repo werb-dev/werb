@@ -5,3 +5,4 @@ export { computeColor } from "./color.js";
 export { computeGravity } from "./gravity.js";
 export { computeScale } from "./scale.js";
 export { computeStrikeTemp } from "./strike-temp.js";
+export { computeCarbonation } from "./carbonation.js";
