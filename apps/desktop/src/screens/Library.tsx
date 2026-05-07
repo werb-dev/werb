@@ -14,6 +14,7 @@ import { profileToWaterOverrides, type ProfileWithId } from "../data/equipment.t
 
 interface LibraryScreenProps {
   recipes: StoredRecipe[];
+  loading: boolean;
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
   onDuplicate: (id: string) => void;
@@ -34,6 +35,7 @@ interface LibraryScreenProps {
 
 export function LibraryScreen({
   recipes,
+  loading,
   onSelect,
   onDelete,
   onDuplicate,
@@ -82,7 +84,9 @@ export function LibraryScreen({
       <main className="mx-auto max-w-5xl px-8 py-12">
         <header className="mb-12">
           <p className="text-caption uppercase tracking-widest text-text-muted">
-            Werb · {recipes.length} recipe{recipes.length === 1 ? "" : "s"}
+            {loading
+              ? "Werb · loading…"
+              : `Werb · ${recipes.length} recipe${recipes.length === 1 ? "" : "s"}`}
           </p>
           <h1 className="text-h1 font-semibold mt-3">Library</h1>
           <ProfileBadge profile={activeProfile} onGoEquipment={onGoEquipment} />
@@ -150,7 +154,9 @@ export function LibraryScreen({
           )}
         </header>
 
-        {recipes.length === 0 ? (
+        {loading ? (
+          <SkeletonGrid />
+        ) : recipes.length === 0 ? (
           <EmptyState />
         ) : visible.length === 0 ? (
           <p className="text-body text-text-muted text-center py-12">
@@ -367,6 +373,36 @@ function EmptyState() {
         from disk, or load the bundled sample recipes to get started.
       </p>
     </div>
+  );
+}
+
+/**
+ * Three placeholder cards in the same grid shape as RecipeCard. Shown
+ * while the StorageBackend resolves its initial read on async backends
+ * (OPFS, future cloud) so the screen doesn't flash an EmptyState that
+ * is about to be replaced with real recipes.
+ */
+function SkeletonGrid() {
+  return (
+    <ul
+      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+      aria-busy="true"
+      aria-live="polite"
+    >
+      {[0, 1, 2].map((i) => (
+        <li key={i}>
+          <div className="rounded-xl bg-surface border border-border p-5 animate-pulse">
+            <div className="h-3 w-1/3 rounded bg-surface-raised" />
+            <div className="mt-3 h-5 w-3/4 rounded bg-surface-raised" />
+            <div className="mt-6 grid grid-cols-3 gap-2">
+              <div className="h-10 rounded bg-surface-raised" />
+              <div className="h-10 rounded bg-surface-raised" />
+              <div className="h-10 rounded bg-surface-raised" />
+            </div>
+          </div>
+        </li>
+      ))}
+    </ul>
   );
 }
 

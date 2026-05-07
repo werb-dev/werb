@@ -33,7 +33,9 @@ export function EquipmentScreen({ api }: EquipmentScreenProps) {
       <main className="mx-auto max-w-5xl px-8 py-12">
         <header className="mb-10">
           <p className="text-caption uppercase tracking-widest text-text-muted">
-            Werb · {eq.profiles.length} profile{eq.profiles.length === 1 ? "" : "s"}
+            {eq.loading
+              ? "Werb · loading…"
+              : `Werb · ${eq.profiles.length} profile${eq.profiles.length === 1 ? "" : "s"}`}
           </p>
           <h1 className="text-h1 font-semibold mt-3">Equipment</h1>
           <p className="text-body text-text-muted mt-2 max-w-2xl">
@@ -42,7 +44,9 @@ export function EquipmentScreen({ api }: EquipmentScreenProps) {
           </p>
         </header>
 
-        {eq.profiles.length === 0 ? (
+        {eq.loading ? (
+          <Skeleton />
+        ) : eq.profiles.length === 0 ? (
           <EmptyState onCreate={handleCreate} />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-[16rem_1fr] gap-8">
@@ -480,6 +484,36 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
       >
         Create your first profile
       </button>
+    </div>
+  );
+}
+
+/**
+ * Two-column placeholder mirroring the loaded layout. Shown during the
+ * StorageBackend's initial async read on backends without readSync —
+ * keeps the screen from flashing the EmptyState before profiles arrive.
+ */
+function Skeleton() {
+  return (
+    <div
+      className="grid grid-cols-1 md:grid-cols-[16rem_1fr] gap-8"
+      aria-busy="true"
+      aria-live="polite"
+    >
+      <div className="space-y-2 animate-pulse">
+        <div className="h-10 rounded-lg bg-surface-raised" />
+        <div className="h-10 rounded-lg bg-surface-raised opacity-70" />
+      </div>
+      <div className="rounded-xl bg-surface border border-border p-6 animate-pulse">
+        <div className="h-4 w-1/4 rounded bg-surface-raised" />
+        <div className="mt-4 h-10 w-2/3 rounded bg-surface-raised" />
+        <div className="mt-8 grid grid-cols-2 gap-4">
+          <div className="h-12 rounded bg-surface-raised" />
+          <div className="h-12 rounded bg-surface-raised" />
+          <div className="h-12 rounded bg-surface-raised" />
+          <div className="h-12 rounded bg-surface-raised" />
+        </div>
+      </div>
     </div>
   );
 }

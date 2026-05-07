@@ -88,6 +88,7 @@ export function App() {
     screen = (
       <LibraryScreen
         recipes={recipesApi.recipes}
+        loading={recipesApi.loading}
         onSelect={goRecipe}
         onDelete={recipesApi.remove}
         onDuplicate={(id) => {
