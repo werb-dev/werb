@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   recipeToIbuInput,
   recipeToWaterInput,
@@ -389,41 +389,68 @@ export function RecipeScreen({ recipe, activeProfile, onBack, onStartBrewing, on
 // ─── Subcomponents ─────────────────────────────────────────────────────
 
 function ExportMenu({ recipe }: { recipe: BeerJsonRecipe }) {
-  const handleBeerJson = async () => {
-    const r = await exportBeerJson(recipe);
+  const [open, setOpen] = useState(false);
+
+  const run = async (fn: () => Promise<{ error?: string | undefined }>) => {
+    setOpen(false);
+    const r = await fn();
     if (r.error) alert(r.error);
   };
-  const handleBeerXml = async () => {
-    const r = await exportBeerXml(recipe);
-    if (r.error) alert(r.error);
-  };
-  const handleHtml = async () => {
-    const r = await exportRecipeHtml(recipe);
-    if (r.error) alert(r.error);
-  };
+
+  const options: {
+    label: string;
+    sublabel: string;
+    fn: () => Promise<{ error?: string | undefined }>;
+  }[] = [
+    {
+      label: "BeerJSON (.beerjson)",
+      sublabel: "Modern JSON format — round-trips cleanly with most tools.",
+      fn: () => exportBeerJson(recipe),
+    },
+    {
+      label: "BeerXML (.xml)",
+      sublabel: "Legacy XML — works with BeerSmith and older imports.",
+      fn: () => exportBeerXml(recipe),
+    },
+    {
+      label: "Printable HTML / PDF",
+      sublabel: "Self-contained .html — open in any browser, print to PDF.",
+      fn: () => exportRecipeHtml(recipe),
+    },
+  ];
+
   return (
-    <div className="no-print flex gap-2">
+    <div className="relative">
       <button
-        onClick={handleBeerJson}
-        className="px-3 py-3 rounded-xl bg-surface-raised border border-border text-body-sm font-medium hover:border-accent hover:text-accent transition-colors"
-        title="Export as BeerJSON 2.x"
+        onClick={() => setOpen((v) => !v)}
+        className="px-4 py-3 rounded-xl bg-surface-raised border border-border text-body-sm font-medium hover:border-accent hover:text-accent transition-colors flex items-center gap-2"
       >
-        .beerjson
+        Export
+        <span aria-hidden className="text-caption">▾</span>
       </button>
-      <button
-        onClick={handleBeerXml}
-        className="px-3 py-3 rounded-xl bg-surface-raised border border-border text-body-sm font-medium hover:border-accent hover:text-accent transition-colors"
-        title="Export as BeerXML 1.0"
-      >
-        .xml
-      </button>
-      <button
-        onClick={handleHtml}
-        className="px-3 py-3 rounded-xl bg-surface-raised border border-border text-body-sm font-medium hover:border-accent hover:text-accent transition-colors"
-        title="Save as a printable HTML file. Open it in any browser and print to PDF from there."
-      >
-        .html / PDF
-      </button>
+      {open && (
+        <>
+          {/* Click-outside backdrop. */}
+          <div
+            onClick={() => setOpen(false)}
+            className="fixed inset-0 z-40"
+            aria-hidden
+          />
+          <div className="absolute right-0 top-full mt-2 z-50 min-w-[20rem] bg-surface-raised border border-border rounded-lg shadow-xl overflow-hidden">
+            {options.map((opt) => (
+              <button
+                key={opt.label}
+                type="button"
+                onClick={() => run(opt.fn)}
+                className="block w-full text-left px-4 py-3 hover:bg-surface focus:bg-surface border-b border-border last:border-b-0 transition-colors"
+              >
+                <p className="text-body-sm font-medium text-text">{opt.label}</p>
+                <p className="text-caption text-text-muted mt-0.5">{opt.sublabel}</p>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
