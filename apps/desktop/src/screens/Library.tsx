@@ -9,6 +9,7 @@ import {
 } from "@werb/adapters";
 import { computeIbu, computeWater } from "@werb/calc";
 import type { StoredRecipe } from "../data/recipes.ts";
+import { filterAndSort, type SortKey } from "../data/library-sort.ts";
 import { profileToWaterOverrides, type ProfileWithId } from "../data/equipment.ts";
 
 interface LibraryScreenProps {
@@ -16,14 +17,20 @@ interface LibraryScreenProps {
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
   onDuplicate: (id: string) => void;
-  onImportSamples: () => number;
-  onImportBeerJsonFile: () => Promise<{ count: number; error?: string | undefined }>;
-  onImportBeerXmlFile: () => Promise<{ count: number; error?: string | undefined }>;
+  onImportSamples: () => { count: number; info?: string | undefined };
+  onImportBeerJsonFile: () => Promise<{
+    count: number;
+    error?: string | undefined;
+    info?: string | undefined;
+  }>;
+  onImportBeerXmlFile: () => Promise<{
+    count: number;
+    error?: string | undefined;
+    info?: string | undefined;
+  }>;
   activeProfile?: ProfileWithId | undefined;
   onGoEquipment: () => void;
 }
-
-type SortKey = "updated" | "name" | "style";
 
 export function LibraryScreen({
   recipes,
@@ -37,6 +44,7 @@ export function LibraryScreen({
   onGoEquipment,
 }: LibraryScreenProps) {
   const [importError, setImportError] = useState<string | null>(null);
+  const [importInfo, setImportInfo] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [query, setQuery] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("updated");
@@ -45,16 +53,22 @@ export function LibraryScreen({
 
   const handleImportSamples = () => {
     setImportError(null);
-    const count = onImportSamples();
-    if (count === 0) setImportError("No bundled samples found.");
+    setImportInfo(null);
+    const { count, info } = onImportSamples();
+    if (info) setImportInfo(info);
+    else if (count === 0) setImportError("No bundled samples found.");
   };
 
-  const runImport = async (fn: () => Promise<{ count: number; error?: string | undefined }>) => {
+  const runImport = async (
+    fn: () => Promise<{ count: number; error?: string | undefined; info?: string | undefined }>,
+  ) => {
     setImportError(null);
+    setImportInfo(null);
     setImporting(true);
     try {
-      const { error } = await fn();
+      const { error, info } = await fn();
       if (error) setImportError(error);
+      if (info) setImportInfo(info);
     } finally {
       setImporting(false);
     }
@@ -123,6 +137,15 @@ export function LibraryScreen({
                 Import failed
               </p>
               <p className="text-body-sm text-text mt-2 font-mono break-all">{importError}</p>
+            </div>
+          )}
+
+          {importInfo && (
+            <div className="mt-5 rounded-lg border border-border bg-surface p-4">
+              <p className="text-caption uppercase tracking-widest text-text-muted font-medium">
+                Import notice
+              </p>
+              <p className="text-body-sm text-text mt-2">{importInfo}</p>
             </div>
           )}
         </header>
@@ -347,36 +370,3 @@ function EmptyState() {
   );
 }
 
-function filterAndSort(
-  recipes: StoredRecipe[],
-  query: string,
-  sortKey: SortKey,
-): StoredRecipe[] {
-  const q = query.trim().toLowerCase();
-  const filtered = q
-    ? recipes.filter(({ recipe }) => {
-        const haystack = [
-          recipe.name,
-          recipe.style?.name,
-          recipe.style?.category,
-          recipe.author,
-        ]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
-        return haystack.includes(q);
-      })
-    : recipes.slice();
-
-  switch (sortKey) {
-    case "name":
-      return filtered.sort((a, b) => a.recipe.name.localeCompare(b.recipe.name));
-    case "style":
-      return filtered.sort((a, b) =>
-        (a.recipe.style?.name ?? "").localeCompare(b.recipe.style?.name ?? ""),
-      );
-    case "updated":
-    default:
-      return filtered.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-  }
-}

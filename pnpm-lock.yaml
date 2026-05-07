@@ -38,6 +38,12 @@ importers:
       '@tauri-apps/api':
         specifier: ^2.1.0
         version: 2.11.0
+      '@tauri-apps/plugin-dialog':
+        specifier: ^2.1.0
+        version: 2.7.1
+      '@tauri-apps/plugin-fs':
+        specifier: ^2.1.0
+        version: 2.5.1
       '@werb/adapters':
         specifier: workspace:*
         version: link:../../packages/adapters
@@ -47,6 +53,9 @@ importers:
       '@werb/types':
         specifier: workspace:*
         version: link:../../packages/types
+      '@werb/validate':
+        specifier: workspace:*
+        version: link:../../packages/validate
       react:
         specifier: ^18.3.1
         version: 18.3.1
@@ -95,6 +104,12 @@ importers:
         version: link:../types
 
   packages/types: {}
+
+  packages/validate:
+    dependencies:
+      ajv:
+        specifier: ^8.20.0
+        version: 8.20.0
 
 packages:
 
@@ -639,6 +654,12 @@ packages:
     resolution: {integrity: sha512-W5Wbuqsb2pHFPTj4TaRNKTj5rwXhDShPiLSY9T18y4ouSR/NNCptAEFxFsBtyNRgL6Vs1a/q9LzfqqYzEwC+Jw==}
     engines: {node: '>= 10'}
     hasBin: true
+
+  '@tauri-apps/plugin-dialog@2.7.1':
+    resolution: {integrity: sha512-OK1UBXYt+ojcmxMktzzuyonYIFta8CmAASpX+CA+DTGK24KlHjhYI6x2iOJ/TjZF4N7/ACK1oFmEOjIY9IhzOQ==}
+
+  '@tauri-apps/plugin-fs@2.5.1':
+    resolution: {integrity: sha512-9Lz+Jopp6QyeEWhlpkMx4R/+P9HgR+AVAI4vOZhlT8Xaymtz8iVI/Ov984/XTqgJz/5gz5NretqPB/XEMS3NhQ==}
 
   '@types/babel__core@7.20.5':
     resolution: {integrity: sha512-qoQprZvz5wQFJwMDqeseRXWv3rqMvhgpbXFfVyWhbx9X47POIA6i/+dXefEmZKoAgOaTdaIgNSMqMIU61yRyzA==}
@@ -1550,6 +1571,14 @@ snapshots:
       '@tauri-apps/cli-win32-arm64-msvc': 2.11.0
       '@tauri-apps/cli-win32-ia32-msvc': 2.11.0
       '@tauri-apps/cli-win32-x64-msvc': 2.11.0
+
+  '@tauri-apps/plugin-dialog@2.7.1':
+    dependencies:
+      '@tauri-apps/api': 2.11.0
+
+  '@tauri-apps/plugin-fs@2.5.1':
+    dependencies:
+      '@tauri-apps/api': 2.11.0
 
   '@types/babel__core@7.20.5':
     dependencies:
