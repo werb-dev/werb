@@ -78,7 +78,7 @@ export function RecipeScreen({ recipe, activeProfile, onBack, onStartBrewing, on
         {onBack && (
           <button
             onClick={onBack}
-            className="no-print mb-8 text-caption font-medium text-text-muted hover:text-text transition-colors flex items-center gap-2"
+            className="mb-8 text-caption font-medium text-text-muted hover:text-text transition-colors flex items-center gap-2"
           >
             <span aria-hidden>←</span> Library
           </button>
@@ -105,7 +105,7 @@ export function RecipeScreen({ recipe, activeProfile, onBack, onStartBrewing, on
             {recipe.efficiency?.brewhouse && ` · ${recipe.efficiency.brewhouse.value}% efficiency`}
             {recipe.type && ` · ${recipe.type}`}
           </p>
-          <div className="no-print mt-6 flex flex-wrap gap-3 items-center">
+          <div className="mt-6 flex flex-wrap gap-3 items-center">
             {onStartBrewing && (
               <button
                 onClick={onStartBrewing}
@@ -124,7 +124,7 @@ export function RecipeScreen({ recipe, activeProfile, onBack, onStartBrewing, on
             {onEdit && (
               <button
                 onClick={onEdit}
-                className="no-print px-4 py-3 rounded-xl bg-surface-raised border border-border text-body-sm font-medium hover:border-accent hover:text-accent transition-colors"
+                className="px-4 py-3 rounded-xl bg-surface-raised border border-border text-body-sm font-medium hover:border-accent hover:text-accent transition-colors"
               >
                 Edit recipe
               </button>
@@ -500,14 +500,11 @@ function ScaleButton({
       title={
         isNoOp
           ? "Recipe already matches your rig — nothing to scale."
-          : `Rescale fermentables, hops, yeast and mash water for ${profile.name}, capping strike water to your mash tun if needed.`
+          : `Rescale to ${profile.name} (${profile.batch_size_l} L · ${profile.efficiency_pct}% efficiency). Caps strike water to your mash tun if needed.`
       }
       className="px-4 py-3 rounded-xl bg-surface-raised border border-border text-body-sm font-medium hover:border-accent hover:text-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
     >
       Adapt to my rig
-      <span className="block font-mono text-caption text-text-muted mt-0.5">
-        → {profile.batch_size_l} L · {profile.efficiency_pct}%
-      </span>
     </button>
   );
 }

@@ -154,7 +154,7 @@ function DevNav({
   if (state.view === "brew") return null;
 
   return (
-    <nav className="no-print fixed top-3 right-3 z-50 flex gap-1 rounded-pill bg-surface-raised border border-border p-1 shadow-lg">
+    <nav className="fixed top-3 right-3 z-50 flex gap-1 rounded-pill bg-surface-raised border border-border p-1 shadow-lg">
       <NavButton
         active={state.view === "library" || state.view === "recipe"}
         onClick={goLibrary}
