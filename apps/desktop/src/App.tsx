@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { BeerJsonRecipe } from "@werb/adapters";
 import { DesignTokensShowcase } from "./design-tokens-showcase.tsx";
 import { LibraryScreen } from "./screens/Library.tsx";
 import { RecipeScreen } from "./screens/Recipe.tsx";
@@ -8,6 +9,37 @@ import { EquipmentScreen } from "./screens/Equipment.tsx";
 import { useRecipes } from "./hooks/useRecipes.ts";
 import { useEquipment } from "./hooks/useEquipment.ts";
 import { BUNDLED_SAMPLES, importBeerJsonFromDisk, importBeerXmlFromDisk } from "./data/recipes.ts";
+import type { StoredRecipe } from "./data/recipes.ts";
+
+/**
+ * Detect duplicates by recipe name (case-insensitive, trimmed) against
+ * the existing library. When duplicates are found, ask the user
+ * whether to import them anyway as duplicates or skip them. New
+ * recipes (not yet in the library) always import.
+ */
+function partitionForImport(
+  incoming: BeerJsonRecipe[],
+  existing: StoredRecipe[],
+): BeerJsonRecipe[] {
+  if (incoming.length === 0) return [];
+  const existingKeys = new Set(
+    existing.map((s) => s.recipe.name.trim().toLowerCase()),
+  );
+  const fresh: BeerJsonRecipe[] = [];
+  const dups: BeerJsonRecipe[] = [];
+  for (const r of incoming) {
+    if (existingKeys.has(r.name.trim().toLowerCase())) dups.push(r);
+    else fresh.push(r);
+  }
+  if (dups.length === 0) return incoming;
+  const names = dups.map((r) => `"${r.name}"`).join("\n  • ");
+  const proceed = window.confirm(
+    `${dups.length} recipe${dups.length === 1 ? "" : "s"} already in your library:\n  • ${names}\n\n` +
+      `OK = import them anyway as duplicates.\n` +
+      `Cancel = skip them, only import the new ones.`,
+  );
+  return proceed ? incoming : fresh;
+}
 
 type AppState =
   | { view: "library" }
@@ -107,16 +139,21 @@ export function App() {
             name: `${stored.recipe.name} (copy)`,
           });
         }}
-        onImportSamples={() => recipesApi.createMany(BUNDLED_SAMPLES).length}
+        onImportSamples={() => {
+          const toImport = partitionForImport(BUNDLED_SAMPLES, recipesApi.recipes);
+          return recipesApi.createMany(toImport).length;
+        }}
         onImportBeerJsonFile={async () => {
           const { recipes, error } = await importBeerJsonFromDisk();
-          if (recipes.length > 0) recipesApi.createMany(recipes);
-          return { count: recipes.length, error };
+          const toImport = partitionForImport(recipes, recipesApi.recipes);
+          if (toImport.length > 0) recipesApi.createMany(toImport);
+          return { count: toImport.length, error };
         }}
         onImportBeerXmlFile={async () => {
           const { recipes, error } = await importBeerXmlFromDisk();
-          if (recipes.length > 0) recipesApi.createMany(recipes);
-          return { count: recipes.length, error };
+          const toImport = partitionForImport(recipes, recipesApi.recipes);
+          if (toImport.length > 0) recipesApi.createMany(toImport);
+          return { count: toImport.length, error };
         }}
         activeProfile={equipmentApi.activeProfile}
         onGoEquipment={goEquipment}
