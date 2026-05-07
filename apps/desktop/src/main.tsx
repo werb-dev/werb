@@ -6,14 +6,25 @@ import "./styles.css";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App.tsx";
-import { localStorageBackend, StorageProvider } from "./storage/index.ts";
+import {
+  browserOpfsBackend,
+  isOpfsAvailable,
+  localStorageBackend,
+  StorageProvider,
+  type StorageBackend,
+} from "./storage/index.ts";
 
-// Single StorageBackend wired at the root. localStorage is the only
-// concrete adapter shipping today; cloud adapters (Drive / GitHub /
-// OPFS) plug in here without changes to hooks or screens.
+// Pick the best available StorageBackend at boot. OPFS persists across
+// reloads, isn't bound by localStorage's 5-10 MB quota, and is the
+// natural fit when we ship a non-Tauri web build. localStorage is the
+// fallback for any environment without OPFS — same shape, less room.
+const backend: StorageBackend = isOpfsAvailable()
+  ? browserOpfsBackend()
+  : localStorageBackend;
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <StorageProvider backend={localStorageBackend}>
+    <StorageProvider backend={backend}>
       <App />
     </StorageProvider>
   </StrictMode>,
