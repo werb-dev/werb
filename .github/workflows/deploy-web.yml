@@ -34,7 +34,19 @@ jobs:
       - name: Install workspace
         run: pnpm install --frozen-lockfile
 
-      - name: Build web bundle
+      # The BeerXML parser is a Rust crate compiled to WebAssembly. The
+      # build:wasm script runs wasm-pack on the werb-beerxml-wasm crate
+      # and writes its pkg/ output, which Vite then picks up as a
+      # dynamic import.
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - uses: jetli/wasm-pack-action@v0.4.0
+        with:
+          version: latest
+
+      - name: Build web bundle (incl. WASM)
         run: pnpm --filter @werb/desktop build
         env:
           # Repo is werb-dev/werb → site lives at /werb/. Adjust if a

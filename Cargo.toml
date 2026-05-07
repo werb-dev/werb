@@ -6,4 +6,5 @@ resolver = "2"
 members = [
   "apps/desktop/src-tauri",
   "crates/werb-beerxml",
+  "crates/werb-beerxml-wasm",
 ]

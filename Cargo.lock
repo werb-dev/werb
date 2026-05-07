@@ -2669,6 +2669,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde-wasm-bindgen"
+version = "0.6.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8302e169f0eddcc139c70f139d19d6467353af16f9fce27e8c30158036a1e16b"
+dependencies = [
+ "js-sys",
+ "serde",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "serde_core"
 version = "1.0.228"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4071,6 +4082,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "werb-beerxml-wasm"
+version = "0.1.0"
+dependencies = [
+ "serde-wasm-bindgen",
+ "serde_json",
+ "wasm-bindgen",
+ "werb-beerxml",
+]
+
+[[package]]
 name = "werb-desktop"
 version = "0.0.0"
 dependencies = [
@@ -4080,7 +4101,6 @@ dependencies = [
  "tauri-build",
  "tauri-plugin-dialog",
  "tauri-plugin-fs",
- "werb-beerxml",
 ]
 
 [[package]]

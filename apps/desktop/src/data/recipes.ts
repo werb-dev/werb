@@ -167,43 +167,57 @@ export async function importBeerJsonFromDisk(): Promise<ImportResult> {
 }
 
 /**
- * Open a file dialog filtered to .xml/.beerxml, read the file, and
- * convert it to BeerJSON via the `parse_beerxml` Tauri command (backed
- * by the werb-beerxml crate). Returns `{ recipes: [] }` with no error
- * if the user cancels. BeerXML import is desktop-only — the parser is
- * the Rust crate exposed through Tauri's invoke; a future WASM build
- * could lift this restriction.
+ * Parse a BeerXML 1.0 document into BeerJSON 2.x recipes via the
+ * werb-beerxml-wasm bundle. Lazy-loads the WASM on first call so the
+ * ~370 KB binary doesn't enter the cold-start path; cached after that.
  */
-export async function importBeerXmlFromDisk(): Promise<ImportResult> {
-  const { isTauri, invoke } = await import("@tauri-apps/api/core");
-  if (!isTauri()) {
-    return {
-      recipes: [],
-      error:
-        "BeerXML import is only available in the desktop app (the parser runs in native Rust). Use BeerJSON for browser imports.",
-    };
-  }
-  const { open } = await import("@tauri-apps/plugin-dialog");
-  const selected = await open({
-    multiple: false,
-    filters: [{ name: "BeerXML", extensions: ["beerxml", "xml"] }],
-    title: "Import a .beerxml recipe",
-  });
-  if (typeof selected !== "string") return { recipes: [] }; // cancelled
-  const { readTextFile } = await import("@tauri-apps/plugin-fs");
-  let raw: string;
+export async function parseBeerXmlText(raw: string): Promise<ImportResult> {
   try {
-    raw = await readTextFile(selected);
-  } catch (err) {
-    return { recipes: [], error: `Read failed: ${(err as Error).message}` };
-  }
-  try {
-    const recipes = await invoke<BeerJsonRecipe[]>("parse_beerxml", { xml: raw });
+    const wasm = await import(
+      "../../../../crates/werb-beerxml-wasm/pkg/werb_beerxml_wasm.js"
+    );
+    await wasm.default(); // wasm-bindgen init — no-op after the first call
+    const recipes = wasm.parseBeerXml(raw) as BeerJsonRecipe[];
     if (recipes.length === 0) {
       return { recipes: [], error: "File parsed but contained no recipes." };
     }
     return { recipes };
   } catch (err) {
-    return { recipes: [], error: `BeerXML parse failed: ${err}` };
+    const detail = err instanceof Error ? err.message : String(err);
+    return { recipes: [], error: `BeerXML parse failed: ${detail}` };
   }
+}
+
+/**
+ * Open a file dialog filtered to .xml/.beerxml, read the file, and
+ * convert it to BeerJSON via the WASM parser. Same code path on
+ * desktop (Tauri webview) and browser — only the file picker differs.
+ * Returns `{ recipes: [] }` with no error if the user cancels.
+ */
+export async function importBeerXmlFromDisk(): Promise<ImportResult> {
+  const { isTauri } = await import("@tauri-apps/api/core");
+
+  let raw: string;
+  if (isTauri()) {
+    const { open } = await import("@tauri-apps/plugin-dialog");
+    const selected = await open({
+      multiple: false,
+      filters: [{ name: "BeerXML", extensions: ["beerxml", "xml"] }],
+      title: "Import a .beerxml recipe",
+    });
+    if (typeof selected !== "string") return { recipes: [] }; // cancelled
+    const { readTextFile } = await import("@tauri-apps/plugin-fs");
+    try {
+      raw = await readTextFile(selected);
+    } catch (err) {
+      return { recipes: [], error: `Read failed: ${(err as Error).message}` };
+    }
+  } else {
+    const { pickAndReadTextFile } = await import("./browser-fs.ts");
+    const picked = await pickAndReadTextFile(".beerxml,.xml,application/xml,text/xml");
+    if (!picked) return { recipes: [] };
+    raw = picked.text;
+  }
+
+  return parseBeerXmlText(raw);
 }

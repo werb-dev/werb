@@ -1,0 +1,26 @@
+[package]
+name = "werb-beerxml-wasm"
+version = "0.1.0"
+edition = "2021"
+description = "WebAssembly bindings for werb-beerxml — parses BeerXML in the browser."
+license = "MIT OR Apache-2.0"
+publish = false
+
+[lib]
+# `cdylib` is the WASM-compatible shared-lib output that wasm-bindgen
+# wants. We never link this from another Rust crate, so omitting `rlib`
+# is fine and shaves the build.
+crate-type = ["cdylib"]
+
+[dependencies]
+werb-beerxml = { path = "../werb-beerxml" }
+wasm-bindgen = "0.2"
+serde-wasm-bindgen = "0.6"
+serde_json = "1"
+
+# Slightly smaller .wasm at the cost of a bit more compile time. Worth
+# it for a module shipped over the wire.
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
