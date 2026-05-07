@@ -69,6 +69,46 @@ export type MiscCategory =
   | "wood"
   | "other";
 
+export type StyleType =
+  | "ale"
+  | "lager"
+  | "wheat"
+  | "mead"
+  | "cider"
+  | "wild"
+  | "specialty"
+  | "other";
+
+/**
+ * BJCP 2021 style entry. Ranges follow the published guideline for
+ * each sub-style. SRM is the canonical color unit in the BJCP
+ * guidelines; recipes that use EBC will want to convert at display
+ * time (1 SRM ≈ 1.97 EBC).
+ */
+export interface StyleEntry {
+  /** Sub-style name as printed in the guidelines (e.g. "American IPA"). */
+  name: string;
+  /** Category name (e.g. "IPA", "Strong American Ale"). */
+  category: string;
+  /** Category number 1-34. */
+  category_number: number;
+  /** Sub-letter A / B / C / D. */
+  style_letter: string;
+  /** Beer family. */
+  type: StyleType;
+  og_min: number;
+  og_max: number;
+  fg_min: number;
+  fg_max: number;
+  ibu_min: number;
+  ibu_max: number;
+  srm_min: number;
+  srm_max: number;
+  abv_min: number;
+  abv_max: number;
+  notes?: string;
+}
+
 export type MiscUse =
   | "add_to_mash"
   | "add_to_boil"

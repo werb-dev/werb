@@ -4,10 +4,12 @@ import {
   FERMENTABLES,
   HOPS,
   MISCS,
+  STYLES,
   searchCultures,
   searchFermentables,
   searchHops,
   searchMiscs,
+  searchStyles,
 } from "../src/data/catalog/index.ts";
 
 describe("catalog content sanity", () => {
@@ -138,5 +140,65 @@ describe("catalog search — miscs", () => {
     const out = searchMiscs("water_agent");
     expect(out.length).toBeGreaterThan(0);
     expect(out.every((m) => m.type === "water_agent")).toBe(true);
+  });
+});
+
+describe("catalog content sanity — styles", () => {
+  it("ships the 2021 BJCP guideline coverage we curated", () => {
+    expect(STYLES.length).toBeGreaterThanOrEqual(80);
+  });
+
+  it("every style has internally-consistent ranges", () => {
+    for (const s of STYLES) {
+      expect(s.og_min).toBeLessThanOrEqual(s.og_max);
+      expect(s.fg_min).toBeLessThanOrEqual(s.fg_max);
+      expect(s.ibu_min).toBeLessThanOrEqual(s.ibu_max);
+      expect(s.srm_min).toBeLessThanOrEqual(s.srm_max);
+      expect(s.abv_min).toBeLessThanOrEqual(s.abv_max);
+      expect(s.category_number).toBeGreaterThanOrEqual(1);
+      expect(s.category_number).toBeLessThanOrEqual(34);
+      expect(s.style_letter.length).toBe(1);
+    }
+  });
+
+  it("includes the headline IPA / lager / saison styles", () => {
+    const names = STYLES.map((s) => s.name);
+    expect(names).toEqual(expect.arrayContaining([
+      "American IPA",
+      "Hazy IPA",
+      "Double IPA",
+      "American Pale Ale",
+      "Munich Helles",
+      "German Pils",
+      "Saison",
+      "Belgian Tripel",
+      "Imperial Stout",
+    ]));
+  });
+});
+
+describe("catalog search — styles", () => {
+  it("finds American IPA by name", () => {
+    const out = searchStyles("american ipa");
+    expect(out[0]?.name).toBe("American IPA");
+  });
+
+  it("finds a style by its category code (e.g. 21A)", () => {
+    const out = searchStyles("21A");
+    expect(out.some((s) => s.category_number === 21 && s.style_letter === "A")).toBe(true);
+  });
+
+  it("matches on the category name (e.g. Trappist)", () => {
+    const out = searchStyles("trappist");
+    expect(out.length).toBeGreaterThan(0);
+    expect(out.every((s) => s.category === "Trappist Ale")).toBe(true);
+  });
+
+  it("returns empty for nonsense", () => {
+    expect(searchStyles("zzzzzzz")).toEqual([]);
+  });
+
+  it("respects the max-results cap", () => {
+    expect(searchStyles("ale").length).toBeLessThanOrEqual(10);
   });
 });

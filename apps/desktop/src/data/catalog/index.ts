@@ -8,19 +8,22 @@ import { FERMENTABLES } from "./fermentables.ts";
 import { HOPS } from "./hops.ts";
 import { CULTURES } from "./cultures.ts";
 import { MISCS } from "./miscs.ts";
+import { STYLES } from "./styles.ts";
 import type {
   FermentableEntry,
   HopEntry,
   CultureEntry,
   MiscEntry,
+  StyleEntry,
 } from "./types.ts";
 
-export { FERMENTABLES, HOPS, CULTURES, MISCS };
+export { FERMENTABLES, HOPS, CULTURES, MISCS, STYLES };
 export type {
   FermentableEntry,
   HopEntry,
   CultureEntry,
   MiscEntry,
+  StyleEntry,
 } from "./types.ts";
 
 /**
@@ -59,6 +62,12 @@ export function searchCultures(query: string): CultureEntry[] {
 
 export function searchMiscs(query: string): MiscEntry[] {
   return rank(MISCS, (e) => score(query, e.name, e.type));
+}
+
+export function searchStyles(query: string): StyleEntry[] {
+  return rank(STYLES, (e) =>
+    score(query, e.name, e.category, `${e.category_number}${e.style_letter}`),
+  );
 }
 
 function rank<T>(items: readonly T[], scoreFn: (item: T) => number): T[] {

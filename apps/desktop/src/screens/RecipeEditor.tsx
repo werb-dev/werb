@@ -12,10 +12,12 @@ import {
   searchFermentables,
   searchHops,
   searchMiscs,
+  searchStyles,
   type CultureEntry,
   type FermentableEntry,
   type HopEntry,
   type MiscEntry,
+  type StyleEntry,
 } from "../data/catalog/index.ts";
 
 /**
@@ -95,6 +97,11 @@ function MetadataSection({
   return (
     <Section title="Recipe">
       <Field label="Name" value={draft.name} onChange={(v) => update("name", v)} required />
+      <StylePicker
+        className="mt-6"
+        style={draft.style}
+        onChange={(s) => update("style", s)}
+      />
       <div className="grid grid-cols-2 gap-6 mt-6">
         <SelectField
           label="Type"
@@ -946,6 +953,118 @@ function miscAmountFromEntry(e: MiscEntry): MiscAddition["amount"] {
     return { value: e.default_amount, unit: e.default_amount_unit };
   }
   return { value: e.default_amount, unit: e.default_amount_unit };
+}
+
+function styleEntryToBeerJson(e: StyleEntry): NonNullable<BeerJsonRecipe["style"]> {
+  return {
+    name: e.name,
+    category: e.category,
+    category_number: e.category_number,
+    style_letter: e.style_letter,
+    style_guide: "BJCP 2021",
+    type: e.type === "lager" || e.type === "ale" || e.type === "wheat" || e.type === "wild"
+      ? "beer"
+      : e.type === "mead"
+      ? "mead"
+      : e.type === "cider"
+      ? "cider"
+      : "other",
+    original_gravity: {
+      minimum: { value: e.og_min, unit: "sg" },
+      maximum: { value: e.og_max, unit: "sg" },
+    },
+    final_gravity: {
+      minimum: { value: e.fg_min, unit: "sg" },
+      maximum: { value: e.fg_max, unit: "sg" },
+    },
+    international_bitterness_units: {
+      minimum: { value: e.ibu_min, unit: "IBUs" },
+      maximum: { value: e.ibu_max, unit: "IBUs" },
+    },
+    color: {
+      minimum: { value: e.srm_min, unit: "SRM" },
+      maximum: { value: e.srm_max, unit: "SRM" },
+    },
+    alcohol_by_volume: {
+      minimum: { value: e.abv_min, unit: "%" },
+      maximum: { value: e.abv_max, unit: "%" },
+    },
+  };
+}
+
+function StylePicker({
+  style,
+  onChange,
+  className,
+}: {
+  style: BeerJsonRecipe["style"];
+  onChange: (next: NonNullable<BeerJsonRecipe["style"]> | undefined) => void;
+  className?: string;
+}) {
+  const display = style?.name ?? "";
+  const tag =
+    style?.category_number !== undefined && style?.style_letter
+      ? `${style.category_number}${style.style_letter}`
+      : null;
+
+  return (
+    <label className={`block ${className ?? ""}`}>
+      <span className="block text-caption uppercase tracking-widest text-text-muted mb-2">
+        Style
+        {tag && (
+          <span className="ml-2 text-text-muted font-mono normal-case tracking-normal">
+            BJCP {tag}
+          </span>
+        )}
+      </span>
+      <div className="relative flex items-center gap-2">
+        <Combobox
+          className="flex-1 bg-surface border border-border rounded-lg px-3 py-2 focus-within:border-accent"
+          value={display}
+          onChange={(v) => {
+            // Free-text edits clear the picked-style envelope but keep
+            // the name so the brewer can leave a custom style in.
+            if (v.trim().length === 0) onChange(undefined);
+            else onChange({ ...(style ?? { name: v }), name: v });
+          }}
+          suggest={searchStyles}
+          onPick={(entry) => onChange(styleEntryToBeerJson(entry))}
+          renderItem={(entry) => (
+            <div>
+              <p className="text-body-sm font-medium text-text">
+                <span className="font-mono text-caption text-text-muted mr-2">
+                  {entry.category_number}
+                  {entry.style_letter}
+                </span>
+                {entry.name}
+              </p>
+              <p className="font-mono text-caption text-text-muted mt-0.5">
+                {entry.category}
+                {" · "}
+                OG {entry.og_min.toFixed(3)}–{entry.og_max.toFixed(3)}
+                {" · "}
+                {entry.ibu_min}–{entry.ibu_max} IBU
+                {" · "}
+                {entry.srm_min}–{entry.srm_max} SRM
+                {" · "}
+                {entry.abv_min}–{entry.abv_max}% ABV
+              </p>
+            </div>
+          )}
+        />
+        {style && (
+          <button
+            type="button"
+            onClick={() => onChange(undefined)}
+            className="shrink-0 px-3 py-2 rounded-lg bg-surface-raised border border-border text-caption text-text-muted hover:text-text transition-colors"
+            title="Clear style"
+          >
+            Clear
+          </button>
+        )}
+      </div>
+    </label>
+  );
 }
 
 function applyMiscEntry(m: MiscAddition, e: MiscEntry): MiscAddition {

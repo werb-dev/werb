@@ -51,6 +51,20 @@ export interface BeerJsonStyle {
   style_letter?: string;
   style_guide?: string;
   type?: "beer" | "cider" | "kombucha" | "mead" | "other" | "soda" | "wine";
+  /**
+   * Style guideline ranges. The BeerJSON 2.x RecipeStyleType doesn't
+   * formally include these, but BeerXML's RECIPE.STYLE block does, and
+   * the standalone BeerJSON StyleType does — werb-beerxml emits them
+   * here on import, the bundled BJCP picker writes them on selection.
+   */
+  original_gravity?: { minimum?: GravityType; maximum?: GravityType };
+  final_gravity?: { minimum?: GravityType; maximum?: GravityType };
+  international_bitterness_units?: {
+    minimum?: { value: number; unit: "IBUs" };
+    maximum?: { value: number; unit: "IBUs" };
+  };
+  color?: { minimum?: ColorType; maximum?: ColorType };
+  alcohol_by_volume?: { minimum?: PercentType; maximum?: PercentType };
 }
 
 export interface FermentableAddition {
