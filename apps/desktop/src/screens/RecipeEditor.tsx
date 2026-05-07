@@ -220,12 +220,15 @@ function FermentablesSection({
               suggest={searchFermentables}
               onPick={(entry) => updateRow(i, applyFermentableEntry(f, entry))}
               renderItem={(entry) => (
-                <div className="flex items-baseline justify-between gap-3">
-                  <span className="font-medium truncate">{entry.name}</span>
-                  <span className="font-mono text-caption text-text-muted shrink-0">
-                    {entry.color_ebc} EBC · {entry.yield_pct}%
+                <div>
+                  <p className="text-body-sm font-medium text-text">{entry.name}</p>
+                  <p className="font-mono text-caption text-text-muted mt-0.5">
+                    <span className="capitalize">{entry.type}</span>
+                    {" · "}
+                    {entry.color_ebc} EBC · {entry.yield_pct}% yield
                     {entry.producer && ` · ${entry.producer}`}
-                  </span>
+                    {entry.origin && ` · ${entry.origin}`}
+                  </p>
                 </div>
               )}
             />
@@ -346,16 +349,20 @@ function HopsSection({
               suggest={searchHops}
               onPick={(entry) => updateRow(i, applyHopEntry(h, entry))}
               renderItem={(entry) => (
-                <div className="flex items-baseline justify-between gap-3">
-                  <span className="font-medium truncate">
+                <div>
+                  <p className="text-body-sm font-medium text-text">
                     {entry.name}
                     {entry.origin && (
-                      <span className="text-caption text-text-muted ml-2">{entry.origin}</span>
+                      <span className="text-caption text-text-muted font-normal ml-2">
+                        {entry.origin}
+                      </span>
                     )}
-                  </span>
-                  <span className="font-mono text-caption text-text-muted shrink-0">
+                  </p>
+                  <p className="font-mono text-caption text-text-muted mt-0.5">
                     {entry.alpha_acid_pct}% AA
-                  </span>
+                    {entry.hop_type && ` · ${entry.hop_type}`}
+                    {entry.notes && ` — ${entry.notes}`}
+                  </p>
                 </div>
               )}
             />
@@ -497,12 +504,27 @@ function CulturesSection({
               suggest={searchCultures}
               onPick={(entry) => updateRow(i, applyCultureEntry(c, entry))}
               renderItem={(entry) => (
-                <div className="flex items-baseline justify-between gap-3">
-                  <span className="font-medium truncate">{entry.name}</span>
-                  <span className="font-mono text-caption text-text-muted shrink-0">
-                    {entry.form} · {entry.attenuation_pct}% · {entry.default_amount}{" "}
-                    {entry.default_amount_unit}
-                  </span>
+                <div>
+                  <p className="text-body-sm font-medium text-text">
+                    {entry.name}
+                    {entry.producer && (
+                      <span className="text-caption text-text-muted font-normal ml-2">
+                        {entry.producer}
+                      </span>
+                    )}
+                  </p>
+                  <p className="font-mono text-caption text-text-muted mt-0.5">
+                    <span className="capitalize">{entry.type}</span>
+                    {" · "}
+                    <span className="capitalize">{entry.form}</span>
+                    {" · "}
+                    {entry.attenuation_pct}% atten
+                    {entry.temp_min_c !== undefined &&
+                      entry.temp_max_c !== undefined &&
+                      ` · ${entry.temp_min_c}–${entry.temp_max_c}°C`}
+                    {" · "}
+                    {entry.default_amount} {entry.default_amount_unit}
+                  </p>
                 </div>
               )}
             />
@@ -751,11 +773,16 @@ function MiscsSection({
               suggest={searchMiscs}
               onPick={(entry) => updateRow(i, applyMiscEntry(m, entry))}
               renderItem={(entry) => (
-                <div className="flex items-baseline justify-between gap-3">
-                  <span className="font-medium truncate">{entry.name}</span>
-                  <span className="font-mono text-caption text-text-muted shrink-0">
-                    {entry.type} · {entry.default_amount} {entry.default_amount_unit}
-                  </span>
+                <div>
+                  <p className="text-body-sm font-medium text-text">{entry.name}</p>
+                  <p className="font-mono text-caption text-text-muted mt-0.5">
+                    {entry.type.replace("_", " ")}
+                    {" · "}
+                    {MISC_USE_LABELS[entry.default_use]}
+                    {entry.default_time_min !== undefined && ` · ${entry.default_time_min} min`}
+                    {" · "}
+                    {entry.default_amount} {entry.default_amount_unit}
+                  </p>
                 </div>
               )}
             />
@@ -838,7 +865,7 @@ function Combobox<T>({
         className="w-full bg-transparent border-b border-transparent px-1 py-1 text-body text-text placeholder:text-text-muted focus:outline-none focus:border-accent hover:border-border transition-colors min-w-0"
       />
       {items.length > 0 && (
-        <div className="absolute top-full left-0 right-0 z-50 max-h-72 overflow-auto bg-surface-raised border border-border rounded-lg shadow-xl mt-1">
+        <div className="absolute top-full left-0 z-50 min-w-[22rem] max-h-80 overflow-auto bg-surface-raised border border-border rounded-lg shadow-xl mt-1">
           {items.map((item, i) => (
             <button
               key={i}
@@ -848,7 +875,7 @@ function Combobox<T>({
                 onPick(item);
                 setFocused(false);
               }}
-              className="block w-full text-left px-3 py-2 hover:bg-surface focus:bg-surface text-body-sm border-b border-border last:border-b-0"
+              className="block w-full text-left px-3 py-2 hover:bg-surface focus:bg-surface border-b border-border last:border-b-0"
             >
               {renderItem(item)}
             </button>
