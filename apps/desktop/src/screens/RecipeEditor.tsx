@@ -5,8 +5,11 @@ import type {
   CultureType,
   FermentableAddition,
   HopAddition,
+  MashProcedure,
+  MashStep,
   MiscAddition,
 } from "@werb/adapters";
+import { toCelsius, toLiters } from "@werb/adapters";
 import {
   searchCultures,
   searchFermentables,
@@ -21,12 +24,11 @@ import {
 } from "../data/catalog/index.ts";
 
 /**
- * Pareto in-app recipe editor. Edits metadata + ingredients in place;
- * on save commits the whole recipe back to the store via onSave.
+ * Pareto in-app recipe editor. Edits metadata + ingredients + mash schedule
+ * in place; on save commits the whole recipe back to the store via onSave.
  *
- * Out of scope for v1: mash steps, style picker, fermentation procedure,
- * water profile, packaging. Those round-trip from BeerXML/BeerJSON
- * imports and rarely need editing.
+ * Out of scope for v1: fermentation procedure, water profile, packaging.
+ * Those round-trip from BeerXML/BeerJSON imports and rarely need editing.
  */
 
 interface RecipeEditorProps {
@@ -80,6 +82,7 @@ export function RecipeEditor({ recipe, onClose, onSave }: RecipeEditorProps) {
         <HopsSection draft={draft} updateIngredients={updateIngredients} />
         <CulturesSection draft={draft} updateIngredients={updateIngredients} />
         <MiscsSection draft={draft} updateIngredients={updateIngredients} />
+        <MashSection draft={draft} update={update} />
       </main>
     </div>
   );
@@ -583,6 +586,162 @@ function CulturesSection({
 }
 
 // ─── Form primitives ──────────────────────────────────────────────────────
+
+// ─── Mash schedule ────────────────────────────────────────────────────────
+
+const MASH_STEP_TYPES: MashStep["type"][] = [
+  "infusion",
+  "temperature",
+  "decoction",
+  "sparge",
+  "drain mash tun",
+  "souring mash",
+  "souring wort",
+];
+
+function MashSection({
+  draft,
+  update,
+}: {
+  draft: BeerJsonRecipe;
+  update: <K extends keyof BeerJsonRecipe>(key: K, value: BeerJsonRecipe[K]) => void;
+}) {
+  const ensureMash = (): MashProcedure =>
+    draft.mash ?? {
+      name: "Mash",
+      grain_temperature: { value: 20, unit: "C" },
+      mash_steps: [],
+    };
+
+  const setMash = (next: MashProcedure) => update("mash", next);
+
+  const setSteps = (steps: MashStep[]) => setMash({ ...ensureMash(), mash_steps: steps });
+
+  const addStep = () => {
+    const m = ensureMash();
+    const isFirst = m.mash_steps.length === 0;
+    const fresh: MashStep = {
+      name: isFirst ? "Saccharification" : "Step",
+      type: "infusion",
+      step_temperature: { value: isFirst ? 67 : 72, unit: "C" },
+      step_time: { value: isFirst ? 60 : 15, unit: "min" },
+      amount: { value: isFirst ? 20 : 0, unit: "l" },
+      infuse_temperature: { value: isFirst ? 75 : 90, unit: "C" },
+    };
+    setSteps([...m.mash_steps, fresh]);
+  };
+
+  const updateStep = (i: number, next: MashStep) => {
+    const m = ensureMash();
+    const copy = m.mash_steps.slice();
+    copy[i] = next;
+    setSteps(copy);
+  };
+
+  const removeStep = (i: number) => {
+    const m = ensureMash();
+    setSteps(m.mash_steps.filter((_, j) => j !== i));
+  };
+
+  // exactOptionalPropertyTypes-friendly setter — clearing a number field
+  // strips the key entirely instead of setting it to `undefined`.
+  const setStepAmount = (i: number, step: MashStep, value: number) => {
+    if (value > 0) {
+      updateStep(i, { ...step, amount: { value, unit: "l" } });
+    } else {
+      const { amount: _drop, ...rest } = step;
+      updateStep(i, rest);
+    }
+  };
+
+  const setStepInfuseTemp = (i: number, step: MashStep, value: number) => {
+    if (value > 0) {
+      updateStep(i, { ...step, infuse_temperature: { value, unit: "C" } });
+    } else {
+      const { infuse_temperature: _drop, ...rest } = step;
+      updateStep(i, rest);
+    }
+  };
+
+  const steps = draft.mash?.mash_steps ?? [];
+
+  return (
+    <Section title="Mash schedule">
+      <div className="rounded-xl bg-surface border border-border">
+        <RowHeader
+          cols={[
+            { label: "Name", span: "col-span-3" },
+            { label: "Type", span: "col-span-2" },
+            { label: "Temp", span: "col-span-2" },
+            { label: "Time", span: "col-span-1" },
+            { label: "Infusion", span: "col-span-3" },
+            { label: "", span: "col-span-1" },
+          ]}
+        />
+        {steps.length === 0 && (
+          <div className="px-4 py-6 text-body-sm text-text-muted text-center">
+            No mash steps. Add one below.
+          </div>
+        )}
+        {steps.map((step, i) => (
+          <div
+            key={i}
+            className="grid grid-cols-12 gap-2 px-4 py-2 border-b border-border last:border-b-0 items-center hover:bg-surface-raised/40 transition-colors"
+          >
+            <InlineInput
+              className="col-span-3"
+              value={step.name}
+              onChange={(v) => updateStep(i, { ...step, name: v })}
+            />
+            <InlineSelect
+              className="col-span-2"
+              value={step.type}
+              onChange={(v) => updateStep(i, { ...step, type: v as MashStep["type"] })}
+              options={[...MASH_STEP_TYPES]}
+            />
+            <InlineNumber
+              className="col-span-2"
+              value={toCelsius(step.step_temperature)}
+              unit="°C"
+              step={1}
+              onChange={(v) =>
+                updateStep(i, { ...step, step_temperature: { value: v, unit: "C" } })
+              }
+            />
+            <InlineNumber
+              className="col-span-1"
+              value={step.step_time.value}
+              unit="min"
+              step={1}
+              onChange={(v) =>
+                updateStep(i, { ...step, step_time: { value: v, unit: "min" } })
+              }
+            />
+            <div className="col-span-3 flex items-center gap-1">
+              <InlineNumber
+                value={step.amount ? toLiters(step.amount) : 0}
+                unit="L"
+                step={0.5}
+                onChange={(v) => setStepAmount(i, step, v)}
+              />
+              <span className="text-caption text-text-muted shrink-0">@</span>
+              <InlineNumber
+                value={step.infuse_temperature ? toCelsius(step.infuse_temperature) : 0}
+                unit="°C"
+                step={1}
+                onChange={(v) => setStepInfuseTemp(i, step, v)}
+              />
+            </div>
+            <div className="col-span-1 flex justify-end">
+              <InlineDeleteButton onClick={() => removeStep(i)} />
+            </div>
+          </div>
+        ))}
+      </div>
+      <AddRowButton label="+ Add mash step" onClick={addStep} />
+    </Section>
+  );
+}
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
