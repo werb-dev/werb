@@ -1,13 +1,14 @@
 import type { BeerJsonFile, BeerJsonRecipe } from "@werb/adapters";
 import { validateBeerJson } from "@werb/validate";
+import type { StorageBackend } from "../storage/index.ts";
 
 /**
  * Recipe storage layer.
  *
- * One JSON blob in localStorage holds the user's recipe list. Each entry
- * carries a stable ID, the recipe itself (BeerJSON shape), and timestamps.
- * Mirrors the equipment-profile pattern — the app is the source of truth,
- * disk files are an import/export concern.
+ * One JSON blob holds the user's recipe list. Each entry carries a stable
+ * ID, the recipe itself (BeerJSON shape), and timestamps. The persistence
+ * target is abstracted behind StorageBackend — today that's localStorage,
+ * tomorrow it can be Drive / GitHub / OPFS without changes here.
  */
 
 export interface StoredRecipe {
@@ -21,25 +22,40 @@ interface RecipeStore {
   recipes: StoredRecipe[];
 }
 
-const STORAGE_KEY = "werb.recipes";
+export const RECIPES_STORAGE_KEY = "werb.recipes";
 
 const EMPTY_STORE: RecipeStore = { recipes: [] };
 
-export function loadStore(): RecipeStore {
+function parseStore(raw: string | null): RecipeStore {
+  if (!raw) return EMPTY_STORE;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return EMPTY_STORE;
     const parsed = JSON.parse(raw) as Partial<RecipeStore>;
-    return {
-      recipes: Array.isArray(parsed.recipes) ? parsed.recipes : [],
-    };
+    return { recipes: Array.isArray(parsed.recipes) ? parsed.recipes : [] };
   } catch {
     return EMPTY_STORE;
   }
 }
 
-export function saveStore(store: RecipeStore): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+/**
+ * Sync read used by hooks for first-render hydration when the backend
+ * supports it (localStorage, in-memory). Returns the empty store when
+ * the backend has no `readSync` — async backends should call `loadStore`
+ * inside an effect instead.
+ */
+export function loadStoreSync(backend: StorageBackend): RecipeStore {
+  if (!backend.readSync) return EMPTY_STORE;
+  return parseStore(backend.readSync(RECIPES_STORAGE_KEY));
+}
+
+export async function loadStore(backend: StorageBackend): Promise<RecipeStore> {
+  return parseStore(await backend.read(RECIPES_STORAGE_KEY));
+}
+
+export async function saveStore(
+  backend: StorageBackend,
+  store: RecipeStore,
+): Promise<void> {
+  await backend.write(RECIPES_STORAGE_KEY, JSON.stringify(store));
 }
 
 export function generateId(): string {

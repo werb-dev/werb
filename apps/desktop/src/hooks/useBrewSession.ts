@@ -3,55 +3,78 @@ import {
   recipeToSessionPlan,
   type BeerJsonRecipe,
 } from "@werb/adapters";
-import type { WerbSession, SessionStep, Measurement } from "@werb/types";
+import type { Measurement, WerbSession } from "@werb/types";
+import { useStorage, type StorageBackend } from "../storage/index.ts";
 
 const STORAGE_PREFIX = "werb.session.";
 
-function storageKey(recipeId: string) {
+export function sessionStorageKey(recipeId: string): string {
   return `${STORAGE_PREFIX}${recipeId}`;
 }
 
-function load(recipeId: string): WerbSession | null {
+function parseSession(raw: string | null): WerbSession | null {
+  if (!raw) return null;
   try {
-    const raw = localStorage.getItem(storageKey(recipeId));
-    if (!raw) return null;
     return JSON.parse(raw) as WerbSession;
   } catch {
     return null;
   }
 }
 
-function save(session: WerbSession): void {
+function loadSync(backend: StorageBackend, recipeId: string): WerbSession | null {
+  if (!backend.readSync) return null;
+  return parseSession(backend.readSync(sessionStorageKey(recipeId)));
+}
+
+async function load(
+  backend: StorageBackend,
+  recipeId: string,
+): Promise<WerbSession | null> {
+  return parseSession(await backend.read(sessionStorageKey(recipeId)));
+}
+
+async function save(backend: StorageBackend, session: WerbSession): Promise<void> {
   try {
-    localStorage.setItem(storageKey(session.recipe_id), JSON.stringify(session));
+    await backend.write(sessionStorageKey(session.recipe_id), JSON.stringify(session));
   } catch (err) {
     console.warn("[brew] failed to persist session", err);
   }
 }
 
-function remove(recipeId: string): void {
-  localStorage.removeItem(storageKey(recipeId));
-}
-
 /**
- * Tracks an in-progress brew session for a recipe. Persists to localStorage
- * keyed by recipe ID; survives reloads and app restarts. Disk persistence
- * (sessions/*.session.json files) is a v1 step.
+ * Tracks an in-progress brew session for a recipe. Keyed by recipe ID
+ * in the active StorageBackend (localStorage today). Survives reloads
+ * and app restarts; will follow the user across devices once a cloud
+ * backend is wired up.
  */
 export function useBrewSession(recipeId: string, recipe: BeerJsonRecipe) {
-  const [session, setSession] = useState<WerbSession | null>(() => load(recipeId));
+  const backend = useStorage();
+  const [session, setSession] = useState<WerbSession | null>(() =>
+    loadSync(backend, recipeId),
+  );
 
-  // Keep state in sync if the user navigates between recipes.
+  // Re-hydrate when recipe id changes (user navigates between recipes)
+  // or when an async backend resolves its initial read.
   useEffect(() => {
-    setSession(load(recipeId));
-  }, [recipeId]);
+    let cancelled = false;
+    if (backend.readSync) {
+      setSession(loadSync(backend, recipeId));
+      return;
+    }
+    void load(backend, recipeId).then((loaded) => {
+      if (!cancelled) setSession(loaded);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [backend, recipeId]);
 
   const start = useCallback(() => {
     const fresh = recipeToSessionPlan(recipe, recipeId);
     fresh.status = "in_progress";
-    save(fresh);
+    void save(backend, fresh);
     setSession(fresh);
-  }, [recipe, recipeId]);
+  }, [backend, recipe, recipeId]);
 
   const update = useCallback(
     (mutator: (draft: WerbSession) => void) => {
@@ -59,11 +82,11 @@ export function useBrewSession(recipeId: string, recipe: BeerJsonRecipe) {
         if (!prev) return prev;
         const next: WerbSession = JSON.parse(JSON.stringify(prev));
         mutator(next);
-        save(next);
+        void save(backend, next);
         return next;
       });
     },
-    [],
+    [backend],
   );
 
   const startStep = useCallback(
@@ -124,10 +147,12 @@ export function useBrewSession(recipeId: string, recipe: BeerJsonRecipe) {
   }, [update]);
 
   const abandon = useCallback(() => {
-    if (!session) return;
-    remove(session.recipe_id);
-    setSession(null);
-  }, [session]);
+    setSession((prev) => {
+      if (!prev) return prev;
+      void backend.delete(sessionStorageKey(prev.recipe_id));
+      return null;
+    });
+  }, [backend]);
 
   const addMeasurement = useCallback(
     (m: Omit<Measurement, "at">) => {

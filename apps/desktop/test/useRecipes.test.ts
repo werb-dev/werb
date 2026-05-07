@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useRecipes } from "../src/hooks/useRecipes.ts";
+import { RECIPES_STORAGE_KEY } from "../src/data/recipes.ts";
+import { makeStorageWrapper } from "./helpers.tsx";
 import type { BeerJsonRecipe } from "@werb/adapters";
 
 const RECIPE: BeerJsonRecipe = {
@@ -13,13 +15,15 @@ const RECIPE: BeerJsonRecipe = {
 };
 
 describe("useRecipes", () => {
-  it("starts with an empty list when no localStorage entry exists", () => {
-    const { result } = renderHook(() => useRecipes());
+  it("starts with an empty list when the backend is empty", () => {
+    const { wrapper } = makeStorageWrapper();
+    const { result } = renderHook(() => useRecipes(), { wrapper });
     expect(result.current.recipes).toEqual([]);
   });
 
-  it("create adds a recipe with id + timestamps and persists to localStorage", () => {
-    const { result } = renderHook(() => useRecipes());
+  it("create adds a recipe with id + timestamps and persists to the backend", async () => {
+    const { wrapper, backend } = makeStorageWrapper();
+    const { result } = renderHook(() => useRecipes(), { wrapper });
 
     let created: ReturnType<typeof result.current.create>;
     act(() => {
@@ -31,13 +35,14 @@ describe("useRecipes", () => {
     expect(created!.createdAt).toBeTruthy();
     expect(created!.updatedAt).toBe(created!.createdAt);
 
-    const persisted = JSON.parse(localStorage.getItem("werb.recipes")!);
+    const persisted = JSON.parse((await backend.read(RECIPES_STORAGE_KEY))!);
     expect(persisted.recipes).toHaveLength(1);
     expect(persisted.recipes[0].recipe.name).toBe("Test IPA");
   });
 
   it("createMany appends every recipe with unique ids", () => {
-    const { result } = renderHook(() => useRecipes());
+    const { wrapper } = makeStorageWrapper();
+    const { result } = renderHook(() => useRecipes(), { wrapper });
 
     act(() => {
       result.current.createMany([
@@ -53,7 +58,8 @@ describe("useRecipes", () => {
   });
 
   it("update changes the recipe and bumps updatedAt without rewriting createdAt", async () => {
-    const { result } = renderHook(() => useRecipes());
+    const { wrapper } = makeStorageWrapper();
+    const { result } = renderHook(() => useRecipes(), { wrapper });
 
     let firstId = "";
     act(() => {
@@ -79,7 +85,8 @@ describe("useRecipes", () => {
   });
 
   it("update is a no-op when the id doesn't exist", () => {
-    const { result } = renderHook(() => useRecipes());
+    const { wrapper } = makeStorageWrapper();
+    const { result } = renderHook(() => useRecipes(), { wrapper });
 
     act(() => {
       result.current.create(RECIPE);
@@ -95,8 +102,9 @@ describe("useRecipes", () => {
     );
   });
 
-  it("remove drops the matching recipe and persists the change", () => {
-    const { result } = renderHook(() => useRecipes());
+  it("remove drops the matching recipe and persists the change", async () => {
+    const { wrapper, backend } = makeStorageWrapper();
+    const { result } = renderHook(() => useRecipes(), { wrapper });
 
     let id = "";
     act(() => {
@@ -112,30 +120,37 @@ describe("useRecipes", () => {
     expect(result.current.recipes).toHaveLength(1);
     expect(result.current.recipes[0]!.recipe.name).toBe("Keep");
 
-    const persisted = JSON.parse(localStorage.getItem("werb.recipes")!);
+    const persisted = JSON.parse((await backend.read(RECIPES_STORAGE_KEY))!);
     expect(persisted.recipes).toHaveLength(1);
   });
 
-  it("rehydrates from localStorage on a fresh mount", () => {
-    const { result: first } = renderHook(() => useRecipes());
+  it("rehydrates from the backend on a fresh mount", () => {
+    const { wrapper } = makeStorageWrapper();
+    const { result: first } = renderHook(() => useRecipes(), { wrapper });
     act(() => {
       first.current.create({ ...RECIPE, name: "Persisted" });
     });
 
-    const { result: second } = renderHook(() => useRecipes());
+    // Re-render the same hook under the same provider — simulates the
+    // user reloading the app with localStorage already populated.
+    const { result: second } = renderHook(() => useRecipes(), { wrapper });
     expect(second.current.recipes).toHaveLength(1);
     expect(second.current.recipes[0]!.recipe.name).toBe("Persisted");
   });
 
-  it("falls back to an empty list when localStorage holds invalid JSON", () => {
-    localStorage.setItem("werb.recipes", "{not json");
-    const { result } = renderHook(() => useRecipes());
+  it("falls back to an empty list when the backend holds invalid JSON", () => {
+    const { wrapper } = makeStorageWrapper({
+      [RECIPES_STORAGE_KEY]: "{not json",
+    });
+    const { result } = renderHook(() => useRecipes(), { wrapper });
     expect(result.current.recipes).toEqual([]);
   });
 
   it("recovers when persisted shape is missing the recipes array", () => {
-    localStorage.setItem("werb.recipes", JSON.stringify({ stale: true }));
-    const { result } = renderHook(() => useRecipes());
+    const { wrapper } = makeStorageWrapper({
+      [RECIPES_STORAGE_KEY]: JSON.stringify({ stale: true }),
+    });
+    const { result } = renderHook(() => useRecipes(), { wrapper });
     expect(result.current.recipes).toEqual([]);
   });
 });

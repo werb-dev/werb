@@ -1,13 +1,14 @@
 import type { WerbEquipmentProfile } from "@werb/types";
 import type { EquipmentOverrides } from "@werb/adapters";
+import type { StorageBackend } from "../storage/index.ts";
 
 /**
  * Equipment profile storage layer.
  *
- * One JSON blob in localStorage holds the user's profile list and the
- * active selection. Each profile has a stable ID so screens can reference
- * them. Disk persistence (`<workingDir>/equipment/*.equipment.json`) is a
- * v1.x step — same pattern as recipes.
+ * One JSON blob holds the user's profile list and the active selection.
+ * Each profile has a stable ID so screens can reference them. The
+ * persistence target is abstracted behind StorageBackend so we can swap
+ * localStorage for Drive / GitHub / OPFS without touching this module.
  */
 
 export interface ProfileWithId extends WerbEquipmentProfile {
@@ -19,16 +20,17 @@ interface EquipmentStore {
   activeId: string | null;
 }
 
-const STORAGE_KEY = "werb.equipment";
+export const EQUIPMENT_STORAGE_KEY = "werb.equipment";
 
 const EMPTY_STORE: EquipmentStore = { profiles: [], activeId: null };
 
-export function loadStore(): EquipmentStore {
+function parseStore(raw: string | null): EquipmentStore {
+  if (!raw) return EMPTY_STORE;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return EMPTY_STORE;
     const parsed = JSON.parse(raw) as Partial<EquipmentStore>;
-    const profiles = (Array.isArray(parsed.profiles) ? parsed.profiles : []).map(migrateProfile);
+    const profiles = (Array.isArray(parsed.profiles) ? parsed.profiles : []).map(
+      migrateProfile,
+    );
     return {
       profiles,
       activeId: typeof parsed.activeId === "string" ? parsed.activeId : null,
@@ -36,6 +38,16 @@ export function loadStore(): EquipmentStore {
   } catch {
     return EMPTY_STORE;
   }
+}
+
+/** Sync hydration for hooks; empty when the backend has no readSync. */
+export function loadStoreSync(backend: StorageBackend): EquipmentStore {
+  if (!backend.readSync) return EMPTY_STORE;
+  return parseStore(backend.readSync(EQUIPMENT_STORAGE_KEY));
+}
+
+export async function loadStore(backend: StorageBackend): Promise<EquipmentStore> {
+  return parseStore(await backend.read(EQUIPMENT_STORAGE_KEY));
 }
 
 /**
@@ -53,8 +65,11 @@ function migrateProfile(p: ProfileWithId): ProfileWithId {
   };
 }
 
-export function saveStore(store: EquipmentStore): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+export async function saveStore(
+  backend: StorageBackend,
+  store: EquipmentStore,
+): Promise<void> {
+  await backend.write(EQUIPMENT_STORAGE_KEY, JSON.stringify(store));
 }
 
 export function generateId(): string {

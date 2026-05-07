@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useEquipment } from "../src/hooks/useEquipment.ts";
+import { EQUIPMENT_STORAGE_KEY } from "../src/data/equipment.ts";
+import { makeStorageWrapper } from "./helpers.tsx";
 import type { WerbEquipmentProfile } from "@werb/types";
 
 const PROFILE: Omit<WerbEquipmentProfile, "id"> = {
@@ -11,14 +13,16 @@ const PROFILE: Omit<WerbEquipmentProfile, "id"> = {
 
 describe("useEquipment", () => {
   it("starts empty with no active profile", () => {
-    const { result } = renderHook(() => useEquipment());
+    const { wrapper } = makeStorageWrapper();
+    const { result } = renderHook(() => useEquipment(), { wrapper });
     expect(result.current.profiles).toEqual([]);
     expect(result.current.activeId).toBeNull();
     expect(result.current.activeProfile).toBeUndefined();
   });
 
   it("the first created profile auto-activates", () => {
-    const { result } = renderHook(() => useEquipment());
+    const { wrapper } = makeStorageWrapper();
+    const { result } = renderHook(() => useEquipment(), { wrapper });
 
     let id = "";
     act(() => {
@@ -31,7 +35,8 @@ describe("useEquipment", () => {
   });
 
   it("subsequent creates do not steal the active selection", () => {
-    const { result } = renderHook(() => useEquipment());
+    const { wrapper } = makeStorageWrapper();
+    const { result } = renderHook(() => useEquipment(), { wrapper });
 
     let firstId = "";
     act(() => {
@@ -45,7 +50,8 @@ describe("useEquipment", () => {
   });
 
   it("setActive switches the live profile", () => {
-    const { result } = renderHook(() => useEquipment());
+    const { wrapper } = makeStorageWrapper();
+    const { result } = renderHook(() => useEquipment(), { wrapper });
 
     let secondId = "";
     act(() => {
@@ -61,7 +67,8 @@ describe("useEquipment", () => {
   });
 
   it("remove drops the profile and clears activeId when it was the active one", () => {
-    const { result } = renderHook(() => useEquipment());
+    const { wrapper } = makeStorageWrapper();
+    const { result } = renderHook(() => useEquipment(), { wrapper });
 
     let id = "";
     act(() => {
@@ -78,7 +85,8 @@ describe("useEquipment", () => {
   });
 
   it("remove leaves activeId untouched when removing a different profile", () => {
-    const { result } = renderHook(() => useEquipment());
+    const { wrapper } = makeStorageWrapper();
+    const { result } = renderHook(() => useEquipment(), { wrapper });
 
     let firstId = "";
     let secondId = "";
@@ -95,7 +103,8 @@ describe("useEquipment", () => {
   });
 
   it("update patches a profile in place", () => {
-    const { result } = renderHook(() => useEquipment());
+    const { wrapper } = makeStorageWrapper();
+    const { result } = renderHook(() => useEquipment(), { wrapper });
 
     let id = "";
     act(() => {
@@ -113,13 +122,14 @@ describe("useEquipment", () => {
     expect(updated.efficiency_pct).toBe(72); // unchanged
   });
 
-  it("rehydrates from localStorage on a fresh mount", () => {
-    const { result: first } = renderHook(() => useEquipment());
+  it("rehydrates from the backend on a fresh mount", () => {
+    const { wrapper } = makeStorageWrapper();
+    const { result: first } = renderHook(() => useEquipment(), { wrapper });
     act(() => {
       first.current.create({ ...PROFILE, name: "Persisted" });
     });
 
-    const { result: second } = renderHook(() => useEquipment());
+    const { result: second } = renderHook(() => useEquipment(), { wrapper });
     expect(second.current.profiles).toHaveLength(1);
     expect(second.current.profiles[0]!.name).toBe("Persisted");
     expect(second.current.activeProfile?.name).toBe("Persisted");
@@ -127,7 +137,7 @@ describe("useEquipment", () => {
 
   it("backfills the hlt section on legacy profiles missing it", () => {
     // A profile saved before the HLT section was introduced — no hlt key.
-    const legacy = {
+    const legacy = JSON.stringify({
       profiles: [
         {
           id: "legacy",
@@ -138,10 +148,9 @@ describe("useEquipment", () => {
         },
       ],
       activeId: "legacy",
-    };
-    localStorage.setItem("werb.equipment", JSON.stringify(legacy));
-
-    const { result } = renderHook(() => useEquipment());
+    });
+    const { wrapper } = makeStorageWrapper({ [EQUIPMENT_STORAGE_KEY]: legacy });
+    const { result } = renderHook(() => useEquipment(), { wrapper });
     expect(result.current.profiles).toHaveLength(1);
     expect(result.current.profiles[0]!.hlt).toBeDefined();
     expect(result.current.profiles[0]!.hlt!.capacity_l).toBeGreaterThan(0);

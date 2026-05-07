@@ -1,11 +1,13 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   generateId,
   getActiveProfile,
   loadStore,
+  loadStoreSync,
   saveStore,
   type ProfileWithId,
 } from "../data/equipment.ts";
+import { useStorage } from "../storage/index.ts";
 
 interface EquipmentStore {
   profiles: ProfileWithId[];
@@ -13,27 +15,38 @@ interface EquipmentStore {
 }
 
 /**
- * Equipment profile state. Mirrors localStorage; every mutation persists.
- *
- * Mutations use functional updates so consecutive calls in the same React
- * tick (e.g. create + setActive in one handler) compose cleanly without
- * stale-closure issues.
- *
- * Returned API: list of profiles, active profile (or undefined), and
- * CRUD + activation actions.
+ * Equipment profile state. Mirrors a StorageBackend; every mutation
+ * persists. Functional updates so consecutive calls in the same React
+ * tick (create + setActive in one handler) compose cleanly.
  */
 export function useEquipment() {
-  const [store, setStore] = useState<EquipmentStore>(() => loadStore());
+  const backend = useStorage();
+  const [store, setStore] = useState<EquipmentStore>(() => loadStoreSync(backend));
+  const [loading, setLoading] = useState(() => backend.readSync === undefined);
+
+  useEffect(() => {
+    if (backend.readSync !== undefined) return;
+    let cancelled = false;
+    void loadStore(backend).then((loaded) => {
+      if (!cancelled) {
+        setStore(loaded);
+        setLoading(false);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [backend]);
 
   const persist = useCallback(
     (updater: (prev: EquipmentStore) => EquipmentStore) => {
       setStore((prev) => {
         const next = updater(prev);
-        saveStore(next);
+        void saveStore(backend, next);
         return next;
       });
     },
-    [],
+    [backend],
   );
 
   const create = useCallback(
@@ -82,6 +95,7 @@ export function useEquipment() {
     profiles: store.profiles,
     activeId: store.activeId,
     activeProfile: getActiveProfile(store),
+    loading,
     create,
     update,
     remove,

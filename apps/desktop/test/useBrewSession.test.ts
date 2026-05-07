@@ -3,7 +3,8 @@ import { renderHook, act } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { useBrewSession } from "../src/hooks/useBrewSession.ts";
+import { useBrewSession, sessionStorageKey } from "../src/hooks/useBrewSession.ts";
+import { makeStorageWrapper } from "./helpers.tsx";
 import type { BeerJsonFile, BeerJsonRecipe } from "@werb/adapters";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -14,13 +15,15 @@ const RECIPE_ID = "double-ipa-test";
 
 describe("useBrewSession", () => {
   it("returns null session before start()", () => {
-    const { result } = renderHook(() => useBrewSession(RECIPE_ID, RECIPE));
+    const { wrapper } = makeStorageWrapper();
+    const { result } = renderHook(() => useBrewSession(RECIPE_ID, RECIPE), { wrapper });
     expect(result.current.session).toBeNull();
     expect(result.current.activeStep).toBeNull();
   });
 
-  it("start() creates an in-progress session with steps from the plan", () => {
-    const { result } = renderHook(() => useBrewSession(RECIPE_ID, RECIPE));
+  it("start() creates an in-progress session with steps from the plan", async () => {
+    const { wrapper, backend } = makeStorageWrapper();
+    const { result } = renderHook(() => useBrewSession(RECIPE_ID, RECIPE), { wrapper });
 
     act(() => {
       result.current.start();
@@ -29,12 +32,13 @@ describe("useBrewSession", () => {
     expect(result.current.session).not.toBeNull();
     expect(result.current.session!.status).toBe("in_progress");
     expect(result.current.session!.steps.length).toBeGreaterThan(0);
-    // Persisted to localStorage under the recipe-keyed slot.
-    expect(localStorage.getItem(`werb.session.${RECIPE_ID}`)).toBeTruthy();
+    // Persisted under the recipe-keyed slot.
+    expect(await backend.read(sessionStorageKey(RECIPE_ID))).toBeTruthy();
   });
 
   it("startStep marks the chosen step active and prior active step done", () => {
-    const { result } = renderHook(() => useBrewSession(RECIPE_ID, RECIPE));
+    const { wrapper } = makeStorageWrapper();
+    const { result } = renderHook(() => useBrewSession(RECIPE_ID, RECIPE), { wrapper });
 
     act(() => result.current.start());
     const [first, second] = result.current.session!.steps;
@@ -55,7 +59,8 @@ describe("useBrewSession", () => {
   });
 
   it("finishStep marks a step done without picking another as active", () => {
-    const { result } = renderHook(() => useBrewSession(RECIPE_ID, RECIPE));
+    const { wrapper } = makeStorageWrapper();
+    const { result } = renderHook(() => useBrewSession(RECIPE_ID, RECIPE), { wrapper });
 
     act(() => result.current.start());
     const first = result.current.session!.steps[0]!;
@@ -68,7 +73,8 @@ describe("useBrewSession", () => {
   });
 
   it("setStepNotes writes notes onto the targeted step only", () => {
-    const { result } = renderHook(() => useBrewSession(RECIPE_ID, RECIPE));
+    const { wrapper } = makeStorageWrapper();
+    const { result } = renderHook(() => useBrewSession(RECIPE_ID, RECIPE), { wrapper });
 
     act(() => result.current.start());
     const [first, second] = result.current.session!.steps;
@@ -82,7 +88,8 @@ describe("useBrewSession", () => {
   });
 
   it("completeSession seals the session and any active step", () => {
-    const { result } = renderHook(() => useBrewSession(RECIPE_ID, RECIPE));
+    const { wrapper } = makeStorageWrapper();
+    const { result } = renderHook(() => useBrewSession(RECIPE_ID, RECIPE), { wrapper });
 
     act(() => result.current.start());
     const last = result.current.session!.steps[result.current.session!.steps.length - 1]!;
@@ -96,20 +103,22 @@ describe("useBrewSession", () => {
     expect(result.current.activeStep).toBeNull();
   });
 
-  it("abandon clears the session and removes persistence", () => {
-    const { result } = renderHook(() => useBrewSession(RECIPE_ID, RECIPE));
+  it("abandon clears the session and removes persistence", async () => {
+    const { wrapper, backend } = makeStorageWrapper();
+    const { result } = renderHook(() => useBrewSession(RECIPE_ID, RECIPE), { wrapper });
 
     act(() => result.current.start());
-    expect(localStorage.getItem(`werb.session.${RECIPE_ID}`)).toBeTruthy();
+    expect(await backend.read(sessionStorageKey(RECIPE_ID))).toBeTruthy();
 
     act(() => result.current.abandon());
 
     expect(result.current.session).toBeNull();
-    expect(localStorage.getItem(`werb.session.${RECIPE_ID}`)).toBeNull();
+    expect(await backend.read(sessionStorageKey(RECIPE_ID))).toBeNull();
   });
 
   it("addMeasurement appends to the session and auto-attaches to the active step", () => {
-    const { result } = renderHook(() => useBrewSession(RECIPE_ID, RECIPE));
+    const { wrapper } = makeStorageWrapper();
+    const { result } = renderHook(() => useBrewSession(RECIPE_ID, RECIPE), { wrapper });
 
     act(() => result.current.start());
     const mashStep = result.current.session!.steps.find((s) => s.kind === "mash");
@@ -129,7 +138,8 @@ describe("useBrewSession", () => {
   });
 
   it("addMeasurement leaves step_id unset when no step is active", () => {
-    const { result } = renderHook(() => useBrewSession(RECIPE_ID, RECIPE));
+    const { wrapper } = makeStorageWrapper();
+    const { result } = renderHook(() => useBrewSession(RECIPE_ID, RECIPE), { wrapper });
 
     act(() => result.current.start());
     act(() =>
@@ -141,7 +151,8 @@ describe("useBrewSession", () => {
   });
 
   it("addMeasurement honors an explicit step_id over the active one", () => {
-    const { result } = renderHook(() => useBrewSession(RECIPE_ID, RECIPE));
+    const { wrapper } = makeStorageWrapper();
+    const { result } = renderHook(() => useBrewSession(RECIPE_ID, RECIPE), { wrapper });
 
     act(() => result.current.start());
     const [first, second] = result.current.session!.steps;
@@ -159,7 +170,8 @@ describe("useBrewSession", () => {
   });
 
   it("removeMeasurement deletes by timestamp", () => {
-    const { result } = renderHook(() => useBrewSession(RECIPE_ID, RECIPE));
+    const { wrapper } = makeStorageWrapper();
+    const { result } = renderHook(() => useBrewSession(RECIPE_ID, RECIPE), { wrapper });
 
     act(() => result.current.start());
 
@@ -184,19 +196,25 @@ describe("useBrewSession", () => {
     });
   });
 
-  it("rehydrates from localStorage on a fresh mount", () => {
-    const { result: first } = renderHook(() => useBrewSession(RECIPE_ID, RECIPE));
+  it("rehydrates from the backend on a fresh mount", () => {
+    const { wrapper } = makeStorageWrapper();
+    const { result: first } = renderHook(() => useBrewSession(RECIPE_ID, RECIPE), {
+      wrapper,
+    });
     act(() => first.current.start());
     const initialStepId = first.current.session!.steps[0]!.id;
     act(() => first.current.startStep(initialStepId));
 
-    const { result: second } = renderHook(() => useBrewSession(RECIPE_ID, RECIPE));
+    const { result: second } = renderHook(() => useBrewSession(RECIPE_ID, RECIPE), {
+      wrapper,
+    });
     expect(second.current.session?.status).toBe("in_progress");
     expect(second.current.activeStep?.id).toBe(initialStepId);
   });
 
   it("re-running start() replaces the session for the same recipe id", () => {
-    const { result } = renderHook(() => useBrewSession(RECIPE_ID, RECIPE));
+    const { wrapper } = makeStorageWrapper();
+    const { result } = renderHook(() => useBrewSession(RECIPE_ID, RECIPE), { wrapper });
 
     act(() => result.current.start());
     const firstSessionId = result.current.session!.id;

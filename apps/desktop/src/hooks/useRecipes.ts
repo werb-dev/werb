@@ -1,36 +1,64 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { BeerJsonRecipe } from "@werb/adapters";
 import {
   generateId,
   loadStore,
+  loadStoreSync,
   saveStore,
   type StoredRecipe,
 } from "../data/recipes.ts";
+import { useStorage } from "../storage/index.ts";
 
 interface RecipeStore {
   recipes: StoredRecipe[];
 }
 
 /**
- * Recipe state. Mirrors localStorage; every mutation persists.
+ * Recipe state. Mirrors a StorageBackend (localStorage today, cloud in
+ * the future); every mutation persists.
  *
- * Mutations are expressed as functional updates — callers can fire several
- * actions in the same React tick (e.g. two `create` calls in a single event
- * handler) without losing any of them to a stale closure on `store`.
+ * Mutations are expressed as functional updates — callers can fire
+ * several actions in the same React tick (e.g. two `create` calls in a
+ * single event handler) without losing any of them to a stale closure.
  *
- * Returned API: list of recipes plus CRUD actions. Imports (bundled samples,
- * .beerjson files, BeerXML) all go through `create` / `createMany`.
+ * `loading` is true while the initial async load is in flight. Sync-
+ * capable backends (localStorage, in-memory) hydrate immediately on the
+ * first render and never set `loading` to true.
  */
 export function useRecipes() {
-  const [store, setStore] = useState<RecipeStore>(() => loadStore());
+  const backend = useStorage();
+  const [store, setStore] = useState<RecipeStore>(() => loadStoreSync(backend));
+  // Sync backends hydrate via lazy initial state above; only async ones
+  // need the loading-flicker treatment.
+  const [loading, setLoading] = useState(() => backend.readSync === undefined);
 
-  const persist = useCallback((updater: (prev: RecipeStore) => RecipeStore) => {
-    setStore((prev) => {
-      const next = updater(prev);
-      saveStore(next);
-      return next;
+  useEffect(() => {
+    if (backend.readSync !== undefined) return;
+    let cancelled = false;
+    void loadStore(backend).then((loaded) => {
+      if (!cancelled) {
+        setStore(loaded);
+        setLoading(false);
+      }
     });
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [backend]);
+
+  const persist = useCallback(
+    (updater: (prev: RecipeStore) => RecipeStore) => {
+      setStore((prev) => {
+        const next = updater(prev);
+        // Fire-and-forget. localStorage is synchronous under the async
+        // facade, so the write completes effectively in this tick. Cloud
+        // backends will need a write queue to serialize concurrent saves.
+        void saveStore(backend, next);
+        return next;
+      });
+    },
+    [backend],
+  );
 
   const create = useCallback(
     (recipe: BeerJsonRecipe): StoredRecipe => {
@@ -83,6 +111,7 @@ export function useRecipes() {
 
   return {
     recipes: store.recipes,
+    loading,
     create,
     createMany,
     update,
