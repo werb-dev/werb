@@ -105,6 +105,35 @@ export const BUNDLED_SAMPLES: BeerJsonRecipe[] = Object.entries(bundledRaw)
   .flatMap(([path, raw]) => parseAndCollect(path, raw))
   .sort((a, b) => a.name.localeCompare(b.name));
 
+/**
+ * Minimal valid BeerJSON recipe — used by the Library's "+ New recipe"
+ * button as the starting point for from-scratch authoring. The caller
+ * is expected to pass batch size + efficiency from the active equipment
+ * profile when one exists; the fallbacks (20 L, 75 %) are the homebrew
+ * baseline used for users who haven't set up a profile yet.
+ */
+export function createBlankRecipe(opts?: {
+  batch_size_l?: number;
+  efficiency_pct?: number;
+}): BeerJsonRecipe {
+  return {
+    name: "New recipe",
+    type: "all grain",
+    author: "",
+    batch_size: { value: opts?.batch_size_l ?? 20, unit: "l" },
+    efficiency: {
+      brewhouse: { value: opts?.efficiency_pct ?? 75, unit: "%" },
+    },
+    ingredients: {
+      fermentable_additions: [],
+      hop_additions: [],
+      culture_additions: [],
+      miscellaneous_additions: [],
+    },
+    boil: { boil_time: { value: 60, unit: "min" } },
+  };
+}
+
 // ─── Import from disk (Tauri only) ────────────────────────────────────────
 
 export interface ImportResult {

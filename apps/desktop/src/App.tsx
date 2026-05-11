@@ -9,7 +9,7 @@ import { JournalScreen } from "./screens/Journal.tsx";
 import { SettingsScreen } from "./screens/Settings.tsx";
 import { useRecipes } from "./hooks/useRecipes.ts";
 import { useEquipment } from "./hooks/useEquipment.ts";
-import { BUNDLED_SAMPLES, importBeerJsonFromDisk, importBeerXmlFromDisk } from "./data/recipes.ts";
+import { BUNDLED_SAMPLES, createBlankRecipe, importBeerJsonFromDisk, importBeerXmlFromDisk } from "./data/recipes.ts";
 import { exportSessionHtml, exportSessionJson } from "./data/recipe-export.ts";
 import { partitionForImport, skippedMessage } from "./data/import-dedup.ts";
 import { useUnits } from "./data/preferences.tsx";
@@ -136,6 +136,37 @@ export function App() {
           const { fresh, skipped } = partitionForImport(BUNDLED_SAMPLES, recipesApi.recipes);
           if (fresh.length > 0) recipesApi.createMany(fresh);
           return { count: fresh.length, info: skippedMessage(skipped) };
+        }}
+        onCreateBlank={() => {
+          // Seed batch + efficiency from the active equipment profile
+          // when one is set — saves a redundant edit for users who've
+          // already told us what rig they brew on. When no profile
+          // exists, offer to set one up first so the new recipe inherits
+          // real values rather than the generic 20 L / 75 % fallback.
+          const profile = equipmentApi.activeProfile;
+          if (!profile) {
+            const setUpFirst = confirm(
+              "No equipment profile yet — the new recipe will use generic defaults (20 L, 75 % efficiency).\n\nSet up your equipment profile first? (Cancel to continue with defaults.)",
+            );
+            if (setUpFirst) {
+              goEquipment();
+              return;
+            }
+          }
+          const fresh = recipesApi.create(
+            createBlankRecipe(
+              profile
+                ? {
+                    batch_size_l: profile.batch_size_l,
+                    efficiency_pct: profile.efficiency_pct,
+                  }
+                : undefined,
+            ),
+          );
+          // Jump straight into the editor — a blank shell isn't useful
+          // to look at on the recipe screen; the brewer needs to fill
+          // in ingredients before anything renders meaningfully.
+          goEditRecipe(fresh.id);
         }}
         onImportBeerJsonFile={async () => {
           const { recipes, error } = await importBeerJsonFromDisk();

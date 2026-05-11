@@ -35,6 +35,7 @@ interface LibraryScreenProps {
     error?: string | undefined;
     info?: string | undefined;
   }>;
+  onCreateBlank: () => void;
   activeProfile?: ProfileWithId | undefined;
   onGoEquipment: () => void;
 }
@@ -48,6 +49,7 @@ export function LibraryScreen({
   onImportSamples,
   onImportBeerJsonFile,
   onImportBeerXmlFile,
+  onCreateBlank,
   activeProfile,
   onGoEquipment,
 }: LibraryScreenProps) {
@@ -99,9 +101,15 @@ export function LibraryScreen({
 
           <div className="flex flex-wrap gap-2 mt-5">
             <button
+              onClick={onCreateBlank}
+              className="px-4 py-2 rounded-lg bg-accent text-bg text-body-sm font-medium hover:opacity-90 transition-opacity"
+            >
+              + New recipe
+            </button>
+            <button
               onClick={handleImportFile}
               disabled={importing}
-              className="px-4 py-2 rounded-lg bg-accent text-bg text-body-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
+              className="px-4 py-2 rounded-lg bg-surface-raised border border-border text-body-sm font-medium hover:border-border-strong disabled:opacity-50 transition-colors"
             >
               {importing ? "Importing…" : "Import .beerjson"}
             </button>
@@ -397,11 +405,13 @@ function ProfileBadge({
 
 function EmptyState() {
   return (
-    <div className="rounded-xl bg-surface border border-border border-dashed p-12 text-center">
+    <div className="rounded-xl bg-surface border border-border border-dashed p-8 sm:p-12 text-center">
       <p className="text-body text-text">No recipes yet.</p>
       <p className="text-body-sm text-text-muted mt-2 max-w-md mx-auto">
-        Use the buttons above to import a <code className="font-mono">.beerjson</code> file
-        from disk, or load the bundled sample recipes to get started.
+        Start a new recipe from scratch, import a{" "}
+        <code className="font-mono">.beerjson</code> or{" "}
+        <code className="font-mono">.beerxml</code> file from disk, or load the
+        bundled sample recipes.
       </p>
     </div>
   );
