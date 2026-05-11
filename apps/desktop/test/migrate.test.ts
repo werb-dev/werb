@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { MemoryBackend, migrateBackend } from "../src/storage/index.ts";
+import {
+  MemoryBackend,
+  copyKeysToBackend,
+  migrateBackend,
+} from "../src/storage/index.ts";
 
 describe("migrateBackend", () => {
   it("copies werb.* keys from source to target when target lacks them", async () => {
@@ -74,5 +78,68 @@ describe("migrateBackend", () => {
 
     const targetKeys = (await target.list("werb.")).sort();
     expect(targetKeys).toEqual((await source.list("werb.")).sort());
+  });
+});
+
+describe("copyKeysToBackend", () => {
+  it("overwrites every werb.* key in target with the source value", async () => {
+    const source = new MemoryBackend({
+      "werb.recipes": "fresh",
+      "werb.equipment": "fresh",
+    });
+    const target = new MemoryBackend({
+      "werb.recipes": "stale",
+      "werb.equipment": "stale",
+    });
+
+    const copied = await copyKeysToBackend(source, target);
+
+    expect(copied).toBe(2);
+    expect(await target.read("werb.recipes")).toBe("fresh");
+    expect(await target.read("werb.equipment")).toBe("fresh");
+  });
+
+  it("leaves keys outside werb.* untouched on the target", async () => {
+    const source = new MemoryBackend({ "werb.recipes": "new" });
+    const target = new MemoryBackend({
+      "werb.recipes": "old",
+      "local.sync.github": "{\"token\":\"keep-me\"}",
+    });
+
+    await copyKeysToBackend(source, target);
+
+    expect(await target.read("werb.recipes")).toBe("new");
+    expect(await target.read("local.sync.github")).toBe(
+      "{\"token\":\"keep-me\"}",
+    );
+  });
+
+  it("doesn't delete target keys that aren't in source", async () => {
+    const source = new MemoryBackend({ "werb.recipes": "from-source" });
+    const target = new MemoryBackend({
+      "werb.equipment": "only-on-target",
+    });
+
+    await copyKeysToBackend(source, target);
+
+    // Push semantics: source wins for keys it has, target keeps the rest.
+    expect(await target.read("werb.recipes")).toBe("from-source");
+    expect(await target.read("werb.equipment")).toBe("only-on-target");
+  });
+
+  it("reports progress through the callback", async () => {
+    const source = new MemoryBackend({
+      "werb.a": "1",
+      "werb.b": "2",
+      "werb.c": "3",
+    });
+    const target = new MemoryBackend();
+    const events: Array<[number, number]> = [];
+    await copyKeysToBackend(source, target, (done, total) =>
+      events.push([done, total]),
+    );
+    // Initial event reports total + 0 done; one event per key written.
+    expect(events[0]).toEqual([0, 3]);
+    expect(events[events.length - 1]).toEqual([3, 3]);
   });
 });

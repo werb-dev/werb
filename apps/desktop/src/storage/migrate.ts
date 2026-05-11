@@ -28,3 +28,33 @@ export async function migrateBackend(
   }
   return copied;
 }
+
+/**
+ * Copy every `werb.*` key from `source` into `target`, overwriting any
+ * existing entries. Used by the Push / Pull buttons in the sync UI
+ * where the user explicitly wants one side's view to win.
+ *
+ * Returns the number of keys written. Reports progress via the
+ * optional onProgress callback (current, total) — useful for the
+ * long-running cloud-sync case where each write is a network round-
+ * trip.
+ *
+ * Keys outside the `werb.` namespace (sync config, screen-local
+ * preferences) are deliberately untouched.
+ */
+export async function copyKeysToBackend(
+  source: StorageBackend,
+  target: StorageBackend,
+  onProgress?: (done: number, total: number) => void,
+): Promise<number> {
+  const keys = await source.list("werb.");
+  let done = 0;
+  onProgress?.(0, keys.length);
+  for (const key of keys) {
+    const value = await source.read(key);
+    if (value !== null) await target.write(key, value);
+    done++;
+    onProgress?.(done, keys.length);
+  }
+  return done;
+}

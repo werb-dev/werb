@@ -6,6 +6,7 @@ import { RecipeEditor } from "./screens/RecipeEditor.tsx";
 import { BrewScreen } from "./screens/Brew.tsx";
 import { EquipmentScreen } from "./screens/Equipment.tsx";
 import { JournalScreen } from "./screens/Journal.tsx";
+import { SettingsScreen } from "./screens/Settings.tsx";
 import { useRecipes } from "./hooks/useRecipes.ts";
 import { useEquipment } from "./hooks/useEquipment.ts";
 import { BUNDLED_SAMPLES, importBeerJsonFromDisk, importBeerXmlFromDisk } from "./data/recipes.ts";
@@ -22,6 +23,7 @@ type AppState =
   | { view: "brew"; recipeId: string; sessionId?: string }
   | { view: "equipment" }
   | { view: "journal" }
+  | { view: "settings" }
   | { view: "tokens" };
 
 export function App() {
@@ -36,6 +38,7 @@ export function App() {
     setState(sessionId ? { view: "brew", recipeId, sessionId } : { view: "brew", recipeId });
   const goEquipment = () => setState({ view: "equipment" });
   const goJournal = () => setState({ view: "journal" });
+  const goSettings = () => setState({ view: "settings" });
   const goTokens = () => setState({ view: "tokens" });
 
   let screen: React.ReactNode;
@@ -108,6 +111,8 @@ export function App() {
         }}
       />
     );
+  } else if (state.view === "settings") {
+    screen = <SettingsScreen />;
   } else if (state.view === "tokens") {
     screen = <DesignTokensShowcase />;
   } else {
@@ -155,6 +160,7 @@ export function App() {
         goLibrary={goLibrary}
         goEquipment={goEquipment}
         goJournal={goJournal}
+        goSettings={goSettings}
         goTokens={goTokens}
       />
       {screen}
@@ -167,12 +173,14 @@ function DevNav({
   goLibrary,
   goEquipment,
   goJournal,
+  goSettings,
   goTokens,
 }: {
   state: AppState;
   goLibrary: () => void;
   goEquipment: () => void;
   goJournal: () => void;
+  goSettings: () => void;
   goTokens: () => void;
 }) {
   // Hide nav on the brew screen — fewer distractions during a brew.
@@ -191,6 +199,9 @@ function DevNav({
       </NavButton>
       <NavButton active={state.view === "equipment"} onClick={goEquipment}>
         Equipment
+      </NavButton>
+      <NavButton active={state.view === "settings"} onClick={goSettings}>
+        Settings
       </NavButton>
       <NavButton active={state.view === "tokens"} onClick={goTokens}>
         Tokens
