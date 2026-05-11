@@ -164,3 +164,91 @@ export function formatLiters(l: number, p: UnitPreferences): Formatted {
   }
   return { value: l, unit: "L", display: `${l.toFixed(1)} L` };
 }
+
+// ─── Reverse conversions: user input → canonical SI ───────────────────────
+//
+// Used by the recipe editor so brewers can type amounts in their
+// preferred units. The form stores everything canonically (kg, L, °C,
+// SRM) so calc / adapters / export paths don't have to care about
+// preferences.
+
+/** User-typed value (°C or °F per prefs) → canonical Celsius. */
+export function userTempToCelsius(value: number, p: UnitPreferences): number {
+  if (p.temperature === "F") return ((value - 32) * 5) / 9;
+  return value;
+}
+
+/** User-typed value (L or US gal per prefs) → canonical liters. */
+export function userVolumeToLiters(value: number, p: UnitPreferences): number {
+  if (p.volume === "gal") return value * L_PER_US_GAL;
+  return value;
+}
+
+/** User-typed value (kg or lb per prefs) → canonical kilograms. */
+export function userMassLargeToKg(value: number, p: UnitPreferences): number {
+  if (p.mass === "lb") return value * KG_PER_LB;
+  return value;
+}
+
+/** User-typed value (g or oz per prefs) → canonical grams. */
+export function userMassSmallToG(value: number, p: UnitPreferences): number {
+  if (p.mass === "lb") return value * G_PER_OZ;
+  return value;
+}
+
+/** User-typed value (SRM or EBC per prefs) → canonical SRM. */
+export function userColorToSrm(value: number, p: UnitPreferences): number {
+  if (p.color === "EBC") return value / EBC_PER_SRM;
+  return value;
+}
+
+/**
+ * Display label for the unit the user types large masses in. Mirrors
+ * what `formatMassLarge` would show, but for the input-side label that
+ * follows the value.
+ */
+export function massLargeUnitLabel(p: UnitPreferences): string {
+  return p.mass === "lb" ? "lb" : "kg";
+}
+
+export function massSmallUnitLabel(p: UnitPreferences): string {
+  return p.mass === "lb" ? "oz" : "g";
+}
+
+export function volumeUnitLabel(p: UnitPreferences): string {
+  return p.volume === "gal" ? "gal" : "L";
+}
+
+export function tempUnitLabel(p: UnitPreferences): string {
+  return p.temperature === "F" ? "°F" : "°C";
+}
+
+export function colorUnitLabel(p: UnitPreferences): string {
+  return p.color === "EBC" ? "EBC" : "SRM";
+}
+
+/** kg → display value in the user's preferred large-mass unit. */
+export function kgToUserMassLarge(kg: number, p: UnitPreferences): number {
+  return p.mass === "lb" ? kg / KG_PER_LB : kg;
+}
+
+/** kg → display value in the user's preferred small-mass unit (g or oz). */
+export function kgToUserMassSmall(kg: number, p: UnitPreferences): number {
+  const g = kg * 1000;
+  return p.mass === "lb" ? g / G_PER_OZ : g;
+}
+
+/** Liters → display value in the user's preferred volume unit. */
+export function litersToUserVolume(l: number, p: UnitPreferences): number {
+  return p.volume === "gal" ? l / L_PER_US_GAL : l;
+}
+
+/** Celsius → display value in the user's preferred temperature unit. */
+export function celsiusToUserTemp(c: number, p: UnitPreferences): number {
+  return p.temperature === "F" ? cToF(c) : c;
+}
+
+/** SRM → display value in the user's preferred color unit. */
+export function srmToUserColor(srm: number, p: UnitPreferences): number {
+  return p.color === "EBC" ? srm * EBC_PER_SRM : srm;
+}

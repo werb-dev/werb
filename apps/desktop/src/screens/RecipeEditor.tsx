@@ -9,7 +9,7 @@ import type {
   MashStep,
   MiscAddition,
 } from "@werb/adapters";
-import { toCelsius, toLiters } from "@werb/adapters";
+import { isMass, toCelsius, toGrams, toKilograms, toLiters, toSrm } from "@werb/adapters";
 import {
   searchCultures,
   searchFermentables,
@@ -22,6 +22,24 @@ import {
   type MiscEntry,
   type StyleEntry,
 } from "../data/catalog/index.ts";
+import { useUnits } from "../data/preferences.tsx";
+import {
+  celsiusToUserTemp,
+  colorUnitLabel,
+  kgToUserMassLarge,
+  kgToUserMassSmall,
+  litersToUserVolume,
+  massLargeUnitLabel,
+  massSmallUnitLabel,
+  srmToUserColor,
+  tempUnitLabel,
+  userColorToSrm,
+  userMassLargeToKg,
+  userMassSmallToG,
+  userTempToCelsius,
+  userVolumeToLiters,
+  volumeUnitLabel,
+} from "../data/units-format.ts";
 
 /**
  * Pareto in-app recipe editor. Edits metadata + ingredients + mash schedule
@@ -119,11 +137,10 @@ function MetadataSection({
         />
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mt-6">
-        <NumberField
+        <VolumeField
           label="Batch size"
-          unit="L"
-          value={draft.batch_size.value}
-          onChange={(v) => update("batch_size", { value: v, unit: draft.batch_size.unit })}
+          valueL={toLiters(draft.batch_size)}
+          onChangeL={(l) => update("batch_size", { value: l, unit: "l" })}
         />
         <NumberField
           label="Brewhouse efficiency"
@@ -250,23 +267,22 @@ function FermentablesSection({
               }
               options={FERMENTABLE_TYPES}
             />
-            <InlineNumber
+            <MassLargeInlineInput
               className="col-span-2"
-              value={f.amount.value}
-              unit="kg"
-              step={0.05}
-              onChange={(v) => updateRow(i, { ...f, amount: { ...f.amount, value: v } })}
+              valueKg={isMass(f.amount) ? toKilograms(f.amount) : 0}
+              onChangeKg={(kg) =>
+                updateRow(i, { ...f, amount: { value: kg, unit: "kg" } })
+              }
             />
-            <InlineNumber
+            <ColorInlineInput
               className="col-span-2"
-              value={f.color?.value ?? 0}
-              unit={f.color?.unit ?? "Lovi"}
-              step={0.5}
-              onChange={(v) =>
-                updateRow(i, {
-                  ...f,
-                  color: { value: v, unit: f.color?.unit ?? "Lovi" },
-                })
+              valueSrm={f.color ? toSrm(f.color) : 0}
+              onChangeSrm={(srm) =>
+                // Normalize to SRM on edit. The display layer
+                // (formatColor / Recipe screen) handles whichever unit
+                // the imported recipe came with, so we don't lose
+                // anything by canonicalizing the store.
+                updateRow(i, { ...f, color: { value: srm, unit: "SRM" } })
               }
             />
             <InlineNumber
@@ -409,13 +425,11 @@ function HopsSection({
                 updateRow(i, { ...h, alpha_acid: { value: v, unit: "%" } })
               }
             />
-            <InlineNumber
+            <MassSmallInlineInput
               className="col-span-2"
-              value={h.amount.value * (h.amount.unit === "kg" ? 1000 : 1)}
-              unit="g"
-              step={1}
-              onChange={(v) =>
-                updateRow(i, { ...h, amount: { value: v / 1000, unit: "kg" } })
+              valueG={isMass(h.amount) ? toGrams(h.amount) : 0}
+              onChangeG={(g) =>
+                updateRow(i, { ...h, amount: { value: g / 1000, unit: "kg" } })
               }
             />
             <InlineSelect
@@ -699,13 +713,11 @@ function MashSection({
               onChange={(v) => updateStep(i, { ...step, type: v as MashStep["type"] })}
               options={[...MASH_STEP_TYPES]}
             />
-            <InlineNumber
+            <TempInlineInput
               className="col-span-2"
-              value={toCelsius(step.step_temperature)}
-              unit="°C"
-              step={1}
-              onChange={(v) =>
-                updateStep(i, { ...step, step_temperature: { value: v, unit: "C" } })
+              valueC={toCelsius(step.step_temperature)}
+              onChangeC={(c) =>
+                updateStep(i, { ...step, step_temperature: { value: c, unit: "C" } })
               }
             />
             <InlineNumber
@@ -718,18 +730,14 @@ function MashSection({
               }
             />
             <div className="col-span-3 flex items-center gap-1">
-              <InlineNumber
-                value={step.amount ? toLiters(step.amount) : 0}
-                unit="L"
-                step={0.5}
-                onChange={(v) => setStepAmount(i, step, v)}
+              <VolumeInlineInput
+                valueL={step.amount ? toLiters(step.amount) : 0}
+                onChangeL={(l) => setStepAmount(i, step, l)}
               />
               <span className="text-caption text-text-muted shrink-0">@</span>
-              <InlineNumber
-                value={step.infuse_temperature ? toCelsius(step.infuse_temperature) : 0}
-                unit="°C"
-                step={1}
-                onChange={(v) => setStepInfuseTemp(i, step, v)}
+              <TempInlineInput
+                valueC={step.infuse_temperature ? toCelsius(step.infuse_temperature) : 0}
+                onChangeC={(c) => setStepInfuseTemp(i, step, c)}
               />
             </div>
             <div className="col-span-1 flex justify-end">
@@ -1274,6 +1282,170 @@ function InlineInput({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       className={`bg-transparent border-b border-transparent px-1 py-1 text-body text-text placeholder:text-text-muted focus:outline-none focus:border-accent hover:border-border transition-colors min-w-0 ${className ?? ""}`}
+    />
+  );
+}
+
+// ─── Unit-aware inputs ────────────────────────────────────────────────────
+//
+// Wrappers that show the canonical-stored value (kg / L / °C / SRM) in the
+// user's preferred unit (lb / gal / °F / EBC), and reverse the conversion
+// on edit. Decimals scale with step so kg-vs-lb conversion noise stays
+// invisible to the brewer.
+
+function decimalsForStep(step: number): number {
+  if (step >= 1) return 0;
+  if (step >= 0.1) return 1;
+  if (step >= 0.01) return 2;
+  if (step >= 0.001) return 3;
+  return 4;
+}
+
+function roundForStep(value: number, step: number): number {
+  const f = 10 ** decimalsForStep(step);
+  return Math.round(value * f) / f;
+}
+
+function MassLargeInlineInput({
+  valueKg,
+  onChangeKg,
+  className,
+}: {
+  valueKg: number;
+  onChangeKg: (kg: number) => void;
+  className?: string;
+}) {
+  const prefs = useUnits();
+  // 50 g feels right in metric (typical fermentable bumping); lb prefers
+  // 0.1 lb increments. Either way we keep the increment visible in the
+  // displayed unit.
+  const step = prefs.mass === "lb" ? 0.1 : 0.05;
+  return (
+    <InlineNumber
+      {...(className !== undefined && { className })}
+      value={roundForStep(kgToUserMassLarge(valueKg, prefs), step)}
+      unit={massLargeUnitLabel(prefs)}
+      step={step}
+      onChange={(v) => onChangeKg(userMassLargeToKg(v, prefs))}
+    />
+  );
+}
+
+function MassSmallInlineInput({
+  valueG,
+  onChangeG,
+  className,
+}: {
+  valueG: number;
+  onChangeG: (g: number) => void;
+  className?: string;
+}) {
+  const prefs = useUnits();
+  // Hops: brewers think in whole grams (or 0.1 oz). 1 g ≈ 0.035 oz so the
+  // imperial increment is finer; that matches the typical hop bag precision.
+  const step = prefs.mass === "lb" ? 0.1 : 1;
+  const display =
+    prefs.mass === "lb"
+      ? kgToUserMassSmall(valueG / 1000, prefs)
+      : valueG;
+  return (
+    <InlineNumber
+      {...(className !== undefined && { className })}
+      value={roundForStep(display, step)}
+      unit={massSmallUnitLabel(prefs)}
+      step={step}
+      onChange={(v) =>
+        onChangeG(prefs.mass === "lb" ? userMassSmallToG(v, prefs) : v)
+      }
+    />
+  );
+}
+
+function VolumeInlineInput({
+  valueL,
+  onChangeL,
+  className,
+}: {
+  valueL: number;
+  onChangeL: (l: number) => void;
+  className?: string;
+}) {
+  const prefs = useUnits();
+  const step = prefs.volume === "gal" ? 0.1 : 0.5;
+  return (
+    <InlineNumber
+      {...(className !== undefined && { className })}
+      value={roundForStep(litersToUserVolume(valueL, prefs), step)}
+      unit={volumeUnitLabel(prefs)}
+      step={step}
+      onChange={(v) => onChangeL(userVolumeToLiters(v, prefs))}
+    />
+  );
+}
+
+function TempInlineInput({
+  valueC,
+  onChangeC,
+  className,
+}: {
+  valueC: number;
+  onChangeC: (c: number) => void;
+  className?: string;
+}) {
+  const prefs = useUnits();
+  return (
+    <InlineNumber
+      {...(className !== undefined && { className })}
+      value={roundForStep(celsiusToUserTemp(valueC, prefs), 1)}
+      unit={tempUnitLabel(prefs)}
+      step={1}
+      onChange={(v) => onChangeC(userTempToCelsius(v, prefs))}
+    />
+  );
+}
+
+function ColorInlineInput({
+  valueSrm,
+  onChangeSrm,
+  className,
+}: {
+  valueSrm: number;
+  onChangeSrm: (srm: number) => void;
+  className?: string;
+}) {
+  const prefs = useUnits();
+  // SRM jumps in half-points; EBC is roughly 2× SRM so whole-unit
+  // increments are about the same perceptual change.
+  const step = prefs.color === "EBC" ? 1 : 0.5;
+  return (
+    <InlineNumber
+      {...(className !== undefined && { className })}
+      value={roundForStep(srmToUserColor(valueSrm, prefs), step)}
+      unit={colorUnitLabel(prefs)}
+      step={step}
+      onChange={(v) => onChangeSrm(userColorToSrm(v, prefs))}
+    />
+  );
+}
+
+function VolumeField({
+  label,
+  valueL,
+  onChangeL,
+}: {
+  label: string;
+  valueL: number;
+  onChangeL: (l: number) => void;
+}) {
+  const prefs = useUnits();
+  const step = prefs.volume === "gal" ? 0.1 : 0.5;
+  return (
+    <NumberField
+      label={label}
+      unit={volumeUnitLabel(prefs)}
+      value={roundForStep(litersToUserVolume(valueL, prefs), step)}
+      step={step}
+      onChange={(v) => onChangeL(userVolumeToLiters(v, prefs))}
     />
   );
 }
