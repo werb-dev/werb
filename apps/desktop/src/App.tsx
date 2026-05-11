@@ -5,6 +5,7 @@ import { RecipeScreen } from "./screens/Recipe.tsx";
 import { RecipeEditor } from "./screens/RecipeEditor.tsx";
 import { BrewScreen } from "./screens/Brew.tsx";
 import { EquipmentScreen } from "./screens/Equipment.tsx";
+import { JournalScreen } from "./screens/Journal.tsx";
 import { useRecipes } from "./hooks/useRecipes.ts";
 import { useEquipment } from "./hooks/useEquipment.ts";
 import { BUNDLED_SAMPLES, importBeerJsonFromDisk, importBeerXmlFromDisk } from "./data/recipes.ts";
@@ -16,6 +17,7 @@ type AppState =
   | { view: "edit_recipe"; recipeId: string }
   | { view: "brew"; recipeId: string }
   | { view: "equipment" }
+  | { view: "journal" }
   | { view: "tokens" };
 
 export function App() {
@@ -28,6 +30,7 @@ export function App() {
   const goEditRecipe = (recipeId: string) => setState({ view: "edit_recipe", recipeId });
   const goBrew = (recipeId: string) => setState({ view: "brew", recipeId });
   const goEquipment = () => setState({ view: "equipment" });
+  const goJournal = () => setState({ view: "journal" });
   const goTokens = () => setState({ view: "tokens" });
 
   let screen: React.ReactNode;
@@ -82,6 +85,8 @@ export function App() {
     }
   } else if (state.view === "equipment") {
     screen = <EquipmentScreen api={equipmentApi} />;
+  } else if (state.view === "journal") {
+    screen = <JournalScreen onOpenSession={goBrew} />;
   } else if (state.view === "tokens") {
     screen = <DesignTokensShowcase />;
   } else {
@@ -124,7 +129,13 @@ export function App() {
 
   return (
     <>
-      <DevNav state={state} goLibrary={goLibrary} goEquipment={goEquipment} goTokens={goTokens} />
+      <DevNav
+        state={state}
+        goLibrary={goLibrary}
+        goEquipment={goEquipment}
+        goJournal={goJournal}
+        goTokens={goTokens}
+      />
       {screen}
     </>
   );
@@ -134,11 +145,13 @@ function DevNav({
   state,
   goLibrary,
   goEquipment,
+  goJournal,
   goTokens,
 }: {
   state: AppState;
   goLibrary: () => void;
   goEquipment: () => void;
+  goJournal: () => void;
   goTokens: () => void;
 }) {
   // Hide nav on the brew screen — fewer distractions during a brew.
@@ -151,6 +164,9 @@ function DevNav({
         onClick={goLibrary}
       >
         Library
+      </NavButton>
+      <NavButton active={state.view === "journal"} onClick={goJournal}>
+        Journal
       </NavButton>
       <NavButton active={state.view === "equipment"} onClick={goEquipment}>
         Equipment
