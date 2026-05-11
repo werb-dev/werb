@@ -28,9 +28,15 @@ export async function pickAndReadTextFile(
     input.style.display = "none";
 
     let settled = false;
+    // True between "change fired with a file" and "finish has been
+    // called with that file." The focus-fallback timer checks this
+    // so an in-flight file.text() isn't preempted into a null.
+    let selectionInProgress = false;
+
     const finish = (result: { name: string; text: string } | null) => {
       if (settled) return;
       settled = true;
+      window.removeEventListener("focus", onFocus);
       input.remove();
       resolve(result);
     };
@@ -41,6 +47,7 @@ export async function pickAndReadTextFile(
         finish(null);
         return;
       }
+      selectionInProgress = true;
       try {
         const text = await file.text();
         finish({ name: file.name, text });
@@ -49,10 +56,27 @@ export async function pickAndReadTextFile(
       }
     });
 
-    // The browser fires no event when the user cancels the file dialog,
-    // so there's no clean way to detect cancellation. Falling out via
-    // window blur would be racy. We just leave the input attached
-    // until selection — the GC reclaims it after `finish`.
+    // Cancellation detection.
+    //
+    // Modern browsers (Chrome 113+ / Safari 16.4+ / Firefox 91+) fire
+    // a `cancel` event when the picker is dismissed without a
+    // selection — the clean signal.
+    //
+    // Older WebKit (iPadOS 16.3 and below) doesn't fire `cancel`, so
+    // we rely on the window `focus` event: when the picker closes
+    // (either way), the page regains focus. The 300 ms delay gives
+    // the `change` event a chance to win if the user did pick a file
+    // — the `selectionInProgress` guard prevents the timer from
+    // racing the in-flight file.text() read.
+    input.addEventListener("cancel", () => finish(null));
+    const onFocus = () => {
+      setTimeout(() => {
+        if (selectionInProgress) return;
+        finish(null);
+      }, 300);
+    };
+    window.addEventListener("focus", onFocus);
+
     document.body.appendChild(input);
     input.click();
   });

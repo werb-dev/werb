@@ -68,4 +68,15 @@ describe("pickAndReadTextFile", () => {
     const result = await pickAndReadTextFile(".txt");
     expect(result).toBeNull();
   });
+
+  it("resolves with null when the picker fires a 'cancel' event", async () => {
+    HTMLInputElement.prototype.click = function () {
+      // Modern browsers dispatch 'cancel' on the input when the user
+      // dismisses the picker without selecting anything.
+      this.dispatchEvent(new Event("cancel"));
+    };
+
+    const result = await pickAndReadTextFile(".txt");
+    expect(result).toBeNull();
+  });
 });
