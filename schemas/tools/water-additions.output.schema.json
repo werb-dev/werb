@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://werb.dev/schemas/tools/water-additions.output.schema.json",
+  "title": "WaterAdditionsOutput",
+  "description": "Resulting ion concentrations after dissolving the salts in source water, plus the sulfate-to-chloride ratio and a coarse flavor hint.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "ca_ppm",
+    "mg_ppm",
+    "na_ppm",
+    "cl_ppm",
+    "so4_ppm",
+    "hco3_ppm",
+    "so4_cl_ratio",
+    "flavor_hint"
+  ],
+  "properties": {
+    "ca_ppm":   { "type": "number" },
+    "mg_ppm":   { "type": "number" },
+    "na_ppm":   { "type": "number" },
+    "cl_ppm":   { "type": "number" },
+    "so4_ppm":  { "type": "number" },
+    "hco3_ppm": { "type": "number" },
+    "so4_cl_ratio": {
+      "type": "number",
+      "description": "SO4 ÷ Cl. Zero when chloride is zero (avoids divide-by-zero); callers can branch on flavor_hint='none'."
+    },
+    "flavor_hint": {
+      "type": "string",
+      "enum": ["very_malty", "malty", "balanced", "hoppy", "very_hoppy", "none"],
+      "description": "Coarse perceptual category derived from so4_cl_ratio. 'none' when chloride is zero."
+    }
+  }
+}

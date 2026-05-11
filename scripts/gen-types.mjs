@@ -43,6 +43,8 @@ const TARGETS = [
   { schema: "tools/carbonation.output.schema.json", name: "CarbonationOutput" },
   { schema: "tools/yeast-pitch.input.schema.json", name: "YeastPitchInput" },
   { schema: "tools/yeast-pitch.output.schema.json", name: "YeastPitchOutput" },
+  { schema: "tools/water-additions.input.schema.json", name: "WaterAdditionsInput" },
+  { schema: "tools/water-additions.output.schema.json", name: "WaterAdditionsOutput" },
 ];
 
 const compileOpts = {

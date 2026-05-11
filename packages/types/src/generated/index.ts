@@ -16,3 +16,5 @@ export * from "./carbonation.input.js";
 export * from "./carbonation.output.js";
 export * from "./yeast-pitch.input.js";
 export * from "./yeast-pitch.output.js";
+export * from "./water-additions.input.js";
+export * from "./water-additions.output.js";

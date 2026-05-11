@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://werb.dev/schemas/tools/water-additions.input.schema.json",
+  "title": "WaterAdditionsInput",
+  "description": "Source water ion profile + brewing salt additions + total water volume. Drives the resulting-ion calc.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["water_volume_l", "source", "additions"],
+  "properties": {
+    "water_volume_l": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Total water volume the salts are mixed into, in liters. Typically the sum of mash + sparge water."
+    },
+    "source": {
+      "$ref": "#/$defs/IonProfile",
+      "description": "Source water ion concentrations in ppm (mg/L)."
+    },
+    "additions": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Brewing salt amounts in grams. All optional — omit a salt to leave it out.",
+      "properties": {
+        "gypsum_g": { "type": "number", "minimum": 0, "description": "Calcium sulfate (CaSO4·2H2O)." },
+        "calcium_chloride_g": { "type": "number", "minimum": 0, "description": "Calcium chloride (CaCl2·2H2O)." },
+        "epsom_g": { "type": "number", "minimum": 0, "description": "Magnesium sulfate (MgSO4·7H2O), 'Epsom salt'." },
+        "table_salt_g": { "type": "number", "minimum": 0, "description": "Sodium chloride (NaCl)." },
+        "baking_soda_g": { "type": "number", "minimum": 0, "description": "Sodium bicarbonate (NaHCO3)." },
+        "chalk_g": { "type": "number", "minimum": 0, "description": "Calcium carbonate (CaCO3). Low solubility — not fully effective in mash." }
+      }
+    }
+  },
+  "$defs": {
+    "IonProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ca_ppm", "mg_ppm", "na_ppm", "cl_ppm", "so4_ppm", "hco3_ppm"],
+      "properties": {
+        "ca_ppm":   { "type": "number", "minimum": 0, "description": "Calcium, ppm." },
+        "mg_ppm":   { "type": "number", "minimum": 0, "description": "Magnesium, ppm." },
+        "na_ppm":   { "type": "number", "minimum": 0, "description": "Sodium, ppm." },
+        "cl_ppm":   { "type": "number", "minimum": 0, "description": "Chloride, ppm." },
+        "so4_ppm":  { "type": "number", "minimum": 0, "description": "Sulfate, ppm." },
+        "hco3_ppm": { "type": "number", "minimum": 0, "description": "Bicarbonate, ppm." }
+      }
+    }
+  }
+}

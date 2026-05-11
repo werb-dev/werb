@@ -7,3 +7,4 @@ export { computeScale } from "./scale.js";
 export { computeStrikeTemp } from "./strike-temp.js";
 export { computeCarbonation } from "./carbonation.js";
 export { computeYeastPitch } from "./yeast-pitch.js";
+export { computeWaterAdditions } from "./water-additions.js";
