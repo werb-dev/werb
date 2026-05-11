@@ -49,5 +49,9 @@ export {
   recipeToCarbonationInput,
   type CarbonationOptions,
 } from "./recipe-to-carbonation.js";
+export {
+  recipeToYeastPitchInput,
+  type YeastPitchOptions,
+} from "./recipe-to-yeast-pitch.js";
 export { recipeToSessionPlan, type SessionPlanDeps } from "./recipe-to-session.js";
 export { srmToHex } from "./srm-color.js";

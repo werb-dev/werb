@@ -6,6 +6,7 @@ import {
   recipeToGravityInput,
   recipeToScaleInput,
   recipeToCarbonationInput,
+  recipeToYeastPitchInput,
   applyScale,
   fitMashToTun,
   toGrams,
@@ -26,7 +27,9 @@ import {
   computeGravity,
   computeScale,
   computeCarbonation,
+  computeYeastPitch,
 } from "@werb/calc";
+import type { YeastPitchInput } from "@werb/types";
 import { profileToWaterOverrides, type ProfileWithId } from "../data/equipment.ts";
 import { exportBeerJson, exportBeerXml, exportRecipeHtml } from "../data/recipe-export.ts";
 import { useBrewSessionExists } from "../hooks/useBrewSession.ts";
@@ -421,6 +424,9 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
             </Section>
           )}
 
+        {/* ─── Yeast pitch ──────────────────────────────────────────────── */}
+        <YeastPitchSection recipe={recipe} />
+
         {/* ─── Carbonation calculator ───────────────────────────────────── */}
         <CarbonationSection recipe={recipe} />
 
@@ -518,6 +524,143 @@ function ExportMenu({ recipe }: { recipe: BeerJsonRecipe }) {
   );
 }
 
+
+// ─── Yeast pitch ───────────────────────────────────────────────────────
+
+const YEAST_PITCH_STORAGE_PREFIX = "werb.yeastpitch.";
+
+interface YeastPitchFormState {
+  yeast_pack_count: number;
+  viability_pct: number;
+}
+
+function defaultViability(form: YeastPitchInput["yeast_form"]): number {
+  return form === "dry" ? 97 : 80;
+}
+
+function YeastPitchSection({ recipe }: { recipe: BeerJsonRecipe }) {
+  const input = recipeToYeastPitchInput(recipe);
+  // Default form depends on the first culture; falls back to "liquid"
+  // when the recipe has no cultures yet.
+  const yeastForm = input?.yeast_form ?? "liquid";
+
+  const [form, setForm] = usePersistedJson<YeastPitchFormState>(
+    `${YEAST_PITCH_STORAGE_PREFIX}${recipe.name}`,
+    {
+      yeast_pack_count: 1,
+      viability_pct: defaultViability(yeastForm),
+    },
+  );
+
+  const update = <K extends keyof YeastPitchFormState>(
+    key: K,
+    value: YeastPitchFormState[K],
+  ) => setForm((prev) => ({ ...prev, [key]: value }));
+
+  // The recipe might not have an OG yet — show a placeholder rather
+  // than zero numbers if so.
+  if (!input) {
+    return (
+      <Section title="Yeast pitch">
+        <p className="text-body-sm text-text-muted">
+          Set an original gravity on the recipe to compute pitch rate.
+        </p>
+      </Section>
+    );
+  }
+
+  const out = computeYeastPitch({
+    ...input,
+    yeast_pack_count: form.yeast_pack_count,
+    viability_pct: form.viability_pct,
+  });
+  const needStarter = !out.has_sufficient;
+  const formLabel = yeastForm === "dry" ? "dry yeast" : "liquid yeast";
+
+  return (
+    <Section
+      title="Yeast pitch"
+      subtitle={`Target cell count for ${formLabel}. Adjust pack count and viability to match what you have on hand.`}
+    >
+      <div className="rounded-xl bg-surface border border-border p-6">
+        {/* Input row */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+          <CarbField
+            label="Packs on hand"
+            unit={yeastForm === "dry" ? "sachets" : "packs"}
+            value={form.yeast_pack_count}
+            step={1}
+            onChange={(v) => update("yeast_pack_count", Math.max(0, Math.round(v)))}
+            hint={
+              yeastForm === "dry"
+                ? "~11.5 g sachets, ~115 B cells fresh"
+                : "Wyeast / White Labs smack-pack, ~100 B at production"
+            }
+          />
+          <CarbField
+            label="Viability"
+            unit="%"
+            value={form.viability_pct}
+            step={1}
+            onChange={(v) => update("viability_pct", Math.min(100, Math.max(0, v)))}
+            hint={
+              yeastForm === "dry"
+                ? "Dry yeast holds well — 97% fresh, drop to ~85% after a year"
+                : "Liquid yeast drops ~21%/month from production"
+            }
+          />
+        </div>
+
+        {/* Derived stats */}
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <CarbStat
+            label="Target"
+            value={`${out.target_cells_billion.toFixed(0)} B`}
+            sub={`${out.target_rate_m_per_ml_per_plato.toFixed(2)} M/mL/°P at ${out.og_plato.toFixed(1)} °P`}
+          />
+          <CarbStat
+            label="Per pack (viable)"
+            value={`${out.cells_per_pack_effective_billion.toFixed(0)} B`}
+            sub={`Pack × viability`}
+          />
+        </div>
+
+        {/* Verdict */}
+        <div className="grid grid-cols-2 gap-px bg-border rounded-xl overflow-hidden">
+          <div className="bg-surface px-5 py-4">
+            <p className="text-caption uppercase tracking-widest text-text-muted">
+              Recommended
+            </p>
+            <p className="font-mono text-h2 mt-1 text-accent">
+              {out.recommended_pack_count}{" "}
+              <span className="text-body-sm text-text-muted">
+                {yeastForm === "dry" ? "sachets" : "packs"}
+              </span>
+            </p>
+            <p className="font-mono text-caption mt-1 text-text-muted">
+              {out.packs_needed.toFixed(2)} packs exact
+            </p>
+          </div>
+          <div className="bg-surface px-5 py-4">
+            <p className="text-caption uppercase tracking-widest text-text-muted">
+              Status
+            </p>
+            <p
+              className={`font-mono text-h2 mt-1 ${needStarter ? "text-warning" : "text-success"}`}
+            >
+              {needStarter ? "Under-pitch" : "Sufficient"}
+            </p>
+            <p className={`font-mono text-caption mt-1 ${needStarter ? "text-warning" : "text-text-muted"}`}>
+              {needStarter
+                ? `Short ${out.shortfall_billion_cells.toFixed(0)} B — buy more or make a starter`
+                : `${form.yeast_pack_count} pack${form.yeast_pack_count === 1 ? "" : "s"} covers the target`}
+            </p>
+          </div>
+        </div>
+      </div>
+    </Section>
+  );
+}
 
 // ─── Carbonation ───────────────────────────────────────────────────────
 

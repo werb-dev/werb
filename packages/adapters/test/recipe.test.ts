@@ -13,6 +13,7 @@ import {
   fitMashToTun,
   recipeToStrikeTempInput,
   recipeToCarbonationInput,
+  recipeToYeastPitchInput,
 } from "../src/index.js";
 import { pitchTempC } from "../src/recipe-to-session.js";
 import type { BeerJsonFile } from "../src/index.js";
@@ -466,5 +467,62 @@ describe("recipeToCarbonationInput — Double IPA fixture", () => {
       serving_temp_c: 4,
     });
     expect(with4.serving_temp_c).toBe(4);
+  });
+});
+
+describe("recipeToYeastPitchInput — Double IPA fixture", () => {
+  it("derives og_sg from the recipe's original_gravity", () => {
+    const input = recipeToYeastPitchInput(recipe);
+    expect(input).not.toBeNull();
+    expect(input!.og_sg).toBe(recipe.original_gravity!.value);
+  });
+
+  it("pulls beer_volume_l from batch_size by default", () => {
+    const input = recipeToYeastPitchInput(recipe);
+    // Mandarina fixture batch size is 22 L (matches recipeToCarbonationInput
+    // suite above).
+    expect(input!.beer_volume_l).toBeCloseTo(22, 1);
+  });
+
+  it("classifies a normal-gravity ale as 'ale'", () => {
+    // The Mandarina fixture is OG 1.069 — just below the high-gravity
+    // threshold (1.075). Ale culture + sub-threshold OG → "ale".
+    const input = recipeToYeastPitchInput(recipe);
+    expect(input!.style_type).toBe("ale");
+  });
+
+  it("bumps to high_gravity when OG override crosses the threshold", () => {
+    const input = recipeToYeastPitchInput(recipe, { og_sg: 1.085 });
+    expect(input!.style_type).toBe("high_gravity");
+  });
+
+  it("returns null when the recipe has no OG and no override", () => {
+    const noOg = { ...recipe, original_gravity: undefined };
+    expect(recipeToYeastPitchInput(noOg)).toBeNull();
+  });
+
+  it("respects an og_sg override even with no OG on the recipe", () => {
+    const noOg = { ...recipe, original_gravity: undefined };
+    const input = recipeToYeastPitchInput(noOg, { og_sg: 1.05 });
+    expect(input).not.toBeNull();
+    expect(input!.og_sg).toBe(1.05);
+    // 1.05 is normal-gravity, so the ale fixture downgrades to "ale".
+    expect(input!.style_type).toBe("ale");
+  });
+
+  it("forwards explicit pack-count / viability overrides", () => {
+    const input = recipeToYeastPitchInput(recipe, {
+      yeast_pack_count: 3,
+      cells_per_pack_billion: 130,
+      viability_pct: 90,
+    });
+    expect(input!.yeast_pack_count).toBe(3);
+    expect(input!.cells_per_pack_billion).toBe(130);
+    expect(input!.viability_pct).toBe(90);
+  });
+
+  it("explicit style_type wins over the derived one", () => {
+    const input = recipeToYeastPitchInput(recipe, { style_type: "lager" });
+    expect(input!.style_type).toBe("lager");
   });
 });

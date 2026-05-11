@@ -14,3 +14,5 @@ export * from "./strike-temp.input.js";
 export * from "./strike-temp.output.js";
 export * from "./carbonation.input.js";
 export * from "./carbonation.output.js";
+export * from "./yeast-pitch.input.js";
+export * from "./yeast-pitch.output.js";

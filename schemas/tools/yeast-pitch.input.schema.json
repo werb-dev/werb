@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://werb.dev/schemas/tools/yeast-pitch.input.schema.json",
+  "title": "YeastPitchInput",
+  "description": "Normalized input for computing yeast pitch rate and pack count for a brew.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "og_sg",
+    "beer_volume_l",
+    "style_type",
+    "yeast_form"
+  ],
+  "properties": {
+    "og_sg": {
+      "type": "number",
+      "exclusiveMinimum": 1,
+      "maximum": 1.2,
+      "description": "Original gravity, specific gravity. Used to derive degrees Plato for the pitch-rate formula."
+    },
+    "beer_volume_l": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Volume of wort being pitched, in liters."
+    },
+    "style_type": {
+      "type": "string",
+      "enum": ["ale", "lager", "high_gravity"],
+      "description": "Drives the target pitch rate in M cells/mL/°P. ale: 0.75. lager: 1.5. high_gravity (OG > 1.075): 1.0 for ales, 2.0 for lagers (rule of thumb)."
+    },
+    "yeast_form": {
+      "type": "string",
+      "enum": ["dry", "liquid"],
+      "description": "Dry yeast is packaged dehydrated (Fermentis, LalBrew, Mangrove Jack's) — ~10 B viable cells/g, near 100% viability fresh. Liquid yeast comes in slurries or smack-packs (Wyeast, White Labs) — typically 100 B cells/pack at production, declining roughly 21% per month."
+    },
+    "yeast_pack_count": {
+      "type": "number",
+      "minimum": 0,
+      "default": 1,
+      "description": "Number of packs / sachets the brewer has on hand. Used to flag whether a starter is needed."
+    },
+    "cells_per_pack_billion": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Override the default cells-per-pack figure. Default: dry → 11.5 g × 10 B/g = 115 B; liquid → 100 B."
+    },
+    "viability_pct": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Percentage of cells still viable at pitch time. Default: dry → 97% (fresh), liquid → 80% (1-2 month old smack-pack)."
+    }
+  }
+}

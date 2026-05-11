@@ -41,6 +41,8 @@ const TARGETS = [
   { schema: "tools/strike-temp.output.schema.json", name: "StrikeTempOutput" },
   { schema: "tools/carbonation.input.schema.json", name: "CarbonationInput" },
   { schema: "tools/carbonation.output.schema.json", name: "CarbonationOutput" },
+  { schema: "tools/yeast-pitch.input.schema.json", name: "YeastPitchInput" },
+  { schema: "tools/yeast-pitch.output.schema.json", name: "YeastPitchOutput" },
 ];
 
 const compileOpts = {
