@@ -12,6 +12,7 @@ import { useEquipment } from "./hooks/useEquipment.ts";
 import { BUNDLED_SAMPLES, importBeerJsonFromDisk, importBeerXmlFromDisk } from "./data/recipes.ts";
 import { exportSessionHtml, exportSessionJson } from "./data/recipe-export.ts";
 import { partitionForImport, skippedMessage } from "./data/import-dedup.ts";
+import { useUnits } from "./data/preferences.tsx";
 
 type AppState =
   | { view: "library" }
@@ -30,6 +31,7 @@ export function App() {
   const [state, setState] = useState<AppState>({ view: "library" });
   const recipesApi = useRecipes();
   const equipmentApi = useEquipment();
+  const prefs = useUnits();
 
   const goLibrary = () => setState({ view: "library" });
   const goRecipe = (recipeId: string) => setState({ view: "recipe", recipeId });
@@ -107,7 +109,7 @@ export function App() {
           const recipe = recipesApi.recipes.find(
             (r) => r.id === session.recipe_id,
           )?.recipe;
-          return exportSessionHtml(session, recipe);
+          return exportSessionHtml(session, recipe, prefs);
         }}
       />
     );

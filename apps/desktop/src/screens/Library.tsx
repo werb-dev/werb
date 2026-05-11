@@ -2,7 +2,6 @@ import { useState } from "react";
 import {
   recipeToIbuInput,
   recipeToWaterInput,
-  toLiters,
   toSrm,
   srmToHex,
   type BeerJsonRecipe,
@@ -11,6 +10,13 @@ import { computeIbu, computeWater } from "@werb/calc";
 import type { StoredRecipe } from "../data/recipes.ts";
 import { filterAndSort, type SortKey } from "../data/library-sort.ts";
 import { profileToWaterOverrides, type ProfileWithId } from "../data/equipment.ts";
+import { useUnits } from "../data/preferences.tsx";
+import {
+  formatColor,
+  formatLiters,
+  formatSpecificGravity,
+  formatVolume,
+} from "../data/units-format.ts";
 
 interface LibraryScreenProps {
   recipes: StoredRecipe[];
@@ -197,7 +203,11 @@ function RecipeCard({
   onDuplicate: () => void;
   onDelete: () => void;
 }) {
+  const prefs = useUnits();
   const beerColor = recipe.color_estimate ? srmToHex(toSrm(recipe.color_estimate)) : null;
+  const colorLabel = recipe.color_estimate
+    ? formatColor(recipe.color_estimate, prefs).display
+    : null;
   const computedIbu = (() => {
     try {
       return computeIbu(recipeToIbuInput(recipe)).total_ibu;
@@ -258,16 +268,26 @@ function RecipeCard({
             aria-hidden
             className="block w-10 h-10 rounded-pill border border-border-strong shrink-0"
             style={{ backgroundColor: beerColor }}
-            title={`${recipe.color_estimate?.value} ${recipe.color_estimate?.unit}`}
+            title={colorLabel ?? undefined}
           />
         )}
       </div>
 
       <dl className="grid grid-cols-3 gap-x-2 gap-y-3 mt-auto pt-4 border-t border-border font-mono">
-        <Stat label="Vol" value={`${toLiters(recipe.batch_size).toFixed(0)} L`} />
+        <Stat
+          label="Vol"
+          value={(() => {
+            const v = formatVolume(recipe.batch_size, prefs);
+            return `${v.value.toFixed(0)} ${v.unit}`;
+          })()}
+        />
         <Stat
           label="OG"
-          value={recipe.original_gravity?.value.toFixed(3) ?? "—"}
+          value={
+            recipe.original_gravity
+              ? formatSpecificGravity(recipe.original_gravity.value, prefs).display
+              : "—"
+          }
         />
         <Stat
           label="ABV"
@@ -295,11 +315,22 @@ function RecipeCard({
         />
         <Stat
           label="FG"
-          value={recipe.final_gravity?.value.toFixed(3) ?? "—"}
+          value={
+            recipe.final_gravity
+              ? formatSpecificGravity(recipe.final_gravity.value, prefs).display
+              : "—"
+          }
         />
         <Stat
           label="Water"
-          value={totalWaterL !== null ? `${totalWaterL.toFixed(0)} L` : "—"}
+          value={
+            totalWaterL !== null
+              ? (() => {
+                  const v = formatLiters(totalWaterL, prefs);
+                  return `${v.value.toFixed(0)} ${v.unit}`;
+                })()
+              : "—"
+          }
           sub={activeProfile ? "rig" : "default"}
         />
       </dl>

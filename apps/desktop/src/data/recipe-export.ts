@@ -5,6 +5,12 @@ import { isTauri } from "./runtime.ts";
 // gesture task on iOS, which means no awaits between the user's tap
 // and the anchor's click().
 import { downloadTextFile } from "./browser-fs.ts";
+import {
+  DEFAULT_PREFS,
+  formatColor,
+  formatSpecificGravity,
+  type UnitPreferences,
+} from "./units-format.ts";
 
 /**
  * Recipe export — BeerJSON, BeerXML, and "print to PDF" via the
@@ -117,19 +123,28 @@ export async function exportBeerJson(recipe: BeerJsonRecipe): Promise<ExportResu
  * generating a self-contained HTML doc that the brewer opens in any
  * browser and prints to PDF from there is more dependable and
  * portable.
+ *
+ * `prefs` is optional and defaults to the metric/SG/EBC set — pass
+ * the user's preferences to honor their unit choices in the output.
  */
-export async function exportRecipeHtml(recipe: BeerJsonRecipe): Promise<ExportResult> {
+export async function exportRecipeHtml(
+  recipe: BeerJsonRecipe,
+  prefs: UnitPreferences = DEFAULT_PREFS,
+): Promise<ExportResult> {
   return saveTextFile({
     filename: `${slugify(recipe.name)}.html`,
     extension: "html",
     filterName: "HTML",
     mime: "text/html",
-    contents: recipeToPrintableHtml(recipe),
+    contents: recipeToPrintableHtml(recipe, prefs),
   });
 }
 
 /** Standalone HTML document for printing — black on white, no externals. */
-export function recipeToPrintableHtml(r: BeerJsonRecipe): string {
+export function recipeToPrintableHtml(
+  r: BeerJsonRecipe,
+  prefs: UnitPreferences = DEFAULT_PREFS,
+): string {
   const sections: string[] = [];
   const metaTag =
     r.style?.category_number !== undefined && r.style?.style_letter
@@ -150,11 +165,13 @@ export function recipeToPrintableHtml(r: BeerJsonRecipe): string {
 
   // Targets strip
   const targets: string[] = [];
-  if (r.original_gravity) targets.push(tile("OG", r.original_gravity.value.toFixed(3)));
-  if (r.final_gravity) targets.push(tile("FG", r.final_gravity.value.toFixed(3)));
+  if (r.original_gravity)
+    targets.push(tile("OG", formatSpecificGravity(r.original_gravity.value, prefs).display));
+  if (r.final_gravity)
+    targets.push(tile("FG", formatSpecificGravity(r.final_gravity.value, prefs).display));
   if (r.ibu_estimate?.ibu) targets.push(tile("IBU", String(r.ibu_estimate.ibu.value)));
   if (r.alcohol_by_volume) targets.push(tile("ABV", `${r.alcohol_by_volume.value.toFixed(1)}%`));
-  if (r.color_estimate) targets.push(tile("Color", `${r.color_estimate.value} ${r.color_estimate.unit}`));
+  if (r.color_estimate) targets.push(tile("Color", formatColor(r.color_estimate, prefs).display));
   if (targets.length > 0) sections.push(`<section class="tiles">${targets.join("")}</section>`);
 
   if (r.ingredients.fermentable_additions.length > 0) {
@@ -547,13 +564,14 @@ export async function exportSessionJson(session: WerbSession): Promise<ExportRes
 export async function exportSessionHtml(
   session: WerbSession,
   recipe?: BeerJsonRecipe,
+  prefs: UnitPreferences = DEFAULT_PREFS,
 ): Promise<ExportResult> {
   return saveTextFile({
     filename: sessionFilename(session, "html"),
     extension: "html",
     filterName: "HTML",
     mime: "text/html",
-    contents: sessionToPrintableHtml(session, recipe),
+    contents: sessionToPrintableHtml(session, recipe, prefs),
   });
 }
 
@@ -573,6 +591,7 @@ function sessionFilename(session: WerbSession, ext: string): string {
 export function sessionToPrintableHtml(
   session: WerbSession,
   recipe?: BeerJsonRecipe,
+  prefs: UnitPreferences = DEFAULT_PREFS,
 ): string {
   const sections: string[] = [];
 
@@ -591,11 +610,13 @@ export function sessionToPrintableHtml(
   // read as a matched set.
   if (recipe) {
     const targets: string[] = [];
-    if (recipe.original_gravity) targets.push(tile("OG", recipe.original_gravity.value.toFixed(3)));
-    if (recipe.final_gravity) targets.push(tile("FG", recipe.final_gravity.value.toFixed(3)));
+    if (recipe.original_gravity)
+      targets.push(tile("OG", formatSpecificGravity(recipe.original_gravity.value, prefs).display));
+    if (recipe.final_gravity)
+      targets.push(tile("FG", formatSpecificGravity(recipe.final_gravity.value, prefs).display));
     if (recipe.ibu_estimate?.ibu) targets.push(tile("IBU", String(recipe.ibu_estimate.ibu.value)));
     if (recipe.alcohol_by_volume) targets.push(tile("ABV", `${recipe.alcohol_by_volume.value.toFixed(1)}%`));
-    if (recipe.color_estimate) targets.push(tile("Color", `${recipe.color_estimate.value} ${recipe.color_estimate.unit}`));
+    if (recipe.color_estimate) targets.push(tile("Color", formatColor(recipe.color_estimate, prefs).display));
     if (targets.length > 0) sections.push(`<section class="tiles">${targets.join("")}</section>`);
   }
 

@@ -208,7 +208,7 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
                 Edit recipe
               </button>
             )}
-            <ExportMenu recipe={recipe} />
+            <ExportMenu recipe={recipe} prefs={prefs} />
           </div>
         </header>
 
@@ -487,7 +487,7 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
 
 // ─── Subcomponents ─────────────────────────────────────────────────────
 
-function ExportMenu({ recipe }: { recipe: BeerJsonRecipe }) {
+function ExportMenu({ recipe, prefs }: { recipe: BeerJsonRecipe; prefs: UnitPreferences }) {
   const [open, setOpen] = useState(false);
 
   const run = async (fn: () => Promise<{ error?: string | undefined }>) => {
@@ -514,7 +514,7 @@ function ExportMenu({ recipe }: { recipe: BeerJsonRecipe }) {
     {
       label: "Printable HTML / PDF",
       sublabel: "Self-contained .html — open in any browser, print to PDF.",
-      fn: () => exportRecipeHtml(recipe),
+      fn: () => exportRecipeHtml(recipe, prefs),
     },
   ];
 

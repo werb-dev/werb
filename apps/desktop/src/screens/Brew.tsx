@@ -12,6 +12,14 @@ import { computeWater } from "@werb/calc";
 import { useBrewSession, useScreenWakeLock, useTick } from "../hooks/useBrewSession.ts";
 import { profileToWaterOverrides, type ProfileWithId } from "../data/equipment.ts";
 import { usePersistedJson } from "../storage/index.ts";
+import { useUnits } from "../data/preferences.tsx";
+import {
+  formatCelsius,
+  formatLiters,
+  formatMassLarge,
+  formatMassSmall,
+  type UnitPreferences,
+} from "../data/units-format.ts";
 
 interface BrewScreenProps {
   recipeId: string;
@@ -92,6 +100,7 @@ export function BrewScreen({ recipeId, recipe, sessionId, activeProfile, onBack 
   const brew = useBrewSession(recipeId, recipe, sessionId);
   const tick = useTick(1000);
   const wakeLockHeld = useScreenWakeLock(brew.session?.status === "in_progress");
+  const prefs = useUnits();
 
   const ctx = useMemo<BrewContext>(() => {
     const water = computeWater(recipeToWaterInput(recipe, profileToWaterOverrides(activeProfile)));
@@ -141,8 +150,8 @@ export function BrewScreen({ recipeId, recipe, sessionId, activeProfile, onBack 
           onBack={onBack}
         />
 
-        {ctx.hltFit && ctx.hltFit.kind !== "ok" && <HltFitBanner fit={ctx.hltFit} />}
-        {ctx.kettleFit && ctx.kettleFit.kind !== "ok" && <KettleFitBanner fit={ctx.kettleFit} />}
+        {ctx.hltFit && ctx.hltFit.kind !== "ok" && <HltFitBanner fit={ctx.hltFit} prefs={prefs} />}
+        {ctx.kettleFit && ctx.kettleFit.kind !== "ok" && <KettleFitBanner fit={ctx.kettleFit} prefs={prefs} />}
 
         {activeStep ? (
           <ActiveStepCard
@@ -151,6 +160,7 @@ export function BrewScreen({ recipeId, recipe, sessionId, activeProfile, onBack 
             ctx={ctx}
             sessionId={session.id}
             onFinish={() => brew.finishStep(activeStep.id)}
+            prefs={prefs}
           />
         ) : session.status === "completed" ? (
           <CompletedCard session={session} />
@@ -171,6 +181,7 @@ export function BrewScreen({ recipeId, recipe, sessionId, activeProfile, onBack 
                 onFinish={() => brew.finishStep(step.id)}
                 onNotes={(notes) => brew.setStepNotes(step.id, notes)}
                 disabled={session.status === "completed"}
+                prefs={prefs}
               />
             ))}
           </ol>
@@ -253,7 +264,14 @@ function Header({
   );
 }
 
-function HltFitBanner({ fit }: { fit: Exclude<HltFit, { kind: "ok" }> }) {
+function HltFitBanner({
+  fit,
+  prefs,
+}: {
+  fit: Exclude<HltFit, { kind: "ok" }>;
+  prefs: UnitPreferences;
+}) {
+  const vol = (l: number) => formatLiters(l, prefs).display;
   if (fit.kind === "overflow") {
     const label = fit.which === "strike" ? "Strike water" : "Sparge water";
     return (
@@ -262,8 +280,8 @@ function HltFitBanner({ fit }: { fit: Exclude<HltFit, { kind: "ok" }> }) {
           HLT too small
         </p>
         <p className="text-body-sm text-text mt-1">
-          {label} ({fit.volumeL.toFixed(1)} L) exceeds your HLT usable capacity (
-          {fit.capacityL.toFixed(1)} L). You can't heat this batch in one pass — split the
+          {label} ({vol(fit.volumeL)}) exceeds your HLT usable capacity (
+          {vol(fit.capacityL)}). You can't heat this batch in one pass — split the
           heat or use a larger vessel.
         </p>
       </section>
@@ -275,24 +293,30 @@ function HltFitBanner({ fit }: { fit: Exclude<HltFit, { kind: "ok" }> }) {
         Two-heat session
       </p>
       <p className="text-body-sm text-text mt-1">
-        Strike ({fit.strikeL.toFixed(1)} L) + sparge ({fit.spargeL.toFixed(1)} L) =
-        {" "}
-        {(fit.strikeL + fit.spargeL).toFixed(1)} L exceeds your HLT capacity (
-        {fit.capacityL.toFixed(1)} L). Heat strike first, drain to mash, then heat sparge.
+        Strike ({vol(fit.strikeL)}) + sparge ({vol(fit.spargeL)}) ={" "}
+        {vol(fit.strikeL + fit.spargeL)} exceeds your HLT capacity (
+        {vol(fit.capacityL)}). Heat strike first, drain to mash, then heat sparge.
       </p>
     </section>
   );
 }
 
-function KettleFitBanner({ fit }: { fit: Exclude<KettleFit, { kind: "ok" }> }) {
+function KettleFitBanner({
+  fit,
+  prefs,
+}: {
+  fit: Exclude<KettleFit, { kind: "ok" }>;
+  prefs: UnitPreferences;
+}) {
+  const vol = (l: number) => formatLiters(l, prefs).display;
   return (
     <section className="mb-8 rounded-xl border border-danger bg-danger/10 px-5 py-4">
       <p className="text-caption uppercase tracking-widest text-danger font-medium">
         Kettle too small
       </p>
       <p className="text-body-sm text-text mt-1">
-        Pre-boil volume ({fit.preBoilL.toFixed(1)} L) exceeds your kettle usable
-        capacity ({fit.capacityL.toFixed(1)} L). You'll boil over — reduce batch size
+        Pre-boil volume ({vol(fit.preBoilL)}) exceeds your kettle usable
+        capacity ({vol(fit.capacityL)}). You'll boil over — reduce batch size
         or use a bigger kettle.
       </p>
     </section>
@@ -330,12 +354,14 @@ function ActiveStepCard({
   ctx,
   sessionId,
   onFinish,
+  prefs,
 }: {
   step: SessionStep;
   now: number;
   ctx: BrewContext;
   sessionId: string;
   onFinish: () => void;
+  prefs: UnitPreferences;
 }) {
   const elapsedSec = step.started_at
     ? Math.floor((now - new Date(step.started_at).getTime()) / 1000)
@@ -372,7 +398,7 @@ function ActiveStepCard({
         </div>
       </div>
 
-      <StepInfo step={step} ctx={ctx} elapsedSec={elapsedSec} variant="active" sessionId={sessionId} />
+      <StepInfo step={step} ctx={ctx} elapsedSec={elapsedSec} variant="active" sessionId={sessionId} prefs={prefs} />
 
       <button
         onClick={onFinish}
@@ -395,14 +421,16 @@ function StepInfo({
   elapsedSec,
   variant,
   sessionId,
+  prefs,
 }: {
   step: SessionStep;
   ctx: BrewContext;
   elapsedSec: number;
   variant: "active" | "row";
   sessionId?: string | undefined;
+  prefs: UnitPreferences;
 }) {
-  const stats = stepStats(step, ctx);
+  const stats = stepStats(step, ctx, prefs);
   const showHops = step.kind === "boil" && variant === "active" && ctx.boilHops.length > 0;
   const showCultures =
     step.kind === "ferment_pitch" && variant === "active" && ctx.cultures && ctx.cultures.length > 0;
@@ -420,7 +448,7 @@ function StepInfo({
           <div className="grid grid-cols-3 gap-4">
             {step.target_temperature_c !== undefined && (
               <StatTile
-                value={`${step.target_temperature_c.toFixed(1)}°C`}
+                value={formatCelsius(step.target_temperature_c, prefs).display}
                 label="Target"
                 tone="data"
               />
@@ -436,10 +464,11 @@ function StepInfo({
             boilDurationMin={step.target_duration_min ?? 60}
             elapsedSec={elapsedSec}
             storageKey={`werb.session.${sessionId}.hopAdded.${step.id}`}
+            prefs={prefs}
           />
         )}
-        {showCultures && <CultureList cultures={ctx.cultures!} />}
-        {showMashIn && <MashInList items={ctx.mashFermentables} />}
+        {showCultures && <CultureList cultures={ctx.cultures!} prefs={prefs} />}
+        {showMashIn && <MashInList items={ctx.mashFermentables} prefs={prefs} />}
       </div>
     );
   }
@@ -447,7 +476,7 @@ function StepInfo({
   // Compact row variant: small font, comma-separated.
   const inline: string[] = [];
   if (step.target_temperature_c !== undefined) {
-    inline.push(`${step.target_temperature_c.toFixed(1)}°C`);
+    inline.push(formatCelsius(step.target_temperature_c, prefs).display);
   }
   if (step.target_duration_min !== undefined) {
     inline.push(`${step.target_duration_min} min`);
@@ -467,14 +496,23 @@ interface StatLine {
   tone?: "default" | "data" | "accent";
 }
 
-function stepStats(step: SessionStep, ctx: BrewContext): StatLine[] {
+function stepStats(step: SessionStep, ctx: BrewContext, prefs: UnitPreferences): StatLine[] {
+  // Helpers: format raw L / kg with the user's pref. "Thickness"
+  // L/kg → gal/lb conversion isn't standard — Anglo-American brewers
+  // usually still talk thickness in qt/lb. We keep L/kg as a
+  // metric-only unit for now since it has no clean "imperial
+  // homebrew" equivalent.
+  const vol = (l: number) => formatLiters(l, prefs).display;
+  const mass = (kg: number) =>
+    formatMassLarge({ value: kg, unit: "kg" }, prefs).display;
+
   switch (step.kind) {
     case "prepare_water":
       // Strike volume + a thickness reminder so the brewer can sanity-check
       // before pouring.
       if (ctx.totalMashedKg <= 0) return [];
       return [
-        { value: `${ctx.water.mash_water_l.toFixed(1)} L`, label: "Strike volume" },
+        { value: vol(ctx.water.mash_water_l), label: "Strike volume" },
         {
           value: `${(ctx.water.mash_water_l / ctx.totalMashedKg).toFixed(2)} L/kg`,
           label: "Thickness",
@@ -483,14 +521,14 @@ function stepStats(step: SessionStep, ctx: BrewContext): StatLine[] {
     case "mash_in":
       if (ctx.totalMashedKg <= 0) return [];
       return [
-        { value: `${ctx.totalMashedKg.toFixed(2)} kg`, label: "Total grain" },
+        { value: mass(ctx.totalMashedKg), label: "Total grain" },
         { value: `${ctx.mashFermentables.length}`, label: "Items" },
       ];
     case "mash":
       if (ctx.totalMashedKg <= 0) return [];
       return [
-        { value: `${ctx.water.mash_water_l.toFixed(1)} L`, label: "Strike water" },
-        { value: `${ctx.totalMashedKg.toFixed(2)} kg`, label: "Grain" },
+        { value: vol(ctx.water.mash_water_l), label: "Strike water" },
+        { value: mass(ctx.totalMashedKg), label: "Grain" },
         {
           value: `${(ctx.water.mash_water_l / ctx.totalMashedKg).toFixed(2)} L/kg`,
           label: "Thickness",
@@ -499,31 +537,26 @@ function stepStats(step: SessionStep, ctx: BrewContext): StatLine[] {
     case "sparge":
       return [
         {
-          value: ctx.water.sparge_water_l > 0
-            ? `${ctx.water.sparge_water_l.toFixed(1)} L`
-            : "—",
+          value: ctx.water.sparge_water_l > 0 ? vol(ctx.water.sparge_water_l) : "—",
           label: "Sparge water",
         },
-        { value: `${ctx.water.pre_boil_volume_l.toFixed(1)} L`, label: "Pre-boil target" },
-        { value: `${ctx.water.grain_absorption_l.toFixed(1)} L`, label: "Absorbed" },
+        { value: vol(ctx.water.pre_boil_volume_l), label: "Pre-boil target" },
+        { value: vol(ctx.water.grain_absorption_l), label: "Absorbed" },
       ];
     case "boil":
       return [
-        { value: `${ctx.water.pre_boil_volume_l.toFixed(1)} L`, label: "Pre-boil" },
-        { value: `${ctx.water.boil_off_l.toFixed(1)} L`, label: "Boil-off" },
+        { value: vol(ctx.water.pre_boil_volume_l), label: "Pre-boil" },
+        { value: vol(ctx.water.boil_off_l), label: "Boil-off" },
         { value: `${ctx.boilHops.length}`, label: "Hop additions" },
       ];
     case "chill":
       return [
-        {
-          value: `${ctx.water.post_cool_kettle_volume_l.toFixed(1)} L`,
-          label: "In kettle",
-        },
+        { value: vol(ctx.water.post_cool_kettle_volume_l), label: "In kettle" },
       ];
     case "transfer":
       return [
         {
-          value: `${(ctx.water.post_cool_kettle_volume_l - 0.5).toFixed(1)} L`,
+          value: vol(ctx.water.post_cool_kettle_volume_l - 0.5),
           label: "To fermenter",
         },
       ];
@@ -556,11 +589,13 @@ function HopSchedule({
   boilDurationMin,
   elapsedSec,
   storageKey,
+  prefs,
 }: {
   hops: BoilHop[];
   boilDurationMin: number;
   elapsedSec: number;
   storageKey: string;
+  prefs: UnitPreferences;
 }) {
   // Per-hop "added" marks, persisted via the active StorageBackend so
   // they survive a navigation away and back during the boil. Stored as
@@ -617,7 +652,7 @@ function HopSchedule({
                     isAdded ? "text-text-muted line-through" : "text-text"
                   }`}
                 >
-                  {h.amount_g.toFixed(0)} g {h.name}
+                  {formatMassSmall({ value: h.amount_g, unit: "g" }, prefs).display} {h.name}
                   {h.alpha_acid_pct > 0 && (
                     <span className="text-text-muted font-mono text-caption ml-2">
                       {h.alpha_acid_pct.toFixed(1)}% AA
@@ -653,7 +688,13 @@ function HopSchedule({
   );
 }
 
-function MashInList({ items }: { items: MashFermentable[] }) {
+function MashInList({
+  items,
+  prefs,
+}: {
+  items: MashFermentable[];
+  prefs: UnitPreferences;
+}) {
   return (
     <div className="rounded-lg bg-bg border border-border p-4">
       <p className="text-caption uppercase tracking-widest text-text-muted mb-3">
@@ -667,7 +708,7 @@ function MashInList({ items }: { items: MashFermentable[] }) {
               <p className="text-caption text-text-muted capitalize">{f.type}</p>
             </div>
             <p className="font-mono text-mono-lg shrink-0 tabular-nums">
-              {f.amount_kg.toFixed(2)} kg
+              {formatMassLarge({ value: f.amount_kg, unit: "kg" }, prefs).display}
             </p>
           </li>
         ))}
@@ -678,8 +719,14 @@ function MashInList({ items }: { items: MashFermentable[] }) {
 
 function CultureList({
   cultures,
+  prefs: _prefs,
 }: {
   cultures: NonNullable<BeerJsonRecipe["ingredients"]["culture_additions"]>;
+  // Currently unused — culture amounts come through as
+  // {value, unit} (mass / volume / pkg) that the Brew screen renders
+  // as-is. Hooks into the formatter later if we want to convert
+  // pkg → g or similar.
+  prefs: UnitPreferences;
 }) {
   return (
     <div className="rounded-lg bg-bg border border-border p-4">
@@ -717,6 +764,7 @@ function TimelineRow({
   onFinish,
   onNotes,
   disabled,
+  prefs,
 }: {
   step: SessionStep;
   now: number;
@@ -726,6 +774,7 @@ function TimelineRow({
   onFinish: () => void;
   onNotes: (notes: string) => void;
   disabled: boolean;
+  prefs: UnitPreferences;
 }) {
   const icon =
     step.status === "done"
@@ -759,7 +808,7 @@ function TimelineRow({
           <div className="flex items-baseline justify-between gap-4">
             <p className="text-body font-medium">{step.label}</p>
           </div>
-          <StepInfo step={step} ctx={ctx} elapsedSec={elapsedSec} variant="row" />
+          <StepInfo step={step} ctx={ctx} elapsedSec={elapsedSec} variant="row" prefs={prefs} />
           {step.status === "active" && elapsedSec > 0 && (
             <p className="font-mono text-caption text-accent mt-1 tabular-nums">
               {formatDuration(elapsedSec)} elapsed
