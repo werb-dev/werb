@@ -1,6 +1,11 @@
 import type { BeerJsonFile, BeerJsonRecipe } from "@werb/adapters";
 import { validateBeerJson } from "@werb/validate";
 import type { StorageBackend } from "../storage/index.ts";
+import { isTauri } from "./runtime.ts";
+// Statically imported so triggering the file picker doesn't cross a
+// microtask boundary — iOS Safari requires `input.click()` to fire in
+// the same task as the user's tap.
+import { pickAndReadTextFile } from "./browser-fs.ts";
 
 /**
  * Recipe storage layer.
@@ -140,33 +145,36 @@ export function parseBeerJsonText(raw: string): ImportResult {
  * user cancels.
  */
 export async function importBeerJsonFromDisk(): Promise<ImportResult> {
-  const { isTauri } = await import("@tauri-apps/api/core");
   if (isTauri()) {
-    const { open } = await import("@tauri-apps/plugin-dialog");
-    const selected = await open({
-      multiple: false,
-      filters: [{ name: "BeerJSON", extensions: ["beerjson", "json"] }],
-      title: "Import a .beerjson recipe",
-    });
-    if (typeof selected !== "string") return { recipes: [] }; // cancelled
-    const { readTextFile } = await import("@tauri-apps/plugin-fs");
-    let raw: string;
-    try {
-      raw = await readTextFile(selected);
-    } catch (err) {
-      return { recipes: [], error: `Read failed: ${(err as Error).message}` };
-    }
-    return parseBeerJsonText(raw);
+    return importBeerJsonViaTauri();
   }
-
-  // Browser fallback. No accept filter — iOS / iPadOS would grey out
-  // .beerjson files in the Files app, and the picker can't be unfiltered
-  // selectively. The validator inside parseBeerJsonText surfaces a
-  // clear error if the user picks something else.
-  const { pickAndReadTextFile } = await import("./browser-fs.ts");
-  const picked = await pickAndReadTextFile();
+  // Browser fallback. pickAndReadTextFile() must be called in the same
+  // task as the user's tap on iOS, so this is a plain sync call with
+  // no awaits in front of it. No accept filter — iOS / iPadOS would
+  // grey out .beerjson files. The validator inside parseBeerJsonText
+  // surfaces a clear error if the user picks something else.
+  const picker = pickAndReadTextFile();
+  const picked = await picker;
   if (!picked) return { recipes: [] };
   return parseBeerJsonText(picked.text);
+}
+
+async function importBeerJsonViaTauri(): Promise<ImportResult> {
+  const { open } = await import("@tauri-apps/plugin-dialog");
+  const selected = await open({
+    multiple: false,
+    filters: [{ name: "BeerJSON", extensions: ["beerjson", "json"] }],
+    title: "Import a .beerjson recipe",
+  });
+  if (typeof selected !== "string") return { recipes: [] }; // cancelled
+  const { readTextFile } = await import("@tauri-apps/plugin-fs");
+  let raw: string;
+  try {
+    raw = await readTextFile(selected);
+  } catch (err) {
+    return { recipes: [], error: `Read failed: ${(err as Error).message}` };
+  }
+  return parseBeerJsonText(raw);
 }
 
 /**
@@ -201,32 +209,33 @@ export async function parseBeerXmlText(raw: string): Promise<ImportResult> {
  * Returns `{ recipes: [] }` with no error if the user cancels.
  */
 export async function importBeerXmlFromDisk(): Promise<ImportResult> {
-  const { isTauri } = await import("@tauri-apps/api/core");
-
-  let raw: string;
   if (isTauri()) {
-    const { open } = await import("@tauri-apps/plugin-dialog");
-    const selected = await open({
-      multiple: false,
-      filters: [{ name: "BeerXML", extensions: ["beerxml", "xml"] }],
-      title: "Import a .beerxml recipe",
-    });
-    if (typeof selected !== "string") return { recipes: [] }; // cancelled
-    const { readTextFile } = await import("@tauri-apps/plugin-fs");
-    try {
-      raw = await readTextFile(selected);
-    } catch (err) {
-      return { recipes: [], error: `Read failed: ${(err as Error).message}` };
-    }
-  } else {
-    // No accept filter — iOS / iPadOS greys out .beerxml files because
-    // that extension isn't a known UTType. The WASM parser surfaces a
-    // clear error if the user picks something that isn't XML.
-    const { pickAndReadTextFile } = await import("./browser-fs.ts");
-    const picked = await pickAndReadTextFile();
-    if (!picked) return { recipes: [] };
-    raw = picked.text;
+    return importBeerXmlViaTauri();
   }
+  // Browser fallback. pickAndReadTextFile() runs synchronously up to
+  // input.click() so the iOS user-gesture token survives. No accept
+  // filter — iPadOS greys out .beerxml files; the WASM parser
+  // surfaces a clear error if the picked file isn't XML.
+  const picker = pickAndReadTextFile();
+  const picked = await picker;
+  if (!picked) return { recipes: [] };
+  return parseBeerXmlText(picked.text);
+}
 
+async function importBeerXmlViaTauri(): Promise<ImportResult> {
+  const { open } = await import("@tauri-apps/plugin-dialog");
+  const selected = await open({
+    multiple: false,
+    filters: [{ name: "BeerXML", extensions: ["beerxml", "xml"] }],
+    title: "Import a .beerxml recipe",
+  });
+  if (typeof selected !== "string") return { recipes: [] }; // cancelled
+  const { readTextFile } = await import("@tauri-apps/plugin-fs");
+  let raw: string;
+  try {
+    raw = await readTextFile(selected);
+  } catch (err) {
+    return { recipes: [], error: `Read failed: ${(err as Error).message}` };
+  }
   return parseBeerXmlText(raw);
 }

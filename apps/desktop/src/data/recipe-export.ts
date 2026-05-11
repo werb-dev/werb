@@ -1,4 +1,9 @@
 import type { BeerJsonRecipe } from "@werb/adapters";
+import { isTauri } from "./runtime.ts";
+// Static import: triggering the download anchor must stay in the user-
+// gesture task on iOS, which means no awaits between the user's tap
+// and the anchor's click().
+import { downloadTextFile } from "./browser-fs.ts";
 
 /**
  * Recipe export — BeerJSON, BeerXML, and "print to PDF" via the
@@ -50,35 +55,42 @@ async function saveTextFile(
   contents: string,
 ): Promise<ExportResult> {
   const filename = `${slugify(recipe.name)}.${extension}`;
-  const { isTauri } = await import("@tauri-apps/api/core");
 
   if (isTauri()) {
-    const { save } = await import("@tauri-apps/plugin-dialog");
-    const selected = await save({
-      defaultPath: filename,
-      filters: [{ name: filterName, extensions: [extension] }],
-    });
-    if (typeof selected !== "string") return { written: false }; // cancelled
-    const { writeTextFile } = await import("@tauri-apps/plugin-fs");
-    try {
-      await writeTextFile(selected, contents);
-      return { written: true, path: selected };
-    } catch (err) {
-      const detail = err instanceof Error ? err.message : String(err);
-      return { written: false, error: `Write failed: ${detail || "unknown error"}` };
-    }
+    return saveTextFileViaTauri(filename, filterName, extension, contents);
   }
 
-  // Browser: trigger a download. No way to confirm where the user saved
-  // it (or whether they did), so we report success once the download
-  // anchor has been clicked.
-  const { downloadTextFile } = await import("./browser-fs.ts");
+  // Browser: trigger a download. anchor.click() inside downloadTextFile
+  // is the user-gesture-sensitive step on iOS — keep it in the same
+  // task as the user's tap by avoiding awaits in front of it.
   try {
     downloadTextFile(filename, contents, mime);
     return { written: true };
   } catch (err) {
     const detail = err instanceof Error ? err.message : String(err);
     return { written: false, error: `Download failed: ${detail || "unknown error"}` };
+  }
+}
+
+async function saveTextFileViaTauri(
+  filename: string,
+  filterName: string,
+  extension: "beerjson" | "xml" | "html",
+  contents: string,
+): Promise<ExportResult> {
+  const { save } = await import("@tauri-apps/plugin-dialog");
+  const selected = await save({
+    defaultPath: filename,
+    filters: [{ name: filterName, extensions: [extension] }],
+  });
+  if (typeof selected !== "string") return { written: false }; // cancelled
+  const { writeTextFile } = await import("@tauri-apps/plugin-fs");
+  try {
+    await writeTextFile(selected, contents);
+    return { written: true, path: selected };
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
+    return { written: false, error: `Write failed: ${detail || "unknown error"}` };
   }
 }
 
