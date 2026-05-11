@@ -29,6 +29,7 @@ export interface WerbSession {
    */
   measurements?: Measurement[];
   notes?: string;
+  tasting?: Tasting;
 }
 export interface SessionStep {
   id: string;
@@ -64,4 +65,50 @@ export interface Measurement {
   value: number;
   step_id?: string;
   notes?: string;
+}
+/**
+ * Post-brew sensory evaluation. Filled in once the beer is ready to drink — recorded against the session so each brew of the same recipe has its own tasting history.
+ */
+export interface Tasting {
+  /**
+   * When the brewer tasted the beer (typically 2-6 weeks after package, depending on the style).
+   */
+  tasted_at: string;
+  axes: SensoryAxes;
+  /**
+   * Stars. 1 = drain pour, 5 = world class.
+   */
+  overall_rating: number;
+  /**
+   * Free-form tasting notes — aroma observations, what worked, what to change next time.
+   */
+  notes?: string;
+  /**
+   * Short labels surfaced as chips on the recipe screen so future brews see concrete lessons (e.g. 'too bitter', 'great head', 'oxidation', 'best one yet').
+   */
+  tags?: string[];
+}
+/**
+ * 7-axis sensory profile, rendered as a radar chart on the recipe and journal screens. Each axis is 0-5; 0 means 'absent', 5 means 'pronounced'.
+ */
+export interface SensoryAxes {
+  bitterness: number;
+  sweetness: number;
+  sourness: number;
+  /**
+   * Combined hop aroma + flavor — how much hop expression is present in the glass, irrespective of bitterness.
+   */
+  hop_character: number;
+  /**
+   * Maltiness — bready, biscuity, caramel, roast. Style-dependent baseline.
+   */
+  malt_character: number;
+  /**
+   * Mouthfeel weight — thin to full. Not the same as gravity.
+   */
+  body: number;
+  /**
+   * Perceived carbonation — flat to highly effervescent.
+   */
+  carbonation: number;
 }

@@ -3,7 +3,7 @@ import {
   recipeToSessionPlan,
   type BeerJsonRecipe,
 } from "@werb/adapters";
-import type { Measurement, WerbSession } from "@werb/types";
+import type { Measurement, Tasting, WerbSession } from "@werb/types";
 import { useStorage, type StorageBackend } from "../storage/index.ts";
 
 const STORAGE_PREFIX = "werb.session.";
@@ -19,11 +19,27 @@ export function sessionStorageKey(sessionId: string): string {
 
 function parseSession(raw: string | null): WerbSession | null {
   if (!raw) return null;
+  let parsed: unknown;
   try {
-    return JSON.parse(raw) as WerbSession;
+    parsed = JSON.parse(raw);
   } catch {
     return null;
   }
+  // The `werb.session.` prefix is shared with sub-keys like
+  // `werb.session.<id>.hopAdded.<step>` (HopSchedule persistence).
+  // Reject anything missing the required session fields so list-scans
+  // don't trip over hop marks and assume they're sessions.
+  if (
+    !parsed ||
+    typeof parsed !== "object" ||
+    Array.isArray(parsed) ||
+    typeof (parsed as WerbSession).id !== "string" ||
+    typeof (parsed as WerbSession).recipe_id !== "string" ||
+    typeof (parsed as WerbSession).started_at !== "string"
+  ) {
+    return null;
+  }
+  return parsed as WerbSession;
 }
 
 function isLive(session: WerbSession): boolean {
@@ -246,6 +262,19 @@ export function useBrewSession(
     [update],
   );
 
+  const setTasting = useCallback(
+    (tasting: Tasting | null) => {
+      update((s) => {
+        if (tasting === null) {
+          delete s.tasting;
+        } else {
+          s.tasting = tasting;
+        }
+      });
+    },
+    [update],
+  );
+
   return {
     session,
     activeStep: session?.steps.find((s) => s.status === "active") ?? null,
@@ -257,6 +286,7 @@ export function useBrewSession(
     abandon,
     addMeasurement,
     removeMeasurement,
+    setTasting,
   };
 }
 

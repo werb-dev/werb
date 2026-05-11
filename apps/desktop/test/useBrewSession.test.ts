@@ -178,6 +178,62 @@ describe("useBrewSession", () => {
     expect(result.current.session!.measurements![0]!.step_id).toBe(second!.id);
   });
 
+  it("setTasting writes a sensory record onto the session", () => {
+    const { wrapper } = makeStorageWrapper();
+    const { result } = renderHook(() => useBrewSession(RECIPE_ID, RECIPE), { wrapper });
+
+    act(() => result.current.start());
+    act(() => {
+      result.current.setTasting({
+        tasted_at: "2026-04-01T12:00:00.000Z",
+        axes: {
+          bitterness: 4,
+          sweetness: 2,
+          sourness: 0,
+          hop_character: 4,
+          malt_character: 3,
+          body: 3,
+          carbonation: 3,
+        },
+        overall_rating: 4,
+        notes: "Great hop expression, a bit too bitter for the style.",
+        tags: ["too bitter", "great head"],
+      });
+    });
+
+    const t = result.current.session!.tasting!;
+    expect(t.overall_rating).toBe(4);
+    expect(t.axes.bitterness).toBe(4);
+    expect(t.tags).toEqual(["too bitter", "great head"]);
+    expect(t.notes).toBe("Great hop expression, a bit too bitter for the style.");
+  });
+
+  it("setTasting(null) removes a previously-saved tasting", () => {
+    const { wrapper } = makeStorageWrapper();
+    const { result } = renderHook(() => useBrewSession(RECIPE_ID, RECIPE), { wrapper });
+
+    act(() => result.current.start());
+    act(() => {
+      result.current.setTasting({
+        tasted_at: "2026-04-01T12:00:00.000Z",
+        axes: {
+          bitterness: 3,
+          sweetness: 3,
+          sourness: 0,
+          hop_character: 3,
+          malt_character: 3,
+          body: 3,
+          carbonation: 3,
+        },
+        overall_rating: 3,
+      });
+    });
+    expect(result.current.session!.tasting).toBeDefined();
+
+    act(() => result.current.setTasting(null));
+    expect(result.current.session!.tasting).toBeUndefined();
+  });
+
   it("removeMeasurement deletes by timestamp", () => {
     const { wrapper } = makeStorageWrapper();
     const { result } = renderHook(() => useBrewSession(RECIPE_ID, RECIPE), { wrapper });

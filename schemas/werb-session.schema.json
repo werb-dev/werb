@@ -42,6 +42,10 @@
     },
     "notes": {
       "type": "string"
+    },
+    "tasting": {
+      "$ref": "#/$defs/Tasting",
+      "description": "Post-brew sensory evaluation. Filled in once the beer is ready to drink — recorded against the session so each brew of the same recipe has its own tasting history."
     }
   },
   "$defs": {
@@ -100,6 +104,85 @@
         "value": { "type": "number" },
         "step_id": { "type": "string" },
         "notes": { "type": "string" }
+      }
+    },
+    "Tasting": {
+      "title": "Tasting",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tasted_at",
+        "axes",
+        "overall_rating"
+      ],
+      "properties": {
+        "tasted_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the brewer tasted the beer (typically 2-6 weeks after package, depending on the style)."
+        },
+        "axes": {
+          "$ref": "#/$defs/SensoryAxes",
+          "description": "7-axis sensory profile, rendered as a radar chart on the recipe and journal screens. Each axis is 0-5; 0 means 'absent', 5 means 'pronounced'."
+        },
+        "overall_rating": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5,
+          "description": "Stars. 1 = drain pour, 5 = world class."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Free-form tasting notes — aroma observations, what worked, what to change next time."
+        },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Short labels surfaced as chips on the recipe screen so future brews see concrete lessons (e.g. 'too bitter', 'great head', 'oxidation', 'best one yet')."
+        }
+      }
+    },
+    "SensoryAxes": {
+      "title": "SensoryAxes",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "bitterness",
+        "sweetness",
+        "sourness",
+        "hop_character",
+        "malt_character",
+        "body",
+        "carbonation"
+      ],
+      "properties": {
+        "bitterness": { "type": "number", "minimum": 0, "maximum": 5 },
+        "sweetness": { "type": "number", "minimum": 0, "maximum": 5 },
+        "sourness": { "type": "number", "minimum": 0, "maximum": 5 },
+        "hop_character": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 5,
+          "description": "Combined hop aroma + flavor — how much hop expression is present in the glass, irrespective of bitterness."
+        },
+        "malt_character": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 5,
+          "description": "Maltiness — bready, biscuity, caramel, roast. Style-dependent baseline."
+        },
+        "body": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 5,
+          "description": "Mouthfeel weight — thin to full. Not the same as gravity."
+        },
+        "carbonation": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 5,
+          "description": "Perceived carbonation — flat to highly effervescent."
+        }
       }
     }
   }

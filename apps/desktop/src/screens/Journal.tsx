@@ -26,7 +26,7 @@ export function JournalScreen({
   onExportJson,
   onExportHtml,
 }: JournalScreenProps) {
-  const { sessions, loading } = useBrewLog();
+  const { sessions, loading, error } = useBrewLog();
   const counts = countByStatus(sessions);
 
   return (
@@ -50,6 +50,15 @@ export function JournalScreen({
             </p>
           )}
         </header>
+
+        {error && (
+          <div className="mb-6 rounded-xl border border-warning bg-warning/10 px-4 sm:px-5 py-3 sm:py-4">
+            <p className="text-caption uppercase tracking-widest text-warning font-medium">
+              Could not load brew log
+            </p>
+            <p className="text-body-sm text-text mt-1 font-mono break-all">{error}</p>
+          </div>
+        )}
 
         {loading ? (
           <Skeleton />
