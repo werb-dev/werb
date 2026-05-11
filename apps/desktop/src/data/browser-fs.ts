@@ -29,16 +29,27 @@ export async function pickAndReadTextFile(
 
     let settled = false;
     // True between "change fired with a file" and "finish has been
-    // called with that file." The focus-fallback timer checks this
-    // so an in-flight file.text() isn't preempted into a null.
+    // called with that file." All fallback timers check this so an
+    // in-flight file.text() read isn't preempted into a null.
     let selectionInProgress = false;
 
     const finish = (result: { name: string; text: string } | null) => {
       if (settled) return;
       settled = true;
+      clearTimeout(safetyTimer);
       window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+      document.removeEventListener("pointerup", onPointerUp, true);
       input.remove();
       resolve(result);
+    };
+
+    // Schedule a "treat as cancelled" check after a short delay, so a
+    // `change` event landing in the same tick can still win the race.
+    const checkSoon = () => {
+      setTimeout(() => {
+        if (!selectionInProgress) finish(null);
+      }, 300);
     };
 
     input.addEventListener("change", async () => {
@@ -56,26 +67,37 @@ export async function pickAndReadTextFile(
       }
     });
 
-    // Cancellation detection.
+    // Layered cancellation detection — the picker doesn't give us a
+    // single reliable signal across every browser × runtime combo we
+    // care about, so we listen for whichever fires first.
     //
-    // Modern browsers (Chrome 113+ / Safari 16.4+ / Firefox 91+) fire
-    // a `cancel` event when the picker is dismissed without a
-    // selection — the clean signal.
-    //
-    // Older WebKit (iPadOS 16.3 and below) doesn't fire `cancel`, so
-    // we rely on the window `focus` event: when the picker closes
-    // (either way), the page regains focus. The 300 ms delay gives
-    // the `change` event a chance to win if the user did pick a file
-    // — the `selectionInProgress` guard prevents the timer from
-    // racing the in-flight file.text() read.
+    //   1. `cancel` event — clean signal in Chrome 113+ / Safari
+    //      16.4+ / Firefox 91+. Often missing in iPadOS PWAs run
+    //      from the home screen.
+    //   2. window `focus` — desktop browsers regain focus when the
+    //      picker closes.
+    //   3. `visibilitychange` → "visible" — most reliable on mobile,
+    //      where opening a system picker hides the page.
+    //   4. document `pointerup` — last-resort "user just tapped the
+    //      page" signal, in case neither focus nor visibility fire
+    //      (e.g. some iPadOS PWA contexts where the picker is
+    //      presented as a sheet without blurring the web view).
+    //   5. 60 s safety timer — if everything else fails, eventually
+    //      release the button instead of leaving it stuck forever.
     input.addEventListener("cancel", () => finish(null));
-    const onFocus = () => {
-      setTimeout(() => {
-        if (selectionInProgress) return;
-        finish(null);
-      }, 300);
-    };
+
+    const onFocus = () => checkSoon();
     window.addEventListener("focus", onFocus);
+
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") checkSoon();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
+    const onPointerUp = () => checkSoon();
+    document.addEventListener("pointerup", onPointerUp, true);
+
+    const safetyTimer = setTimeout(() => finish(null), 60_000);
 
     document.body.appendChild(input);
     input.click();
