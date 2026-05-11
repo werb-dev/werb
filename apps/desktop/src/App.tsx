@@ -9,6 +9,7 @@ import { JournalScreen } from "./screens/Journal.tsx";
 import { useRecipes } from "./hooks/useRecipes.ts";
 import { useEquipment } from "./hooks/useEquipment.ts";
 import { BUNDLED_SAMPLES, importBeerJsonFromDisk, importBeerXmlFromDisk } from "./data/recipes.ts";
+import { exportSessionHtml, exportSessionJson } from "./data/recipe-export.ts";
 import { partitionForImport, skippedMessage } from "./data/import-dedup.ts";
 
 type AppState =
@@ -91,7 +92,22 @@ export function App() {
   } else if (state.view === "equipment") {
     screen = <EquipmentScreen api={equipmentApi} />;
   } else if (state.view === "journal") {
-    screen = <JournalScreen onOpenSession={goBrew} />;
+    screen = (
+      <JournalScreen
+        onOpenSession={goBrew}
+        onExportJson={exportSessionJson}
+        onExportHtml={(session) => {
+          // Pass the recipe through when it's still around so the
+          // printout includes target gravities / IBU / etc. If the
+          // recipe was deleted, exportSessionHtml falls back to the
+          // session's own snapshot fields.
+          const recipe = recipesApi.recipes.find(
+            (r) => r.id === session.recipe_id,
+          )?.recipe;
+          return exportSessionHtml(session, recipe);
+        }}
+      />
+    );
   } else if (state.view === "tokens") {
     screen = <DesignTokensShowcase />;
   } else {

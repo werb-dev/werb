@@ -1,9 +1,14 @@
+import { useState } from "react";
 import type { WerbSession } from "@werb/types";
 import { useBrewLog } from "../hooks/useBrewLog.ts";
 
 interface JournalScreenProps {
   /** Open a specific session in the brew screen. */
   onOpenSession: (recipeId: string, sessionId: string) => void;
+  /** Export a session as JSON. */
+  onExportJson: (session: WerbSession) => Promise<{ error?: string }>;
+  /** Export a session as printable HTML. */
+  onExportHtml: (session: WerbSession) => Promise<{ error?: string }>;
 }
 
 /**
@@ -16,7 +21,11 @@ interface JournalScreenProps {
  * measurements. Read-only behavior follows automatically once the
  * session's status is "completed."
  */
-export function JournalScreen({ onOpenSession }: JournalScreenProps) {
+export function JournalScreen({
+  onOpenSession,
+  onExportJson,
+  onExportHtml,
+}: JournalScreenProps) {
   const { sessions, loading } = useBrewLog();
   const counts = countByStatus(sessions);
 
@@ -50,7 +59,12 @@ export function JournalScreen({ onOpenSession }: JournalScreenProps) {
           <ul className="rounded-xl bg-surface border border-border divide-y divide-border">
             {sessions.map((s) => (
               <li key={s.id}>
-                <SessionRow session={s} onOpen={() => onOpenSession(s.recipe_id, s.id)} />
+                <SessionRow
+                  session={s}
+                  onOpen={() => onOpenSession(s.recipe_id, s.id)}
+                  onExportJson={() => onExportJson(s)}
+                  onExportHtml={() => onExportHtml(s)}
+                />
               </li>
             ))}
           </ul>
@@ -63,9 +77,13 @@ export function JournalScreen({ onOpenSession }: JournalScreenProps) {
 function SessionRow({
   session,
   onOpen,
+  onExportJson,
+  onExportHtml,
 }: {
   session: WerbSession;
   onOpen: () => void;
+  onExportJson: () => Promise<{ error?: string }>;
+  onExportHtml: () => Promise<{ error?: string }>;
 }) {
   const stepsDone = session.steps.filter((s) => s.status === "done").length;
   const totalSteps = session.steps.length;
@@ -73,13 +91,13 @@ function SessionRow({
   const duration = sessionDuration(session);
 
   return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className="w-full text-left px-6 py-5 hover:bg-surface-raised/40 transition-colors"
-    >
+    <div className="px-6 py-5 hover:bg-surface-raised/40 transition-colors">
       <div className="flex items-baseline justify-between gap-4">
-        <div className="min-w-0 flex-1">
+        <button
+          type="button"
+          onClick={onOpen}
+          className="min-w-0 flex-1 text-left"
+        >
           <p className="text-body font-medium truncate capitalize">
             {(session.recipe_name ?? "Untitled recipe").toLowerCase()}
           </p>
@@ -98,10 +116,76 @@ function SessionRow({
               {firstNote(session)}
             </p>
           )}
+        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <StatusBadge status={session.status} />
+          <ExportMenu onExportJson={onExportJson} onExportHtml={onExportHtml} />
         </div>
-        <StatusBadge status={session.status} />
       </div>
-    </button>
+    </div>
+  );
+}
+
+function ExportMenu({
+  onExportJson,
+  onExportHtml,
+}: {
+  onExportJson: () => Promise<{ error?: string }>;
+  onExportHtml: () => Promise<{ error?: string }>;
+}) {
+  const [open, setOpen] = useState(false);
+
+  const run = async (fn: () => Promise<{ error?: string }>) => {
+    setOpen(false);
+    const r = await fn();
+    if (r.error) alert(r.error);
+  };
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        title="Export this brew log"
+        aria-label="Export this brew log"
+        className="w-8 h-8 rounded-pill flex items-center justify-center text-text-muted hover:text-text hover:bg-surface transition-colors text-body-sm"
+      >
+        ⋯
+      </button>
+      {open && (
+        <>
+          <div
+            onClick={() => setOpen(false)}
+            className="fixed inset-0 z-40"
+            aria-hidden
+          />
+          <div className="absolute right-0 top-full mt-2 z-50 min-w-[14rem] bg-surface-raised border border-border rounded-lg shadow-xl overflow-hidden">
+            <button
+              type="button"
+              onClick={() => run(onExportHtml)}
+              className="block w-full text-left px-4 py-3 hover:bg-surface focus:bg-surface border-b border-border transition-colors"
+            >
+              <p className="text-body-sm font-medium text-text">
+                Printable HTML / PDF
+              </p>
+              <p className="text-caption text-text-muted mt-0.5">
+                Open in any browser, print to PDF
+              </p>
+            </button>
+            <button
+              type="button"
+              onClick={() => run(onExportJson)}
+              className="block w-full text-left px-4 py-3 hover:bg-surface focus:bg-surface transition-colors"
+            >
+              <p className="text-body-sm font-medium text-text">JSON</p>
+              <p className="text-caption text-text-muted mt-0.5">
+                Full session data — steps, measurements, notes
+              </p>
+            </button>
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 

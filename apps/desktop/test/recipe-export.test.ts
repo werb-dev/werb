@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import type { BeerJsonRecipe } from "@werb/adapters";
-import { recipeToBeerXml } from "../src/data/recipe-export.ts";
+import type { WerbSession } from "@werb/types";
+import { recipeToBeerXml, sessionToPrintableHtml } from "../src/data/recipe-export.ts";
 
 const FULL_RECIPE: BeerJsonRecipe = {
   name: "Cascade IPA",
@@ -208,5 +209,131 @@ describe("recipeToBeerXml", () => {
     expect(xml).not.toContain("<YEASTS>");
     expect(xml).not.toContain("<MISCS>");
     expect(xml).not.toContain("<MASH>");
+  });
+});
+
+// ─── Brew session export ──────────────────────────────────────────────────
+
+const SESSION: WerbSession = {
+  id: "session-1",
+  recipe_id: "recipe-1",
+  recipe_name: "Cascade IPA",
+  status: "completed",
+  started_at: "2026-04-12T09:00:00.000Z",
+  completed_at: "2026-04-12T15:30:00.000Z",
+  steps: [
+    {
+      id: "mash",
+      kind: "mash",
+      label: "Saccharification",
+      status: "done",
+      started_at: "2026-04-12T09:15:00.000Z",
+      completed_at: "2026-04-12T10:15:00.000Z",
+      target_temperature_c: 67,
+      target_duration_min: 60,
+      notes: "Hit target on first try.",
+    },
+    {
+      id: "boil",
+      kind: "boil",
+      label: "Boil",
+      status: "done",
+      started_at: "2026-04-12T11:00:00.000Z",
+      completed_at: "2026-04-12T12:00:00.000Z",
+      target_duration_min: 60,
+    },
+  ],
+  measurements: [
+    {
+      at: "2026-04-12T10:30:00.000Z",
+      kind: "gravity_sg",
+      value: 1.064,
+      step_id: "mash",
+    },
+    {
+      at: "2026-04-12T12:05:00.000Z",
+      kind: "volume_l",
+      value: 22.5,
+      notes: "pre-chill",
+    },
+  ],
+  notes: "Solid brew day overall.",
+};
+
+describe("sessionToPrintableHtml", () => {
+  it("emits a well-formed standalone document", () => {
+    const html = sessionToPrintableHtml(SESSION);
+    expect(html).toMatch(/^<!doctype html>/i);
+    expect(html).toContain("<title>");
+    expect(html).toContain("</html>");
+  });
+
+  it("renders the header with recipe name and brew date", () => {
+    const html = sessionToPrintableHtml(SESSION);
+    expect(html).toContain("Cascade IPA");
+    expect(html).toContain("Brew session");
+    // The completed_at + duration appear in the meta line.
+    expect(html).toMatch(/6 h 30 min|6h\s?30/);
+  });
+
+  it("includes the full step timeline with status and notes", () => {
+    const html = sessionToPrintableHtml(SESSION);
+    expect(html).toContain("Saccharification");
+    expect(html).toContain("Done");
+    expect(html).toContain("Hit target on first try.");
+  });
+
+  it("includes every logged measurement", () => {
+    const html = sessionToPrintableHtml(SESSION);
+    expect(html).toContain("1.064");
+    expect(html).toContain("22.5 L");
+    expect(html).toContain("pre-chill");
+    // Measurements bound to a step name it under "During step".
+    expect(html).toContain("Saccharification");
+  });
+
+  it("surfaces session-level notes in their own section", () => {
+    const html = sessionToPrintableHtml(SESSION);
+    expect(html).toContain("Solid brew day overall.");
+  });
+
+  it("works when the source recipe is missing (recipe was deleted)", () => {
+    // `recipe` is optional; the snapshot fields on the session are
+    // enough to render the document — just without the original
+    // OG/FG/IBU tiles.
+    const html = sessionToPrintableHtml(SESSION);
+    expect(html).not.toContain("section class=\"tiles\"");
+  });
+
+  it("includes recipe target tiles when a recipe is provided", () => {
+    const recipe: BeerJsonRecipe = {
+      name: "Cascade IPA",
+      type: "all grain",
+      author: "Brewer",
+      batch_size: { value: 20, unit: "l" },
+      efficiency: { brewhouse: { value: 75, unit: "%" } },
+      ingredients: { fermentable_additions: [] },
+      original_gravity: { value: 1.064, unit: "sg" },
+      final_gravity: { value: 1.012, unit: "sg" },
+      ibu_estimate: { method: "Tinseth", ibu: { value: 55, unit: "IBUs" } },
+      alcohol_by_volume: { value: 6.8, unit: "%" },
+      color_estimate: { value: 10, unit: "SRM" },
+    };
+    const html = sessionToPrintableHtml(SESSION, recipe);
+    expect(html).toContain('section class="tiles"');
+    expect(html).toContain("1.064");
+    expect(html).toContain("55");
+    expect(html).toContain("6.8%");
+  });
+
+  it("renders in-progress sessions without a duration line", () => {
+    const active: WerbSession = {
+      ...SESSION,
+      status: "in_progress",
+      completed_at: undefined,
+    };
+    const html = sessionToPrintableHtml(active);
+    expect(html).toContain("In progress");
+    expect(html).not.toContain("finished");
   });
 });

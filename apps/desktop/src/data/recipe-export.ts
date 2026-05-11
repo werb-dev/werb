@@ -1,4 +1,5 @@
 import type { BeerJsonRecipe } from "@werb/adapters";
+import type { WerbSession, SessionStep, Measurement } from "@werb/types";
 import { isTauri } from "./runtime.ts";
 // Static import: triggering the download anchor must stay in the user-
 // gesture task on iOS, which means no awaits between the user's tap
@@ -40,6 +41,18 @@ function slugify(name: string): string {
     .slice(0, 60) || "recipe";
 }
 
+interface SaveOptions {
+  /** Default filename suggested in the save dialog / download. */
+  filename: string;
+  /** Single extension for the Tauri dialog filter, e.g. "json", "html". */
+  extension: string;
+  /** Human-readable label for the Tauri dialog filter group. */
+  filterName: string;
+  /** MIME type used for the browser Blob download. */
+  mime: string;
+  contents: string;
+}
+
 /**
  * Save text contents to a file. Desktop: native save dialog + Tauri-fs
  * write, returning the chosen path. Browser: fall back to a Blob +
@@ -47,24 +60,16 @@ function slugify(name: string): string {
  *
  * Returns `{ written: false }` (no error) when the user cancels.
  */
-async function saveTextFile(
-  recipe: BeerJsonRecipe,
-  extension: "beerjson" | "xml" | "html",
-  filterName: string,
-  mime: string,
-  contents: string,
-): Promise<ExportResult> {
-  const filename = `${slugify(recipe.name)}.${extension}`;
-
+async function saveTextFile(opts: SaveOptions): Promise<ExportResult> {
   if (isTauri()) {
-    return saveTextFileViaTauri(filename, filterName, extension, contents);
+    return saveTextFileViaTauri(opts);
   }
 
   // Browser: trigger a download. anchor.click() inside downloadTextFile
   // is the user-gesture-sensitive step on iOS — keep it in the same
   // task as the user's tap by avoiding awaits in front of it.
   try {
-    downloadTextFile(filename, contents, mime);
+    downloadTextFile(opts.filename, opts.contents, opts.mime);
     return { written: true };
   } catch (err) {
     const detail = err instanceof Error ? err.message : String(err);
@@ -72,21 +77,16 @@ async function saveTextFile(
   }
 }
 
-async function saveTextFileViaTauri(
-  filename: string,
-  filterName: string,
-  extension: "beerjson" | "xml" | "html",
-  contents: string,
-): Promise<ExportResult> {
+async function saveTextFileViaTauri(opts: SaveOptions): Promise<ExportResult> {
   const { save } = await import("@tauri-apps/plugin-dialog");
   const selected = await save({
-    defaultPath: filename,
-    filters: [{ name: filterName, extensions: [extension] }],
+    defaultPath: opts.filename,
+    filters: [{ name: opts.filterName, extensions: [opts.extension] }],
   });
   if (typeof selected !== "string") return { written: false }; // cancelled
   const { writeTextFile } = await import("@tauri-apps/plugin-fs");
   try {
-    await writeTextFile(selected, contents);
+    await writeTextFile(selected, opts.contents);
     return { written: true, path: selected };
   } catch (err) {
     const detail = err instanceof Error ? err.message : String(err);
@@ -102,13 +102,13 @@ export async function exportBeerJson(recipe: BeerJsonRecipe): Promise<ExportResu
       recipes: [recipe],
     },
   };
-  return saveTextFile(
-    recipe,
-    "beerjson",
-    "BeerJSON",
-    "application/json",
-    JSON.stringify(file, null, 2),
-  );
+  return saveTextFile({
+    filename: `${slugify(recipe.name)}.beerjson`,
+    extension: "beerjson",
+    filterName: "BeerJSON",
+    mime: "application/json",
+    contents: JSON.stringify(file, null, 2),
+  });
 }
 
 /**
@@ -119,13 +119,13 @@ export async function exportBeerJson(recipe: BeerJsonRecipe): Promise<ExportResu
  * portable.
  */
 export async function exportRecipeHtml(recipe: BeerJsonRecipe): Promise<ExportResult> {
-  return saveTextFile(
-    recipe,
-    "html",
-    "HTML",
-    "text/html",
-    recipeToPrintableHtml(recipe),
-  );
+  return saveTextFile({
+    filename: `${slugify(recipe.name)}.html`,
+    extension: "html",
+    filterName: "HTML",
+    mime: "text/html",
+    contents: recipeToPrintableHtml(recipe),
+  });
 }
 
 /** Standalone HTML document for printing — black on white, no externals. */
@@ -294,13 +294,13 @@ function toL(v: { value: number; unit: string }): number {
 
 /** Export the recipe as a `.xml` (BeerXML 1.0) file. */
 export async function exportBeerXml(recipe: BeerJsonRecipe): Promise<ExportResult> {
-  return saveTextFile(
-    recipe,
-    "xml",
-    "BeerXML",
-    "application/xml",
-    recipeToBeerXml(recipe),
-  );
+  return saveTextFile({
+    filename: `${slugify(recipe.name)}.xml`,
+    extension: "xml",
+    filterName: "BeerXML",
+    mime: "application/xml",
+    contents: recipeToBeerXml(recipe),
+  });
 }
 
 // ─── BeerXML serializer ───────────────────────────────────────────────────
@@ -523,4 +523,241 @@ function cultureTypeToBeerXml(t: string): string {
   // safe fallback. Exporters that round-trip to BeerXML lose the precise
   // strain category, but the recipe still imports cleanly elsewhere.
   return "Ale";
+}
+
+// ─── Brew-session export ──────────────────────────────────────────────────
+
+/** Export a single brew session as a `.session.json` file. */
+export async function exportSessionJson(session: WerbSession): Promise<ExportResult> {
+  return saveTextFile({
+    filename: sessionFilename(session, "session.json"),
+    extension: "json",
+    filterName: "Brew session",
+    mime: "application/json",
+    contents: JSON.stringify(session, null, 2),
+  });
+}
+
+/**
+ * Export a single brew session as a printable HTML document. Reuses
+ * the recipe-printout's black-on-white styling. The recipe argument
+ * is optional — if the source recipe was deleted, the export still
+ * works using the snapshot fields stored on the session.
+ */
+export async function exportSessionHtml(
+  session: WerbSession,
+  recipe?: BeerJsonRecipe,
+): Promise<ExportResult> {
+  return saveTextFile({
+    filename: sessionFilename(session, "html"),
+    extension: "html",
+    filterName: "HTML",
+    mime: "text/html",
+    contents: sessionToPrintableHtml(session, recipe),
+  });
+}
+
+function sessionFilename(session: WerbSession, ext: string): string {
+  const name = slugify(session.recipe_name ?? "brew");
+  const date = session.started_at.slice(0, 10); // YYYY-MM-DD
+  return `${name}-${date}.${ext}`;
+}
+
+/**
+ * Standalone HTML brew-log entry — black on white, no externals.
+ * Mirrors recipeToPrintableHtml's layout: brief header strip, recipe
+ * targets, timeline of steps with planned/actual times and any
+ * captured notes, then a measurements table. Built for printing to
+ * PDF from any browser.
+ */
+export function sessionToPrintableHtml(
+  session: WerbSession,
+  recipe?: BeerJsonRecipe,
+): string {
+  const sections: string[] = [];
+
+  sections.push(`<header>
+    <p class="kicker">Brew session · ${esc(formatDate(session.started_at))}</p>
+    <h1>${esc(session.recipe_name ?? "Untitled brew")}</h1>
+    <p class="meta">
+      ${esc(statusLabel(session.status))}
+      ${session.completed_at ? ` · finished ${esc(formatDate(session.completed_at))}` : ""}
+      ${duration(session) ? ` · ${esc(duration(session)!)}` : ""}
+    </p>
+  </header>`);
+
+  // Recipe targets — only when the recipe is still around. Reuses the
+  // same tile layout the recipe printout uses so the two documents
+  // read as a matched set.
+  if (recipe) {
+    const targets: string[] = [];
+    if (recipe.original_gravity) targets.push(tile("OG", recipe.original_gravity.value.toFixed(3)));
+    if (recipe.final_gravity) targets.push(tile("FG", recipe.final_gravity.value.toFixed(3)));
+    if (recipe.ibu_estimate?.ibu) targets.push(tile("IBU", String(recipe.ibu_estimate.ibu.value)));
+    if (recipe.alcohol_by_volume) targets.push(tile("ABV", `${recipe.alcohol_by_volume.value.toFixed(1)}%`));
+    if (recipe.color_estimate) targets.push(tile("Color", `${recipe.color_estimate.value} ${recipe.color_estimate.unit}`));
+    if (targets.length > 0) sections.push(`<section class="tiles">${targets.join("")}</section>`);
+  }
+
+  // Step timeline.
+  if (session.steps.length > 0) {
+    sections.push(`<section><h2>Timeline</h2>${
+      table(
+        ["Step", "Status", "Target", "Started", "Finished", "Notes"],
+        session.steps.map((s) => [
+          s.label,
+          statusLabel(s.status),
+          stepTarget(s),
+          s.started_at ? formatTime(s.started_at) : "—",
+          s.completed_at ? formatTime(s.completed_at) : "—",
+          s.notes ?? "",
+        ]),
+      )
+    }</section>`);
+  }
+
+  // Measurements.
+  if (session.measurements && session.measurements.length > 0) {
+    sections.push(`<section><h2>Measurements</h2>${
+      table(
+        ["Time", "Reading", "Value", "During step", "Notes"],
+        session.measurements.map((m) => [
+          formatTime(m.at),
+          measurementLabel(m.kind),
+          formatMeasurement(m),
+          measurementStepLabel(m, session),
+          m.notes ?? "",
+        ]),
+      )
+    }</section>`);
+  }
+
+  if (session.notes) {
+    sections.push(`<section><h2>Notes</h2><p class="notes">${esc(session.notes).replace(/\n/g, "<br>")}</p></section>`);
+  }
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>${esc(session.recipe_name ?? "Brew")} — Werb session</title>
+<style>
+  :root { color-scheme: light; }
+  body { margin: 2cm; max-width: 80ch; font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; color: #111; background: #fff; }
+  header { margin-bottom: 2rem; }
+  .kicker { text-transform: uppercase; letter-spacing: 0.1em; font-size: 11px; color: #666; margin: 0 0 0.5rem; }
+  h1 { font-size: 28px; margin: 0 0 0.25rem; line-height: 1.2; text-transform: capitalize; }
+  .meta { color: #444; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; margin: 0; }
+  h2 { font-size: 16px; margin: 1.75rem 0 0.5rem; border-bottom: 1px solid #ddd; padding-bottom: 0.25rem; }
+  section.tiles { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.5rem; margin-bottom: 1.5rem; }
+  .tile { border: 1px solid #ddd; padding: 0.5rem 0.75rem; border-radius: 4px; }
+  .tile-label { text-transform: uppercase; letter-spacing: 0.08em; font-size: 10px; color: #666; }
+  .tile-value { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 18px; margin-top: 0.15rem; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th, td { text-align: left; padding: 0.4rem 0.5rem; border-bottom: 1px solid #eee; vertical-align: top; }
+  th { background: #f7f7f7; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; font-size: 10px; color: #555; }
+  .notes { white-space: pre-wrap; }
+  @page { margin: 1.5cm; }
+  @media print { body { margin: 0; } section { break-inside: avoid; } }
+</style>
+</head>
+<body>
+${sections.join("\n")}
+<footer style="margin-top:2rem;font-size:10px;color:#999">Exported from Werb</footer>
+</body>
+</html>`;
+}
+
+function statusLabel(s: WerbSession["status"] | SessionStep["status"]): string {
+  switch (s) {
+    case "draft": return "Draft";
+    case "in_progress": return "In progress";
+    case "completed": return "Completed";
+    case "abandoned": return "Abandoned";
+    case "pending": return "Pending";
+    case "active": return "Active";
+    case "done": return "Done";
+    case "skipped": return "Skipped";
+  }
+}
+
+function stepTarget(step: SessionStep): string {
+  const parts: string[] = [];
+  if (step.target_temperature_c !== undefined) {
+    parts.push(`${step.target_temperature_c.toFixed(1)} °C`);
+  }
+  if (step.target_duration_min !== undefined) {
+    parts.push(`${step.target_duration_min} min`);
+  }
+  return parts.length > 0 ? parts.join(" · ") : "—";
+}
+
+const MEASUREMENT_KIND_LABELS: Record<Measurement["kind"], string> = {
+  gravity_sg: "Gravity",
+  temperature_c: "Temperature",
+  ph: "pH",
+  volume_l: "Volume",
+  abv_pct: "ABV",
+};
+
+const MEASUREMENT_KIND_UNITS: Record<Measurement["kind"], string> = {
+  gravity_sg: "SG",
+  temperature_c: "°C",
+  ph: "",
+  volume_l: "L",
+  abv_pct: "%",
+};
+
+function measurementLabel(kind: Measurement["kind"]): string {
+  return MEASUREMENT_KIND_LABELS[kind] ?? kind;
+}
+
+function formatMeasurement(m: Measurement): string {
+  const unit = MEASUREMENT_KIND_UNITS[m.kind] ?? "";
+  const v =
+    m.kind === "gravity_sg"
+      ? m.value.toFixed(3)
+      : m.kind === "ph"
+      ? m.value.toFixed(2)
+      : m.value.toFixed(1);
+  return unit ? `${v} ${unit}` : v;
+}
+
+function measurementStepLabel(m: Measurement, session: WerbSession): string {
+  if (!m.step_id) return "—";
+  return session.steps.find((s) => s.id === m.step_id)?.label ?? "—";
+}
+
+function formatDate(iso: string): string {
+  try {
+    return new Date(iso).toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  } catch {
+    return iso;
+  }
+}
+
+function formatTime(iso: string): string {
+  try {
+    return new Date(iso).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return iso;
+  }
+}
+
+function duration(session: WerbSession): string | null {
+  if (!session.completed_at) return null;
+  const ms = new Date(session.completed_at).getTime() - new Date(session.started_at).getTime();
+  if (!Number.isFinite(ms) || ms <= 0) return null;
+  const minutes = Math.round(ms / 60_000);
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const rem = minutes - hours * 60;
+  return rem > 0 ? `${hours} h ${rem} min` : `${hours} h`;
 }
