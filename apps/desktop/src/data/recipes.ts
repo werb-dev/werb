@@ -159,9 +159,12 @@ export async function importBeerJsonFromDisk(): Promise<ImportResult> {
     return parseBeerJsonText(raw);
   }
 
-  // Browser fallback.
+  // Browser fallback. No accept filter — iOS / iPadOS would grey out
+  // .beerjson files in the Files app, and the picker can't be unfiltered
+  // selectively. The validator inside parseBeerJsonText surfaces a
+  // clear error if the user picks something else.
   const { pickAndReadTextFile } = await import("./browser-fs.ts");
-  const picked = await pickAndReadTextFile(".beerjson,.json,application/json");
+  const picked = await pickAndReadTextFile();
   if (!picked) return { recipes: [] };
   return parseBeerJsonText(picked.text);
 }
@@ -216,8 +219,11 @@ export async function importBeerXmlFromDisk(): Promise<ImportResult> {
       return { recipes: [], error: `Read failed: ${(err as Error).message}` };
     }
   } else {
+    // No accept filter — iOS / iPadOS greys out .beerxml files because
+    // that extension isn't a known UTType. The WASM parser surfaces a
+    // clear error if the user picks something that isn't XML.
     const { pickAndReadTextFile } = await import("./browser-fs.ts");
-    const picked = await pickAndReadTextFile(".beerxml,.xml,application/xml,text/xml");
+    const picked = await pickAndReadTextFile();
     if (!picked) return { recipes: [] };
     raw = picked.text;
   }

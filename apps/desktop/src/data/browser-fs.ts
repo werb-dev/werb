@@ -13,12 +13,18 @@
  */
 
 export async function pickAndReadTextFile(
-  accept: string,
+  accept?: string,
 ): Promise<{ name: string; text: string } | null> {
   return new Promise((resolve) => {
     const input = document.createElement("input");
     input.type = "file";
-    input.accept = accept;
+    // `accept` is intentionally optional. iOS / iPadOS filter the
+    // picker by UTType, which doesn't recognize custom extensions
+    // (`.beerxml`, `.beerjson`) — setting accept would grey those
+    // files out in the Files app. Callers that want filtering on
+    // desktop pass a value; importers leave it off so all files are
+    // selectable and we surface parse errors instead.
+    if (accept) input.accept = accept;
     input.style.display = "none";
 
     let settled = false;
