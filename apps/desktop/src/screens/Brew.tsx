@@ -16,6 +16,12 @@ import { usePersistedJson } from "../storage/index.ts";
 interface BrewScreenProps {
   recipeId: string;
   recipe: BeerJsonRecipe;
+  /**
+   * Optional: load this specific session (Journal flow). When absent,
+   * the screen finds the live session for the recipe or offers to
+   * start one.
+   */
+  sessionId?: string | undefined;
   activeProfile?: ProfileWithId | undefined;
   onBack: () => void;
 }
@@ -82,8 +88,8 @@ function checkKettleFit(water: WaterOutput, profile: ProfileWithId | undefined):
   return { kind: "ok" };
 }
 
-export function BrewScreen({ recipeId, recipe, activeProfile, onBack }: BrewScreenProps) {
-  const brew = useBrewSession(recipeId, recipe);
+export function BrewScreen({ recipeId, recipe, sessionId, activeProfile, onBack }: BrewScreenProps) {
+  const brew = useBrewSession(recipeId, recipe, sessionId);
   const tick = useTick(1000);
   const wakeLockHeld = useScreenWakeLock(brew.session?.status === "in_progress");
 

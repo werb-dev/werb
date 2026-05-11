@@ -7,7 +7,9 @@ import {
   useBrewSession,
   useBrewSessionExists,
   sessionStorageKey,
+  migrateLegacySessionKeys,
 } from "../src/hooks/useBrewSession.ts";
+import { MemoryBackend } from "../src/storage/index.ts";
 import { makeStorageWrapper } from "./helpers.tsx";
 import type { BeerJsonFile, BeerJsonRecipe } from "@werb/adapters";
 
@@ -36,8 +38,10 @@ describe("useBrewSession", () => {
     expect(result.current.session).not.toBeNull();
     expect(result.current.session!.status).toBe("in_progress");
     expect(result.current.session!.steps.length).toBeGreaterThan(0);
-    // Persisted under the recipe-keyed slot.
-    expect(await backend.read(sessionStorageKey(RECIPE_ID))).toBeTruthy();
+    // Persisted under the session.id key — multiple historical brews
+    // for the same recipe co-exist that way.
+    const sessionId = result.current.session!.id;
+    expect(await backend.read(sessionStorageKey(sessionId))).toBeTruthy();
   });
 
   it("startStep marks the chosen step active and prior active step done", () => {
@@ -112,12 +116,13 @@ describe("useBrewSession", () => {
     const { result } = renderHook(() => useBrewSession(RECIPE_ID, RECIPE), { wrapper });
 
     act(() => result.current.start());
-    expect(await backend.read(sessionStorageKey(RECIPE_ID))).toBeTruthy();
+    const sessionId = result.current.session!.id;
+    expect(await backend.read(sessionStorageKey(sessionId))).toBeTruthy();
 
     act(() => result.current.abandon());
 
     expect(result.current.session).toBeNull();
-    expect(await backend.read(sessionStorageKey(RECIPE_ID))).toBeNull();
+    expect(await backend.read(sessionStorageKey(sessionId))).toBeNull();
   });
 
   it("addMeasurement appends to the session and auto-attaches to the active step", () => {
@@ -216,17 +221,70 @@ describe("useBrewSession", () => {
     expect(second.current.activeStep?.id).toBe(initialStepId);
   });
 
-  it("re-running start() replaces the session for the same recipe id", () => {
-    const { wrapper } = makeStorageWrapper();
+  it("re-running start() creates a fresh session and leaves the previous one in storage", async () => {
+    const { wrapper, backend } = makeStorageWrapper();
     const { result } = renderHook(() => useBrewSession(RECIPE_ID, RECIPE), { wrapper });
 
     act(() => result.current.start());
-    const firstSessionId = result.current.session!.id;
-    act(() => result.current.startStep(result.current.session!.steps[0]!.id));
+    const firstId = result.current.session!.id;
+    act(() => result.current.completeSession());
 
     act(() => result.current.start());
-    expect(result.current.session!.id).not.toBe(firstSessionId);
+    const secondId = result.current.session!.id;
+
+    expect(secondId).not.toBe(firstId);
+    expect(result.current.session!.status).toBe("in_progress");
     expect(result.current.session!.steps.every((s) => s.status === "pending")).toBe(true);
+
+    // Both sessions are independently retrievable from storage.
+    const keys = await backend.list("werb.session.");
+    expect(keys.sort()).toEqual(
+      [sessionStorageKey(firstId), sessionStorageKey(secondId)].sort(),
+    );
+  });
+
+  it("useBrewSession only surfaces the live session for the recipe", async () => {
+    const oldCompletedId = "old-session-id";
+    const { wrapper } = makeStorageWrapper({
+      [sessionStorageKey(oldCompletedId)]: JSON.stringify({
+        id: oldCompletedId,
+        recipe_id: RECIPE_ID,
+        recipe_name: "Old brew",
+        status: "completed",
+        started_at: "2025-01-01T00:00:00.000Z",
+        completed_at: "2025-01-01T05:00:00.000Z",
+        steps: [],
+      }),
+    });
+    const { result } = renderHook(() => useBrewSession(RECIPE_ID, RECIPE), { wrapper });
+    // Sync init runs against the seeded backend: it should ignore the
+    // completed session and return null because there's no live one.
+    expect(result.current.session).toBeNull();
+  });
+});
+
+describe("useBrewSession — explicit sessionId mode (Journal flow)", () => {
+  it("loads the specific session passed as the third argument", () => {
+    const sessionId = "specific-session";
+    const { wrapper } = makeStorageWrapper({
+      [sessionStorageKey(sessionId)]: JSON.stringify({
+        id: sessionId,
+        recipe_id: RECIPE_ID,
+        recipe_name: "Past brew",
+        status: "completed",
+        started_at: "2025-06-01T00:00:00.000Z",
+        completed_at: "2025-06-01T04:00:00.000Z",
+        steps: [],
+        notes: "Hit numbers on the nose.",
+      }),
+    });
+    const { result } = renderHook(
+      () => useBrewSession(RECIPE_ID, RECIPE, sessionId),
+      { wrapper },
+    );
+    expect(result.current.session).not.toBeNull();
+    expect(result.current.session!.id).toBe(sessionId);
+    expect(result.current.session!.status).toBe("completed");
   });
 });
 
@@ -237,12 +295,36 @@ describe("useBrewSessionExists", () => {
     expect(result.current).toBe(false);
   });
 
-  it("returns true when a session is already in the backend on mount", () => {
+  it("returns true when a live session is already in the backend on mount", () => {
     const { wrapper } = makeStorageWrapper({
-      [sessionStorageKey("rid")]: JSON.stringify({ id: "x", recipe_id: "rid" }),
+      // Storage is keyed by session.id, but the hook scans by recipe_id.
+      [sessionStorageKey("session-x")]: JSON.stringify({
+        id: "session-x",
+        recipe_id: "rid",
+        recipe_name: "Test",
+        status: "in_progress",
+        started_at: "2026-01-01T00:00:00.000Z",
+        steps: [],
+      }),
     });
     const { result } = renderHook(() => useBrewSessionExists("rid"), { wrapper });
     expect(result.current).toBe(true);
+  });
+
+  it("returns false for a completed session of the same recipe", () => {
+    const { wrapper } = makeStorageWrapper({
+      [sessionStorageKey("session-done")]: JSON.stringify({
+        id: "session-done",
+        recipe_id: "rid",
+        recipe_name: "Test",
+        status: "completed",
+        started_at: "2026-01-01T00:00:00.000Z",
+        completed_at: "2026-01-01T05:00:00.000Z",
+        steps: [],
+      }),
+    });
+    const { result } = renderHook(() => useBrewSessionExists("rid"), { wrapper });
+    expect(result.current).toBe(false);
   });
 
   it("flips to true after a sibling component starts a session", () => {
@@ -268,5 +350,93 @@ describe("useBrewSessionExists", () => {
       { wrapper },
     );
     expect(remounted.current).toBe(true);
+  });
+});
+
+describe("migrateLegacySessionKeys", () => {
+  it("rewrites recipe-id-keyed sessions under their session.id", async () => {
+    const session = {
+      id: "session-1",
+      recipe_id: "recipe-1",
+      recipe_name: "Old layout",
+      status: "completed" as const,
+      started_at: "2025-01-01T00:00:00.000Z",
+      steps: [],
+    };
+    // Pre-migration: key suffix is the recipe id, not the session id.
+    const backend = new MemoryBackend({
+      "werb.session.recipe-1": JSON.stringify(session),
+    });
+
+    const migrated = await migrateLegacySessionKeys(backend);
+    expect(migrated).toBe(1);
+    expect(await backend.read("werb.session.recipe-1")).toBeNull();
+    expect(await backend.read("werb.session.session-1")).toBeTruthy();
+  });
+
+  it("is idempotent — already-correct entries are skipped", async () => {
+    const session = {
+      id: "session-1",
+      recipe_id: "recipe-1",
+      recipe_name: "Already migrated",
+      status: "in_progress" as const,
+      started_at: "2025-01-01T00:00:00.000Z",
+      steps: [],
+    };
+    const backend = new MemoryBackend({
+      "werb.session.session-1": JSON.stringify(session),
+    });
+
+    const first = await migrateLegacySessionKeys(backend);
+    const second = await migrateLegacySessionKeys(backend);
+    expect(first).toBe(0);
+    expect(second).toBe(0);
+  });
+
+  it("preserves multiple sessions of the same recipe (the whole point)", async () => {
+    const a = {
+      id: "a",
+      recipe_id: "recipe-x",
+      recipe_name: "Brew A",
+      status: "completed" as const,
+      started_at: "2025-01-01T00:00:00.000Z",
+      steps: [],
+    };
+    const b = {
+      id: "b",
+      recipe_id: "recipe-x",
+      recipe_name: "Brew B",
+      status: "completed" as const,
+      started_at: "2025-02-01T00:00:00.000Z",
+      steps: [],
+    };
+    // Hypothetical: storage already has two completed brews of the
+    // same recipe under session-id keys. Migrate is a no-op.
+    const backend = new MemoryBackend({
+      "werb.session.a": JSON.stringify(a),
+      "werb.session.b": JSON.stringify(b),
+    });
+    await migrateLegacySessionKeys(backend);
+    const keys = (await backend.list("werb.session.")).sort();
+    expect(keys).toEqual(["werb.session.a", "werb.session.b"]);
+  });
+
+  it("ignores corrupt JSON instead of failing the whole migration", async () => {
+    const backend = new MemoryBackend({
+      "werb.session.broken": "{not json",
+      "werb.session.recipe-1": JSON.stringify({
+        id: "session-1",
+        recipe_id: "recipe-1",
+        recipe_name: "OK",
+        status: "completed",
+        started_at: "2025-01-01T00:00:00.000Z",
+        steps: [],
+      }),
+    });
+    const migrated = await migrateLegacySessionKeys(backend);
+    expect(migrated).toBe(1);
+    expect(await backend.read("werb.session.session-1")).toBeTruthy();
+    // Broken entry is left in place — nothing safe to do with it.
+    expect(await backend.read("werb.session.broken")).toBe("{not json");
   });
 });

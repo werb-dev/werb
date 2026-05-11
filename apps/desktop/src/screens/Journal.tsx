@@ -2,8 +2,8 @@ import type { WerbSession } from "@werb/types";
 import { useBrewLog } from "../hooks/useBrewLog.ts";
 
 interface JournalScreenProps {
-  /** Open a recipe's session in the brew screen. */
-  onOpenSession: (recipeId: string) => void;
+  /** Open a specific session in the brew screen. */
+  onOpenSession: (recipeId: string, sessionId: string) => void;
 }
 
 /**
@@ -50,7 +50,7 @@ export function JournalScreen({ onOpenSession }: JournalScreenProps) {
           <ul className="rounded-xl bg-surface border border-border divide-y divide-border">
             {sessions.map((s) => (
               <li key={s.id}>
-                <SessionRow session={s} onOpen={() => onOpenSession(s.recipe_id)} />
+                <SessionRow session={s} onOpen={() => onOpenSession(s.recipe_id, s.id)} />
               </li>
             ))}
           </ul>

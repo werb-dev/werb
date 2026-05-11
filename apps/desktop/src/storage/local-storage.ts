@@ -30,6 +30,9 @@ export const localStorageBackend: StorageBackend = {
     localStorage.removeItem(key);
   },
   async list(prefix) {
+    return this.listSync!(prefix);
+  },
+  listSync(prefix) {
     const out: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);

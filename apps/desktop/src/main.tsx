@@ -14,6 +14,7 @@ import {
   StorageProvider,
   type StorageBackend,
 } from "./storage/index.ts";
+import { migrateLegacySessionKeys } from "./hooks/useBrewSession.ts";
 
 // Pick the best available StorageBackend at boot. OPFS persists across
 // reloads, isn't bound by localStorage's 5-10 MB quota, and is the
@@ -38,6 +39,19 @@ async function boot() {
     } catch (err) {
       console.warn("[storage] migration failed; using OPFS as-is", err);
     }
+  }
+
+  // Per-session storage was originally keyed by recipe_id, which
+  // capped each recipe at one historical brew. Rewrite any such
+  // entries under their session.id key. Idempotent — already-migrated
+  // entries cost one read and a key-equality check.
+  try {
+    const sessionsMigrated = await migrateLegacySessionKeys(backend);
+    if (sessionsMigrated > 0) {
+      console.info(`[storage] rewrote ${sessionsMigrated} sessions under their session.id`);
+    }
+  } catch (err) {
+    console.warn("[storage] session-key migration failed", err);
   }
 
   root.render(

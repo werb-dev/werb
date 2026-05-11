@@ -34,6 +34,10 @@ export class MemoryBackend implements StorageBackend {
   }
 
   async list(prefix: string): Promise<string[]> {
+    return this.listSync(prefix);
+  }
+
+  listSync(prefix: string): string[] {
     const out: string[] = [];
     for (const k of this.store.keys()) {
       if (k.startsWith(prefix)) out.push(k);

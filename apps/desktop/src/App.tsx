@@ -15,7 +15,10 @@ type AppState =
   | { view: "library" }
   | { view: "recipe"; recipeId: string }
   | { view: "edit_recipe"; recipeId: string }
-  | { view: "brew"; recipeId: string }
+  // `sessionId` optional: when present, view that specific past or
+  // active session (Journal flow). When absent, the brew screen
+  // finds the live session for the recipe or offers to start one.
+  | { view: "brew"; recipeId: string; sessionId?: string }
   | { view: "equipment" }
   | { view: "journal" }
   | { view: "tokens" };
@@ -28,7 +31,8 @@ export function App() {
   const goLibrary = () => setState({ view: "library" });
   const goRecipe = (recipeId: string) => setState({ view: "recipe", recipeId });
   const goEditRecipe = (recipeId: string) => setState({ view: "edit_recipe", recipeId });
-  const goBrew = (recipeId: string) => setState({ view: "brew", recipeId });
+  const goBrew = (recipeId: string, sessionId?: string) =>
+    setState(sessionId ? { view: "brew", recipeId, sessionId } : { view: "brew", recipeId });
   const goEquipment = () => setState({ view: "equipment" });
   const goJournal = () => setState({ view: "journal" });
   const goTokens = () => setState({ view: "tokens" });
@@ -78,8 +82,9 @@ export function App() {
         <BrewScreen
           recipeId={state.recipeId}
           recipe={loaded.recipe}
+          sessionId={state.sessionId}
           activeProfile={equipmentApi.activeProfile}
-          onBack={() => goRecipe(state.recipeId)}
+          onBack={() => (state.sessionId ? goJournal() : goRecipe(state.recipeId))}
         />
       );
     }

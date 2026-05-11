@@ -8,8 +8,13 @@ import { useStorage, type StorageBackend } from "../storage/index.ts";
 
 const STORAGE_PREFIX = "werb.session.";
 
-export function sessionStorageKey(recipeId: string): string {
-  return `${STORAGE_PREFIX}${recipeId}`;
+/**
+ * Storage key for a brew session, keyed by the session's own ID so a
+ * recipe can accumulate multiple historical brews. The legacy layout
+ * keyed by recipe_id is migrated at boot — see {@link migrateLegacySessionKeys}.
+ */
+export function sessionStorageKey(sessionId: string): string {
+  return `${STORAGE_PREFIX}${sessionId}`;
 }
 
 function parseSession(raw: string | null): WerbSession | null {
@@ -21,53 +26,113 @@ function parseSession(raw: string | null): WerbSession | null {
   }
 }
 
-function loadSync(backend: StorageBackend, recipeId: string): WerbSession | null {
-  if (!backend.readSync) return null;
-  return parseSession(backend.readSync(sessionStorageKey(recipeId)));
+function isLive(session: WerbSession): boolean {
+  return session.status === "draft" || session.status === "in_progress";
 }
 
-async function load(
+/**
+ * Sync-only lookup for the active brew session of a given recipe.
+ * Used by hooks for first-render hydration on sync-capable backends
+ * (localStorage, in-memory). Returns null when the backend can't
+ * answer synchronously or no live session exists.
+ */
+function findActiveSync(
+  backend: StorageBackend,
+  recipeId: string,
+): WerbSession | null {
+  if (!backend.readSync || !backend.listSync) return null;
+  for (const key of backend.listSync(STORAGE_PREFIX)) {
+    const session = parseSession(backend.readSync(key));
+    if (session && session.recipe_id === recipeId && isLive(session)) {
+      return session;
+    }
+  }
+  return null;
+}
+
+async function findActive(
   backend: StorageBackend,
   recipeId: string,
 ): Promise<WerbSession | null> {
-  return parseSession(await backend.read(sessionStorageKey(recipeId)));
+  const keys = await backend.list(STORAGE_PREFIX);
+  for (const key of keys) {
+    const session = parseSession(await backend.read(key));
+    if (session && session.recipe_id === recipeId && isLive(session)) {
+      return session;
+    }
+  }
+  return null;
+}
+
+function loadByIdSync(
+  backend: StorageBackend,
+  sessionId: string,
+): WerbSession | null {
+  if (!backend.readSync) return null;
+  return parseSession(backend.readSync(sessionStorageKey(sessionId)));
+}
+
+async function loadById(
+  backend: StorageBackend,
+  sessionId: string,
+): Promise<WerbSession | null> {
+  return parseSession(await backend.read(sessionStorageKey(sessionId)));
 }
 
 async function save(backend: StorageBackend, session: WerbSession): Promise<void> {
   try {
-    await backend.write(sessionStorageKey(session.recipe_id), JSON.stringify(session));
+    await backend.write(sessionStorageKey(session.id), JSON.stringify(session));
   } catch (err) {
     console.warn("[brew] failed to persist session", err);
   }
 }
 
 /**
- * Tracks an in-progress brew session for a recipe. Keyed by recipe ID
- * in the active StorageBackend (localStorage today). Survives reloads
- * and app restarts; will follow the user across devices once a cloud
- * backend is wired up.
+ * Tracks a brew session.
+ *
+ * Two calling modes:
+ *   • Recipe screen → brew flow: pass just `recipeId` (no `sessionId`).
+ *     The hook finds the live (draft/in_progress) session for that
+ *     recipe, or null if none. `start()` creates a new one.
+ *   • Journal → brew flow: pass `sessionId` of the specific session to
+ *     view. Works for completed sessions too — the Brew screen renders
+ *     them read-only via its existing status checks.
+ *
+ * Sessions are keyed by their own `id` in storage, so a recipe can
+ * accumulate any number of completed historical brews without the
+ * previous one being overwritten.
  */
-export function useBrewSession(recipeId: string, recipe: BeerJsonRecipe) {
+export function useBrewSession(
+  recipeId: string,
+  recipe: BeerJsonRecipe,
+  sessionId?: string,
+) {
   const backend = useStorage();
-  const [session, setSession] = useState<WerbSession | null>(() =>
-    loadSync(backend, recipeId),
-  );
+  const [session, setSession] = useState<WerbSession | null>(() => {
+    if (sessionId) return loadByIdSync(backend, sessionId);
+    return findActiveSync(backend, recipeId);
+  });
 
-  // Re-hydrate when recipe id changes (user navigates between recipes)
-  // or when an async backend resolves its initial read.
   useEffect(() => {
     let cancelled = false;
-    if (backend.readSync) {
-      setSession(loadSync(backend, recipeId));
-      return;
-    }
-    void load(backend, recipeId).then((loaded) => {
-      if (!cancelled) setSession(loaded);
+    const loader = sessionId
+      ? loadById(backend, sessionId)
+      : findActive(backend, recipeId);
+    void loader.then((loaded) => {
+      if (cancelled) return;
+      // Functional update so we don't clobber a session the user
+      // started while this async load was in flight. The async
+      // `findActive` returns null for empty storage, but by the
+      // time it resolves the user may already have called start().
+      setSession((current) => {
+        if (current && loaded === null) return current;
+        return loaded;
+      });
     });
     return () => {
       cancelled = true;
     };
-  }, [backend, recipeId]);
+  }, [backend, recipeId, sessionId]);
 
   const start = useCallback(() => {
     const fresh = recipeToSessionPlan(recipe, recipeId);
@@ -149,7 +214,7 @@ export function useBrewSession(recipeId: string, recipe: BeerJsonRecipe) {
   const abandon = useCallback(() => {
     setSession((prev) => {
       if (!prev) return prev;
-      void backend.delete(sessionStorageKey(prev.recipe_id));
+      void backend.delete(sessionStorageKey(prev.id));
       return null;
     });
   }, [backend]);
@@ -196,9 +261,9 @@ export function useBrewSession(recipeId: string, recipe: BeerJsonRecipe) {
 }
 
 /**
- * Returns true when a brew session is currently saved for the given
- * recipe id. Drives the "Resume brewing" / "Start brewing" label on
- * the Recipe screen.
+ * Returns true when there's a live (draft or in_progress) session for
+ * the given recipe. Drives the "Resume brewing" / "Start brewing"
+ * label on the Recipe screen.
  *
  * Sync-capable backends answer on the first render; async backends
  * resolve in a follow-up effect.
@@ -206,18 +271,18 @@ export function useBrewSession(recipeId: string, recipe: BeerJsonRecipe) {
 export function useBrewSessionExists(recipeId: string): boolean {
   const backend = useStorage();
   const [exists, setExists] = useState<boolean>(() => {
-    if (!backend.readSync) return false;
-    return backend.readSync(sessionStorageKey(recipeId)) !== null;
+    return findActiveSync(backend, recipeId) !== null;
   });
 
   useEffect(() => {
-    if (backend.readSync) {
-      setExists(backend.readSync(sessionStorageKey(recipeId)) !== null);
-      return;
-    }
     let cancelled = false;
-    void backend.read(sessionStorageKey(recipeId)).then((raw) => {
-      if (!cancelled) setExists(raw !== null);
+    void findActive(backend, recipeId).then((s) => {
+      if (cancelled) return;
+      // Same race-avoidance shape as useBrewSession: if the user
+      // started a session while we were scanning storage, the sync
+      // initializer already saw it. Don't flip true → false on a
+      // stale "empty" read.
+      setExists((current) => (current && s === null ? current : s !== null));
     });
     return () => {
       cancelled = true;
@@ -225,6 +290,34 @@ export function useBrewSessionExists(recipeId: string): boolean {
   }, [backend, recipeId]);
 
   return exists;
+}
+
+/**
+ * One-shot migration: pre-multi-session layout keyed sessions by
+ * `recipe_id`, so the storage key suffix could disagree with the
+ * session's own `id`. Rewrite each such entry under its session-id
+ * key and delete the old. Idempotent — already-correct entries are
+ * skipped.
+ *
+ * Returns the number of keys rewritten so the boot script can log it.
+ */
+export async function migrateLegacySessionKeys(
+  backend: StorageBackend,
+): Promise<number> {
+  const keys = await backend.list(STORAGE_PREFIX);
+  let migrated = 0;
+  for (const key of keys) {
+    const raw = await backend.read(key);
+    if (!raw) continue;
+    const session = parseSession(raw);
+    if (!session) continue;
+    const expected = sessionStorageKey(session.id);
+    if (key === expected) continue; // already in new format
+    await backend.write(expected, raw);
+    await backend.delete(key);
+    migrated++;
+  }
+  return migrated;
 }
 
 // ─── Helper hooks ─────────────────────────────────────────────────────────

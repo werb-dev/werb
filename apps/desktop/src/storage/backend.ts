@@ -25,4 +25,11 @@ export interface StorageBackend {
   write(key: string, value: string): Promise<void>;
   delete(key: string): Promise<void>;
   list(prefix: string): Promise<string[]>;
+  /**
+   * Synchronous prefix listing. Sibling optimization to `readSync`:
+   * backends that can answer in the same tick implement it so hooks
+   * can scan a prefix during first-render hydration without a flicker.
+   * Async-only backends leave it undefined.
+   */
+  listSync?(prefix: string): string[];
 }
