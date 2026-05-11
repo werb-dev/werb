@@ -34,6 +34,14 @@ export interface UnitPreferences {
   gravity: "sg" | "plato";
   color: "SRM" | "EBC";
   currency: "EUR" | "USD" | "GBP";
+  /**
+   * Global multiplier applied to the bundled default ingredient prices.
+   * 100 = ship as-is (EUR-anchored European homebrew supplier averages).
+   * Brewers in pricier markets bump to 110-130; lower-cost markets dial
+   * down. Single knob — per-category tuning is overkill for "approx
+   * batch cost".
+   */
+  cost_inflation_pct: number;
 }
 
 export const DEFAULT_PREFS: UnitPreferences = {
@@ -43,6 +51,7 @@ export const DEFAULT_PREFS: UnitPreferences = {
   gravity: "sg",
   color: "EBC",
   currency: "EUR",
+  cost_inflation_pct: 100,
 };
 
 const CURRENCY_SYMBOL: Record<UnitPreferences["currency"], string> = {

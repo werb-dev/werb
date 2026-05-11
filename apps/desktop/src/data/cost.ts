@@ -1,14 +1,16 @@
 /**
- * Per-recipe cost breakdown.
+ * Per-recipe cost estimator.
  *
- * Walks every priced ingredient (fermentables, hops, cultures, miscs),
- * looks up its unit price in the global catalog, converts the recipe's
- * amount into the catalog's natural unit, and sums into a total. Lines
- * with no catalog entry are returned as `unpriced` so the UI can prompt
- * the brewer to set a price inline.
+ * Approximation-grade: ingredient prices come from a small bundled
+ * lookup keyed on category + name pattern, anchored to typical EUR
+ * homebrew supplier prices (Brouwland / Brewferm / similar EU shops).
+ * Local markets vary widely; the Settings "Cost adjustment" coefficient
+ * is one global multiplier that lets the brewer dial the whole basket
+ * up or down. Goal is "what does this batch roughly cost" — not a
+ * line-item-accurate quote.
  *
- * Pure function — no IO, no React. The Recipe screen calls it with the
- * live catalog + recipe, then renders the result.
+ * Pure function — no React, no IO. The Recipe screen calls it with the
+ * recipe + inflation pct and renders the result.
  */
 
 import {
@@ -18,54 +20,154 @@ import {
   toLiters,
   type BeerJsonRecipe,
 } from "@werb/adapters";
-import {
-  findPrice,
-  type PriceCatalog,
-  type PriceEntry,
-  type PriceUnit,
-} from "./prices.ts";
 
 export type CostCategory = "fermentable" | "hop" | "culture" | "misc";
+
+/** Natural unit of the bundled default price. */
+export type PriceUnit = "kg" | "g" | "pack" | "L";
+
+export interface DefaultPrice {
+  unit_price: number;
+  natural_unit: PriceUnit;
+}
 
 export interface CostLine {
   category: CostCategory;
   name: string;
-  /**
-   * Best-effort amount in the catalog's natural unit. For mass items
-   * we always have a numeric value; for cultures/miscs with unit-count
-   * amounts we use the count directly when natural_unit is "pack".
-   */
   amount_in_natural_unit: number | null;
   natural_unit: PriceUnit | null;
-  /** Catalog entry, when one exists for this ingredient name. */
-  price: PriceEntry | null;
-  /** unit_price × amount_in_natural_unit when both are known. */
+  default_unit_price: number | null;
+  /** unit_price × amount × inflation_factor */
   line_cost: number | null;
 }
 
 export interface CostBreakdown {
   lines: CostLine[];
-  /** Sum of priced lines. */
+  /** Sum of priced lines, in the brewer's currency, with inflation applied. */
   total: number;
-  /** How many lines we managed to price. */
   priced_count: number;
   total_count: number;
   batch_l: number;
   per_liter: number;
-  /** Per 330 mL bottle — the common European bottle size. */
+  /** Per 330 mL bottle. */
   per_bottle_330: number;
 }
 
+// ─── Default-price lookup ─────────────────────────────────────────────────
+
+function defaultPriceForFermentable(
+  name: string,
+  type: string | undefined,
+): DefaultPrice {
+  const n = name.toLowerCase();
+  // Sugar / extracts (rice solids, candi, DME / LME, honey).
+  if (
+    type === "sugar" ||
+    type === "extract" ||
+    type === "dry extract" ||
+    /(sugar|honey|syrup|candi|dme|lme|maltodextrin)/.test(n)
+  ) {
+    return { unit_price: 3.0, natural_unit: "kg" };
+  }
+  // Roasted / chocolate / black malts.
+  if (/(roast|chocolate|black|carafa|carafe)/.test(n)) {
+    return { unit_price: 3.8, natural_unit: "kg" };
+  }
+  // Crystal / Caramel.
+  if (/(crystal|caramel|cara)/.test(n)) {
+    return { unit_price: 3.5, natural_unit: "kg" };
+  }
+  // Specialty + character malts.
+  if (/(smoked|acid|biscuit|victory|melanoidin|aromatic|honey malt|brown malt|amber|special)/.test(n)) {
+    return { unit_price: 4.0, natural_unit: "kg" };
+  }
+  // Adjuncts (oats, rice, wheat, flaked).
+  if (/(oats|rice|wheat|flaked|torrified|raw barley|spelt|rye)/.test(n)) {
+    return { unit_price: 2.5, natural_unit: "kg" };
+  }
+  // Base malts (pilsner, pale, maris, vienna, munich, lager).
+  if (/(pilsner|pilsen|pale ale|pale malt|lager|vienna|munich|maris|otter|2-row|6-row|bohemian)/.test(n)) {
+    return { unit_price: 2.2, natural_unit: "kg" };
+  }
+  // Reasonable catch-all for grain.
+  return { unit_price: 2.8, natural_unit: "kg" };
+}
+
+function defaultPriceForHop(name: string): DefaultPrice {
+  const n = name.toLowerCase();
+  // Premium / proprietary modern varieties.
+  if (
+    /(mosaic|citra|galaxy|nelson sauvin|nelson|el dorado|sabro|strata|simcoe|amarillo|idaho 7|riwaka|motueka|enigma|vic secret|cryo|incognito)/.test(
+      n,
+    )
+  ) {
+    return { unit_price: 0.07, natural_unit: "g" };
+  }
+  // Noble + classic European.
+  if (/(saaz|hallertau|tettnang|tettnanger|spalt|fuggle|goldings|styrian|perle|hersbrucker|mittelfrüh|magnum|northern brewer)/.test(n)) {
+    return { unit_price: 0.06, natural_unit: "g" };
+  }
+  // Standard catch-all (Cascade, Centennial, Chinook, etc.).
+  return { unit_price: 0.05, natural_unit: "g" };
+}
+
+function defaultPriceForCulture(form: string | undefined): DefaultPrice {
+  // Liquid yeast (smack-pack, vial, pouch) — roughly 2× a dry sachet.
+  if (form === "liquid") return { unit_price: 10, natural_unit: "pack" };
+  // Dry yeast and everything else (kveik, dregs) default to dry-pack
+  // pricing — close enough for the approximation.
+  return { unit_price: 5, natural_unit: "pack" };
+}
+
+function defaultPriceForMisc(
+  name: string,
+  type: string | undefined,
+): DefaultPrice {
+  const n = name.toLowerCase();
+  // Water chemistry salts.
+  if (
+    type === "water agent" ||
+    /(gypsum|calcium chloride|calcium sulfate|epsom|table salt|baking soda|chalk|sodium|magnesium)/.test(n)
+  ) {
+    return { unit_price: 0.02, natural_unit: "g" };
+  }
+  // Finings + clarity aids.
+  if (
+    type === "fining" ||
+    /(irish moss|whirlfloc|biofine|gelatin|isinglass|polyclar|kettle finings)/.test(n)
+  ) {
+    return { unit_price: 0.1, natural_unit: "g" };
+  }
+  // Spices, herbs, flavor adjuncts default to the higher end since they
+  // dose lighter and tend to cost more by the gram.
+  return { unit_price: 0.3, natural_unit: "g" };
+}
+
 /**
- * Convert a recipe-side ingredient amount into the catalog entry's
- * natural unit. Returns null when the conversion isn't possible
- * (e.g. a hop priced per pack but listed by mass — we'd need a
- * separate "g per pack" hint that we don't track yet).
+ * Pick a default price for an ingredient based on its category and
+ * (for hops + grains) name pattern. Exposed so tests can verify the
+ * dispatch directly.
  */
-function amountIn(
-  amount: unknown,
-  natural_unit: PriceUnit,
-): number | null {
+export function defaultPriceFor(
+  category: CostCategory,
+  name: string,
+  extra?: { type?: string | undefined; form?: string | undefined },
+): DefaultPrice {
+  switch (category) {
+    case "fermentable":
+      return defaultPriceForFermentable(name, extra?.type);
+    case "hop":
+      return defaultPriceForHop(name);
+    case "culture":
+      return defaultPriceForCulture(extra?.form);
+    case "misc":
+      return defaultPriceForMisc(name, extra?.type);
+  }
+}
+
+// ─── Amount → natural unit conversion ────────────────────────────────────
+
+function amountIn(amount: unknown, natural_unit: PriceUnit): number | null {
   if (!amount || typeof amount !== "object") return null;
   if (isMass(amount as Parameters<typeof isMass>[0])) {
     const mass = amount as Parameters<typeof toKilograms>[0];
@@ -73,14 +175,11 @@ function amountIn(
     if (natural_unit === "g") return toGrams(mass);
     return null;
   }
-  // Volume-based amounts (some misc additions: water salts in mL,
-  // brett tinctures, etc.).
   const v = amount as { value?: number; unit?: string };
   if (typeof v.value === "number" && typeof v.unit === "string") {
     if (natural_unit === "L" && /^(ml|l)$/i.test(v.unit)) {
       return toLiters(amount as Parameters<typeof toLiters>[0]);
     }
-    // Unit-count amounts (pkg / each) for yeast packs.
     if (
       natural_unit === "pack" &&
       /^(pkg|unit|each|dimensionless|1)$/i.test(v.unit)
@@ -95,113 +194,42 @@ function makeLine(
   category: CostCategory,
   name: string,
   amount: unknown,
-  catalog: PriceCatalog,
+  extra: { type?: string | undefined; form?: string | undefined },
+  inflationFactor: number,
 ): CostLine {
-  const price = findPrice(catalog, name) ?? null;
-  if (!price) {
-    return {
-      category,
-      name,
-      amount_in_natural_unit: null,
-      natural_unit: null,
-      price: null,
-      line_cost: null,
-    };
-  }
+  const price = defaultPriceFor(category, name, extra);
   const qty = amountIn(amount, price.natural_unit);
+  const line_cost = qty !== null ? qty * price.unit_price * inflationFactor : null;
   return {
     category,
     name,
     amount_in_natural_unit: qty,
     natural_unit: price.natural_unit,
-    price,
-    line_cost: qty !== null ? qty * price.unit_price : null,
+    default_unit_price: price.unit_price,
+    line_cost,
   };
 }
 
-/**
- * Walk every recipe in the library and collect distinct ingredient
- * names grouped by category. Used by the Prices card in Settings to
- * surface "X ingredients across your library are missing a price".
- *
- * De-dup is case-insensitive: "Mosaic" and "mosaic" collapse to one
- * entry, using the first capitalization encountered so the brewer sees
- * a recognizable name.
- */
-export interface LibraryIngredient {
-  category: CostCategory;
-  /** Display name — the first capitalization we saw across recipes. */
-  display_name: string;
-  /** Normalized lookup key — matches the price catalog. */
-  key: string;
-  /** How many recipes contain this ingredient. Helps the brewer prioritize. */
-  recipe_count: number;
-}
-
-export function collectLibraryIngredients(
-  recipes: ReadonlyArray<BeerJsonRecipe>,
-): LibraryIngredient[] {
-  const map = new Map<string, LibraryIngredient>();
-  const visit = (category: CostCategory, name: string, seenInThisRecipe: Set<string>) => {
-    const key = name.trim().toLowerCase();
-    if (!key) return;
-    // Don't double-count when a recipe lists the same ingredient twice
-    // (e.g. Mosaic at 60 min + 0 min: one Mosaic, two additions).
-    if (seenInThisRecipe.has(key)) return;
-    seenInThisRecipe.add(key);
-    const existing = map.get(key);
-    if (existing) {
-      existing.recipe_count += 1;
-    } else {
-      map.set(key, {
-        category,
-        display_name: name.trim(),
-        key,
-        recipe_count: 1,
-      });
-    }
-  };
-
-  for (const recipe of recipes) {
-    const seen = new Set<string>();
-    for (const f of recipe.ingredients.fermentable_additions ?? []) {
-      visit("fermentable", f.name, seen);
-    }
-    for (const h of recipe.ingredients.hop_additions ?? []) {
-      visit("hop", h.name, seen);
-    }
-    for (const c of recipe.ingredients.culture_additions ?? []) {
-      visit("culture", c.name, seen);
-    }
-    for (const m of recipe.ingredients.miscellaneous_additions ?? []) {
-      visit("misc", m.name, seen);
-    }
-  }
-
-  // Sort by recipe count desc (most-used first), then alphabetically.
-  return Array.from(map.values()).sort((a, b) => {
-    if (a.recipe_count !== b.recipe_count) return b.recipe_count - a.recipe_count;
-    return a.display_name.localeCompare(b.display_name);
-  });
-}
+// ─── Public API ──────────────────────────────────────────────────────────
 
 export function computeRecipeCost(
   recipe: BeerJsonRecipe,
-  catalog: PriceCatalog,
+  cost_inflation_pct: number,
 ): CostBreakdown {
+  const factor = cost_inflation_pct / 100;
   const lines: CostLine[] = [];
 
   for (const f of recipe.ingredients.fermentable_additions ?? []) {
-    lines.push(makeLine("fermentable", f.name, f.amount, catalog));
+    lines.push(makeLine("fermentable", f.name, f.amount, { type: f.type }, factor));
   }
   for (const h of recipe.ingredients.hop_additions ?? []) {
-    lines.push(makeLine("hop", h.name, h.amount, catalog));
+    lines.push(makeLine("hop", h.name, h.amount, {}, factor));
   }
   for (const c of recipe.ingredients.culture_additions ?? []) {
-    lines.push(makeLine("culture", c.name, c.amount, catalog));
+    lines.push(makeLine("culture", c.name, c.amount, { form: c.form }, factor));
   }
   for (const m of recipe.ingredients.miscellaneous_additions ?? []) {
-    lines.push(makeLine("misc", m.name, m.amount, catalog));
+    lines.push(makeLine("misc", m.name, m.amount, { type: m.type }, factor));
   }
 
   const priced = lines.filter((l) => l.line_cost !== null);
