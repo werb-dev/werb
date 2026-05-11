@@ -142,7 +142,7 @@ export function BrewScreen({ recipeId, recipe, sessionId, activeProfile, onBack 
 
   return (
     <div className="min-h-dvh bg-bg text-text">
-      <main className="mx-auto max-w-3xl px-6 py-10">
+      <main className="mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-10">
         <Header
           recipe={recipe}
           session={session}
@@ -194,11 +194,11 @@ export function BrewScreen({ recipeId, recipe, sessionId, activeProfile, onBack 
           disabled={session.status === "completed"}
         />
 
-        <div className="mt-12 flex flex-wrap gap-3 justify-between">
+        <div className="mt-10 sm:mt-12 flex flex-wrap gap-3 justify-between">
           {session.status !== "completed" ? (
             <button
               onClick={brew.completeSession}
-              className="px-5 py-3 rounded-lg bg-success text-bg text-body-sm font-medium hover:opacity-90 transition-opacity"
+              className="px-5 py-3 rounded-lg bg-success text-bg text-body-sm font-medium hover:opacity-90 transition-opacity min-h-[44px]"
             >
               Complete session
             </button>
@@ -215,7 +215,7 @@ export function BrewScreen({ recipeId, recipe, sessionId, activeProfile, onBack 
                 brew.abandon();
               }
             }}
-            className="px-5 py-3 rounded-lg bg-surface-raised border border-border text-text-muted text-body-sm font-medium hover:text-danger hover:border-danger transition-colors"
+            className="px-5 py-3 rounded-lg bg-surface-raised border border-border text-text-muted text-body-sm font-medium hover:text-danger hover:border-danger transition-colors min-h-[44px]"
           >
             Discard session
           </button>
@@ -239,19 +239,19 @@ function Header({
   onBack: () => void;
 }) {
   return (
-    <header className="mb-10">
+    <header className="mb-8 sm:mb-10">
       <button
         onClick={onBack}
         className="text-caption font-medium text-text-muted hover:text-text transition-colors flex items-center gap-2"
       >
         <span aria-hidden>←</span> Recipe
       </button>
-      <div className="mt-6 flex items-start justify-between gap-6">
+      <div className="mt-5 sm:mt-6 flex items-start justify-between gap-3 sm:gap-6">
         <div className="min-w-0">
           <p className="text-caption uppercase tracking-widest text-accent font-medium">
             Brew session · <StatusLabel status={session.status} />
           </p>
-          <h1 className="text-h1 font-semibold mt-2 capitalize">
+          <h1 className="text-h2 sm:text-h1 font-semibold mt-2 capitalize break-words">
             {recipe.name.toLowerCase()}
           </h1>
           <p className="text-body-sm text-text-muted mt-2 font-mono">
@@ -275,7 +275,7 @@ function HltFitBanner({
   if (fit.kind === "overflow") {
     const label = fit.which === "strike" ? "Strike water" : "Sparge water";
     return (
-      <section className="mb-8 rounded-xl border border-danger bg-danger/10 px-5 py-4">
+      <section className="mb-6 sm:mb-8 rounded-xl border border-danger bg-danger/10 px-4 sm:px-5 py-3 sm:py-4">
         <p className="text-caption uppercase tracking-widest text-danger font-medium">
           HLT too small
         </p>
@@ -288,7 +288,7 @@ function HltFitBanner({
     );
   }
   return (
-    <section className="mb-8 rounded-xl border border-warning bg-warning/10 px-5 py-4">
+    <section className="mb-6 sm:mb-8 rounded-xl border border-warning bg-warning/10 px-4 sm:px-5 py-3 sm:py-4">
       <p className="text-caption uppercase tracking-widest text-warning font-medium">
         Two-heat session
       </p>
@@ -310,7 +310,7 @@ function KettleFitBanner({
 }) {
   const vol = (l: number) => formatLiters(l, prefs).display;
   return (
-    <section className="mb-8 rounded-xl border border-danger bg-danger/10 px-5 py-4">
+    <section className="mb-6 sm:mb-8 rounded-xl border border-danger bg-danger/10 px-4 sm:px-5 py-3 sm:py-4">
       <p className="text-caption uppercase tracking-widest text-danger font-medium">
         Kettle too small
       </p>
@@ -372,17 +372,17 @@ function ActiveStepCard({
   const overrun = remaining !== null && remaining < 0;
 
   return (
-    <section className="mb-10 rounded-2xl bg-surface border border-border p-8">
-      <div className="flex items-baseline justify-between gap-6">
-        <div>
+    <section className="mb-8 sm:mb-10 rounded-2xl bg-surface border border-border p-5 sm:p-7 lg:p-8">
+      <div className="flex items-baseline justify-between gap-3 sm:gap-6">
+        <div className="min-w-0">
           <p className="text-caption uppercase tracking-widest text-text-muted">
             {kindLabel(step.kind)}
           </p>
-          <h2 className="text-h2 font-semibold mt-2 capitalize">{step.label}</h2>
+          <h2 className="text-h3 sm:text-h2 font-semibold mt-2 capitalize break-words">{step.label}</h2>
         </div>
-        <div className="text-right">
+        <div className="text-right shrink-0">
           <p
-            className={`font-mono text-display tabular-nums ${
+            className={`font-mono text-h1 sm:text-display tabular-nums ${
               overrun ? "text-warning" : "text-accent"
             }`}
           >
@@ -443,9 +443,9 @@ function StepInfo({
 
   if (variant === "active") {
     return (
-      <div className="mt-6 space-y-5">
+      <div className="mt-6 space-y-4 sm:space-y-5">
         {(stats.length > 0 || step.target_temperature_c !== undefined) && (
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 gap-2 sm:gap-4">
             {step.target_temperature_c !== undefined && (
               <StatTile
                 value={formatCelsius(step.target_temperature_c, prefs).display}
@@ -577,9 +577,9 @@ function StatTile({
   const valueColor =
     tone === "data" ? "text-data" : tone === "accent" ? "text-accent" : "text-text";
   return (
-    <div className="rounded-lg bg-surface-raised border border-border px-4 py-3">
-      <p className="text-caption uppercase tracking-widest text-text-muted">{label}</p>
-      <p className={`font-mono text-h3 mt-1 tabular-nums ${valueColor}`}>{value}</p>
+    <div className="rounded-lg bg-surface-raised border border-border px-3 py-3 sm:px-4">
+      <p className="text-[10px] sm:text-caption uppercase tracking-widest text-text-muted truncate">{label}</p>
+      <p className={`font-mono text-body sm:text-h3 mt-1 tabular-nums ${valueColor}`}>{value}</p>
     </div>
   );
 }
@@ -642,13 +642,13 @@ function HopSchedule({
           return (
             <li
               key={h.originalIndex}
-              className={`flex items-center justify-between gap-4 px-2 py-2 rounded ${
+              className={`flex items-center justify-between gap-3 sm:gap-4 px-2 py-2 rounded ${
                 isNext && due ? "bg-accent/10 ring-1 ring-accent/40" : ""
               }`}
             >
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p
-                  className={`text-body-sm font-medium ${
+                  className={`text-body-sm font-medium break-words ${
                     isAdded ? "text-text-muted line-through" : "text-text"
                   }`}
                 >
@@ -670,7 +670,7 @@ function HopSchedule({
               <button
                 onClick={() => toggle(h.originalIndex)}
                 title={isAdded ? "Tap to undo" : "Tap when added to the boil"}
-                className={`shrink-0 px-3 py-1.5 rounded-pill border text-caption font-medium transition-colors ${
+                className={`shrink-0 px-3 py-2 sm:py-1.5 rounded-pill border text-caption font-medium transition-colors min-h-[36px] ${
                   isAdded
                     ? "border-success text-success bg-success/10 hover:bg-success/20"
                     : due
@@ -790,11 +790,11 @@ function TimelineRow({
       : 0;
 
   return (
-    <li className="px-5 py-4">
-      <div className="flex items-start gap-4">
+    <li className="px-4 py-4 sm:px-5">
+      <div className="flex items-start gap-3 sm:gap-4">
         <span
           aria-hidden
-          className={`shrink-0 w-7 mt-0.5 text-h4 text-center font-mono ${
+          className={`shrink-0 w-6 sm:w-7 mt-0.5 text-h4 text-center font-mono ${
             step.status === "done"
               ? "text-success"
               : step.status === "active"
@@ -806,7 +806,7 @@ function TimelineRow({
         </span>
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline justify-between gap-4">
-            <p className="text-body font-medium">{step.label}</p>
+            <p className="text-body font-medium break-words">{step.label}</p>
           </div>
           <StepInfo step={step} ctx={ctx} elapsedSec={elapsedSec} variant="row" prefs={prefs} />
           {step.status === "active" && elapsedSec > 0 && (
@@ -845,7 +845,7 @@ function TimelineRow({
             {step.status === "pending" && (
               <button
                 onClick={onStart}
-                className="px-3 py-1.5 rounded-lg bg-surface-raised border border-border text-caption font-medium hover:border-accent hover:text-accent transition-colors"
+                className="px-3 py-2 sm:py-1.5 rounded-lg bg-surface-raised border border-border text-caption font-medium hover:border-accent hover:text-accent transition-colors min-h-[36px]"
               >
                 Start
               </button>
@@ -853,7 +853,7 @@ function TimelineRow({
             {step.status === "active" && (
               <button
                 onClick={onFinish}
-                className="px-3 py-1.5 rounded-lg bg-accent text-bg text-caption font-medium hover:opacity-90 transition-opacity"
+                className="px-3 py-2 sm:py-1.5 rounded-lg bg-accent text-bg text-caption font-medium hover:opacity-90 transition-opacity min-h-[36px]"
               >
                 Done
               </button>
@@ -934,7 +934,7 @@ function StartHint() {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="mb-10">
+    <section className="mb-8 sm:mb-10">
       <h2 className="text-h3 font-semibold mb-4">{title}</h2>
       {children}
     </section>
@@ -1003,8 +1003,8 @@ function MeasurementsSection({
     <Section title="Measurements">
       {!disabled && (
         <div className="rounded-xl bg-surface border border-border p-4 mb-4">
-          <div className="flex flex-wrap items-end gap-3">
-            <label className="flex-1 min-w-[10rem]">
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap sm:items-end gap-3">
+            <label className="col-span-1 sm:flex-1 sm:min-w-[10rem]">
               <span className="block text-caption uppercase tracking-widest text-text-muted mb-1">
                 Reading
               </span>
@@ -1020,7 +1020,7 @@ function MeasurementsSection({
                 ))}
               </select>
             </label>
-            <label className="flex-1 min-w-[8rem]">
+            <label className="col-span-1 sm:flex-1 sm:min-w-[8rem]">
               <span className="block text-caption uppercase tracking-widest text-text-muted mb-1">
                 Value{spec.unit && ` (${spec.unit})`}
               </span>
@@ -1035,7 +1035,7 @@ function MeasurementsSection({
                 className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-body font-mono tabular-nums text-text focus:outline-none focus:border-accent [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
               />
             </label>
-            <label className="flex-[2] min-w-[12rem]">
+            <label className="col-span-2 sm:flex-[2] sm:min-w-[12rem]">
               <span className="block text-caption uppercase tracking-widest text-text-muted mb-1">
                 Notes (optional)
               </span>
@@ -1051,7 +1051,7 @@ function MeasurementsSection({
               type="button"
               onClick={submit}
               disabled={!Number.isFinite(value)}
-              className="px-5 py-2 rounded-lg bg-accent text-bg text-body-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+              className="col-span-2 sm:col-auto w-full sm:w-auto px-5 py-2.5 sm:py-2 rounded-lg bg-accent text-bg text-body-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed min-h-[40px]"
             >
               Log
             </button>
@@ -1079,7 +1079,7 @@ function MeasurementsSection({
             return (
               <li
                 key={m.at}
-                className="px-4 py-3 flex items-baseline justify-between gap-4 hover:bg-surface-raised/40 transition-colors"
+                className="px-4 py-3 flex items-baseline justify-between gap-3 sm:gap-4 hover:bg-surface-raised/40 transition-colors"
               >
                 <div className="min-w-0">
                   <p className="text-body-sm text-text">

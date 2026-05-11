@@ -87,14 +87,14 @@ export function LibraryScreen({
 
   return (
     <div className="min-h-dvh bg-bg text-text">
-      <main className="mx-auto max-w-5xl px-8 py-12">
-        <header className="mb-12">
+      <main className="mx-auto max-w-5xl px-4 pt-12 pb-8 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
+        <header className="mb-8 sm:mb-10 lg:mb-12">
           <p className="text-caption uppercase tracking-widest text-text-muted">
             {loading
               ? "Werb · loading…"
               : `Werb · ${recipes.length} recipe${recipes.length === 1 ? "" : "s"}`}
           </p>
-          <h1 className="text-h1 font-semibold mt-3">Library</h1>
+          <h1 className="text-h2 sm:text-h1 font-semibold mt-3">Library</h1>
           <ProfileBadge profile={activeProfile} onGoEquipment={onGoEquipment} />
 
           <div className="flex flex-wrap gap-2 mt-5">
@@ -227,7 +227,7 @@ function RecipeCard({
 
   return (
     <div className="group relative">
-      <div className="absolute top-3 right-3 z-10 flex gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+      <div className="absolute top-3 right-3 z-10 flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100 transition-opacity">
         <button
           onClick={onDuplicate}
           aria-label={`Duplicate ${recipe.name}`}
@@ -247,7 +247,7 @@ function RecipeCard({
       </div>
     <button
       onClick={onSelect}
-      className="w-full text-left rounded-xl bg-surface border border-border hover:bg-surface-raised hover:border-border-strong transition-colors p-6 flex flex-col gap-4 focus:outline-none focus:ring-2 focus:ring-accent"
+      className="w-full text-left rounded-xl bg-surface border border-border hover:bg-surface-raised hover:border-border-strong transition-colors p-5 sm:p-6 flex flex-col gap-4 focus:outline-none focus:ring-2 focus:ring-accent"
     >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">

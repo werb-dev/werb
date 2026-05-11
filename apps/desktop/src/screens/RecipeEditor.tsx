@@ -53,8 +53,8 @@ export function RecipeEditor({ recipe, onClose, onSave }: RecipeEditorProps) {
 
   return (
     <div className="min-h-dvh bg-bg text-text">
-      <main className="mx-auto max-w-4xl px-8 py-12">
-        <header className="mb-10 flex items-center justify-between gap-4">
+      <main className="mx-auto max-w-4xl px-4 pt-12 pb-8 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
+        <header className="mb-8 sm:mb-10 flex items-center justify-between gap-4">
           <button
             onClick={onClose}
             className="text-caption font-medium text-text-muted hover:text-text transition-colors flex items-center gap-2"
@@ -63,14 +63,14 @@ export function RecipeEditor({ recipe, onClose, onSave }: RecipeEditorProps) {
           </button>
           <button
             onClick={handleSave}
-            className="px-5 py-2 rounded-lg bg-accent text-bg text-body-sm font-medium hover:opacity-90 transition-opacity"
+            className="px-5 py-2 rounded-lg bg-accent text-bg text-body-sm font-medium hover:opacity-90 transition-opacity min-h-[40px]"
           >
             Save changes
           </button>
         </header>
 
-        <h1 className="text-h1 font-semibold mb-2">Edit recipe</h1>
-        <p className="text-body text-text-muted mb-10">
+        <h1 className="text-h2 sm:text-h1 font-semibold mb-2">Edit recipe</h1>
+        <p className="text-body text-text-muted mb-8 sm:mb-10">
           Changes are kept locally until you press <span className="text-text">Save changes</span>.
         </p>
 
@@ -105,7 +105,7 @@ function MetadataSection({
         style={draft.style}
         onChange={(s) => update("style", s)}
       />
-      <div className="grid grid-cols-2 gap-6 mt-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mt-6">
         <SelectField
           label="Type"
           value={draft.type}
@@ -118,7 +118,7 @@ function MetadataSection({
           onChange={(v) => update("author", v)}
         />
       </div>
-      <div className="grid grid-cols-2 gap-6 mt-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mt-6">
         <NumberField
           label="Batch size"
           unit="L"
@@ -207,7 +207,7 @@ function FermentablesSection({
 
   return (
     <Section title="Fermentables">
-      <div className="rounded-xl bg-surface border border-border">
+      <div className="rounded-xl bg-surface border border-border overflow-x-auto md:overflow-x-visible">
         <RowHeader
           cols={[
             { label: "Name", span: "col-span-4" },
@@ -221,7 +221,7 @@ function FermentablesSection({
         {items.map((f, i) => (
           <div
             key={i}
-            className="grid grid-cols-12 gap-2 px-4 py-2 border-b border-border last:border-b-0 items-center hover:bg-surface-raised/40 transition-colors"
+            className="grid grid-cols-12 gap-2 px-4 py-2 border-b border-border last:border-b-0 items-center hover:bg-surface-raised/40 transition-colors min-w-[720px] md:min-w-0"
           >
             <Combobox
               className="col-span-4"
@@ -335,7 +335,7 @@ function HopsSection({
 
   return (
     <Section title="Hops">
-      <div className="rounded-xl bg-surface border border-border">
+      <div className="rounded-xl bg-surface border border-border overflow-x-auto md:overflow-x-visible">
         <RowHeader
           cols={[
             { label: "Name", span: "col-span-3" },
@@ -350,7 +350,7 @@ function HopsSection({
         {items.map((h, i) => (
           <div
             key={i}
-            className="grid grid-cols-12 gap-2 px-4 py-2 border-b border-border last:border-b-0 items-center hover:bg-surface-raised/40 transition-colors"
+            className="grid grid-cols-12 gap-2 px-4 py-2 border-b border-border last:border-b-0 items-center hover:bg-surface-raised/40 transition-colors min-w-[720px] md:min-w-0"
           >
             <Combobox
               className="col-span-3"
@@ -491,7 +491,7 @@ function CulturesSection({
 
   return (
     <Section title="Cultures">
-      <div className="rounded-xl bg-surface border border-border">
+      <div className="rounded-xl bg-surface border border-border overflow-x-auto md:overflow-x-visible">
         <RowHeader
           cols={[
             { label: "Name", span: "col-span-4" },
@@ -505,7 +505,7 @@ function CulturesSection({
         {items.map((c, i) => (
           <div
             key={i}
-            className="grid grid-cols-12 gap-2 px-4 py-2 border-b border-border last:border-b-0 items-center hover:bg-surface-raised/40 transition-colors"
+            className="grid grid-cols-12 gap-2 px-4 py-2 border-b border-border last:border-b-0 items-center hover:bg-surface-raised/40 transition-colors min-w-[720px] md:min-w-0"
           >
             <Combobox
               className="col-span-4"
@@ -667,7 +667,7 @@ function MashSection({
 
   return (
     <Section title="Mash schedule">
-      <div className="rounded-xl bg-surface border border-border">
+      <div className="rounded-xl bg-surface border border-border overflow-x-auto md:overflow-x-visible">
         <RowHeader
           cols={[
             { label: "Name", span: "col-span-3" },
@@ -686,7 +686,7 @@ function MashSection({
         {steps.map((step, i) => (
           <div
             key={i}
-            className="grid grid-cols-12 gap-2 px-4 py-2 border-b border-border last:border-b-0 items-center hover:bg-surface-raised/40 transition-colors"
+            className="grid grid-cols-12 gap-2 px-4 py-2 border-b border-border last:border-b-0 items-center hover:bg-surface-raised/40 transition-colors min-w-[720px] md:min-w-0"
           >
             <InlineInput
               className="col-span-3"
@@ -916,7 +916,7 @@ function MiscsSection({
 
   return (
     <Section title="Miscellaneous">
-      <div className="rounded-xl bg-surface border border-border">
+      <div className="rounded-xl bg-surface border border-border overflow-x-auto md:overflow-x-visible">
         <RowHeader
           cols={[
             { label: "Name", span: "col-span-3" },
@@ -930,7 +930,7 @@ function MiscsSection({
         {items.map((m, i) => (
           <div
             key={i}
-            className="grid grid-cols-12 gap-2 px-4 py-2 border-b border-border last:border-b-0 items-center hover:bg-surface-raised/40 transition-colors"
+            className="grid grid-cols-12 gap-2 px-4 py-2 border-b border-border last:border-b-0 items-center hover:bg-surface-raised/40 transition-colors min-w-[720px] md:min-w-0"
           >
             <Combobox
               className="col-span-3"
@@ -1249,7 +1249,7 @@ function applyMiscEntry(m: MiscAddition, e: MiscEntry): MiscAddition {
 
 function RowHeader({ cols }: { cols: { label: string; span: string }[] }) {
   return (
-    <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-surface-raised text-caption uppercase tracking-widest text-text-muted border-b border-border">
+    <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-surface-raised text-caption uppercase tracking-widest text-text-muted border-b border-border min-w-[720px] md:min-w-0">
       {cols.map((c, i) => (
         <div key={i} className={c.span}>
           {c.label}

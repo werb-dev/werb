@@ -189,7 +189,7 @@ function DevNav({
   if (state.view === "brew") return null;
 
   return (
-    <nav className="fixed top-3 right-3 z-50 flex gap-1 rounded-pill bg-surface-raised border border-border p-1 shadow-lg">
+    <nav className="fixed top-2 right-2 sm:top-3 sm:right-3 z-50 flex gap-0.5 sm:gap-1 rounded-pill bg-surface-raised border border-border p-0.5 sm:p-1 shadow-lg">
       <NavButton
         active={state.view === "library" || state.view === "recipe"}
         onClick={goLibrary}
@@ -205,7 +205,7 @@ function DevNav({
       <NavButton active={state.view === "settings"} onClick={goSettings}>
         Settings
       </NavButton>
-      <NavButton active={state.view === "tokens"} onClick={goTokens}>
+      <NavButton active={state.view === "tokens"} onClick={goTokens} hideOnMobile>
         Tokens
       </NavButton>
     </nav>
@@ -215,16 +215,18 @@ function DevNav({
 function NavButton({
   active,
   onClick,
+  hideOnMobile,
   children,
 }: {
   active: boolean;
   onClick: () => void;
+  hideOnMobile?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <button
       onClick={onClick}
-      className={`px-4 py-1.5 rounded-pill text-caption font-medium transition-colors ${
+      className={`${hideOnMobile ? "hidden sm:inline-flex" : ""} px-2.5 py-1 sm:px-4 sm:py-1.5 rounded-pill text-[11px] sm:text-caption font-medium transition-colors ${
         active ? "bg-accent text-bg" : "text-text-muted hover:text-text hover:bg-surface"
       }`}
     >

@@ -30,14 +30,14 @@ export function EquipmentScreen({ api }: EquipmentScreenProps) {
 
   return (
     <div className="min-h-dvh bg-bg text-text">
-      <main className="mx-auto max-w-5xl px-8 py-12">
-        <header className="mb-10">
+      <main className="mx-auto max-w-5xl px-4 pt-12 pb-8 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
+        <header className="mb-8 sm:mb-10">
           <p className="text-caption uppercase tracking-widest text-text-muted">
             {eq.loading
               ? "Werb · loading…"
               : `Werb · ${eq.profiles.length} profile${eq.profiles.length === 1 ? "" : "s"}`}
           </p>
-          <h1 className="text-h1 font-semibold mt-3">Equipment</h1>
+          <h1 className="text-h2 sm:text-h1 font-semibold mt-3">Equipment</h1>
           <p className="text-body text-text-muted mt-2 max-w-2xl">
             Define your kettle, mash tun, fermenter and losses. The active profile drives
             water volume calculations across the library, recipe view and brew mode.
@@ -49,7 +49,7 @@ export function EquipmentScreen({ api }: EquipmentScreenProps) {
         ) : eq.profiles.length === 0 ? (
           <EmptyState onCreate={handleCreate} />
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-[16rem_1fr] gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-[16rem_1fr] gap-6 lg:gap-8">
             <ProfileList
               profiles={eq.profiles}
               selectedId={selectedId}
@@ -200,7 +200,7 @@ function ProfileForm({
         textarea
       />
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
         <NumberField
           label="Batch size"
           unit="L"
@@ -237,7 +237,7 @@ function ProfileForm({
       </Section>
 
       <Section title="Mash tun">
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
           <NumberField
             label="Capacity"
             unit="L"
@@ -470,7 +470,7 @@ function NumberField({
 
 function EmptyState({ onCreate }: { onCreate: () => void }) {
   return (
-    <div className="rounded-xl bg-surface border border-border border-dashed p-12 text-center">
+    <div className="rounded-xl bg-surface border border-border border-dashed p-8 sm:p-12 text-center">
       <p className="text-body text-text">
         No equipment profile yet.
       </p>

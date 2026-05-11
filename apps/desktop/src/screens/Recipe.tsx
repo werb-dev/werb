@@ -154,18 +154,18 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
 
   return (
     <div className="min-h-dvh bg-bg text-text">
-      <main className="mx-auto max-w-4xl px-8 py-12">
+      <main className="mx-auto max-w-4xl px-4 pt-12 pb-8 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
         {onBack && (
           <button
             onClick={onBack}
-            className="mb-8 text-caption font-medium text-text-muted hover:text-text transition-colors flex items-center gap-2"
+            className="mb-6 sm:mb-8 text-caption font-medium text-text-muted hover:text-text transition-colors flex items-center gap-2"
           >
             <span aria-hidden>←</span> Library
           </button>
         )}
 
         {/* ─── Header ───────────────────────────────────────────────────── */}
-        <header className="mb-12">
+        <header className="mb-8 sm:mb-10 lg:mb-12">
           {recipe.style && (
             <p className="text-caption uppercase tracking-widest text-text-muted">
               {recipe.style.style_guide ? `${recipe.style.style_guide} · ` : ""}
@@ -175,7 +175,7 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
               {recipe.style.name ? ` · ${recipe.style.name}` : ""}
             </p>
           )}
-          <h1 className="text-h1 font-semibold mt-3 capitalize">{recipe.name.toLowerCase()}</h1>
+          <h1 className="text-h2 sm:text-h1 font-semibold mt-3 capitalize break-words">{recipe.name.toLowerCase()}</h1>
           {recipe.author && recipe.author !== "Unknown" && (
             <p className="text-caption text-text-muted mt-1">by {recipe.author}</p>
           )}
@@ -218,7 +218,7 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
         </header>
 
         {/* ─── Targets vs computed strip ───────────────────────────────── */}
-        <section className="mb-12 grid grid-cols-2 md:grid-cols-5 gap-px bg-border rounded-xl overflow-hidden">
+        <section className="mb-8 sm:mb-10 lg:mb-12 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-px bg-border rounded-xl overflow-hidden">
           <Tile
             label="OG"
             value={claimedOgDisplay}
@@ -291,7 +291,7 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
                 ? formatColor(f.color, prefs).display
                 : null;
               return (
-                <li key={i} className="px-6 py-5 flex items-baseline justify-between gap-6">
+                <li key={i} className="px-4 py-4 sm:px-6 sm:py-5 flex items-baseline justify-between gap-3 sm:gap-6">
                   <div className="min-w-0">
                     <p className="text-body font-medium truncate">{f.name}</p>
                     <p className="text-body-sm text-text-muted mt-1">
@@ -324,7 +324,7 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
               const time = h.timing?.time ? toMinutes(h.timing.time) : 0;
               const ibuValue = computed.ibuByIndex.get(i);
               return (
-                <li key={i} className="px-6 py-5 flex items-baseline justify-between gap-6">
+                <li key={i} className="px-4 py-4 sm:px-6 sm:py-5 flex items-baseline justify-between gap-3 sm:gap-6">
                   <div className="min-w-0">
                     <p className="text-body font-medium truncate">
                       {h.name}
@@ -376,7 +376,7 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
                     ? formatVolume(m.amount, prefs).display
                     : "—";
                   return (
-                    <li key={i} className="px-6 py-5 flex items-baseline justify-between gap-6">
+                    <li key={i} className="px-4 py-4 sm:px-6 sm:py-5 flex items-baseline justify-between gap-3 sm:gap-6">
                       <div className="min-w-0">
                         <p className="text-body font-medium truncate">{m.name}</p>
                         <p className="text-body-sm text-text-muted mt-1">
@@ -402,7 +402,7 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
           >
             <ol className="rounded-xl bg-surface border border-border divide-y divide-border">
               {recipe.mash.mash_steps.map((step, i) => (
-                <li key={i} className="px-6 py-5 flex items-baseline justify-between gap-6">
+                <li key={i} className="px-4 py-4 sm:px-6 sm:py-5 flex items-baseline justify-between gap-3 sm:gap-6">
                   <div className="min-w-0">
                     <p className="text-body font-medium">{step.name}</p>
                     <p className="text-body-sm text-text-muted mt-1 capitalize">
@@ -432,7 +432,7 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
             <Section title="Cultures">
               <ul className="rounded-xl bg-surface border border-border divide-y divide-border">
                 {recipe.ingredients.culture_additions.map((c, i) => (
-                  <li key={i} className="px-6 py-5 flex items-baseline justify-between gap-6">
+                  <li key={i} className="px-4 py-4 sm:px-6 sm:py-5 flex items-baseline justify-between gap-3 sm:gap-6">
                     <div className="min-w-0">
                       <p className="text-body font-medium">{c.name}</p>
                       <p className="text-body-sm text-text-muted mt-1">
@@ -543,7 +543,7 @@ function ExportMenu({ recipe, prefs }: { recipe: BeerJsonRecipe; prefs: UnitPref
             className="fixed inset-0 z-40"
             aria-hidden
           />
-          <div className="absolute right-0 top-full mt-2 z-50 min-w-[20rem] bg-surface-raised border border-border rounded-lg shadow-xl overflow-hidden">
+          <div className="absolute right-0 top-full mt-2 z-50 w-[calc(100vw-2rem)] sm:w-auto sm:min-w-[20rem] max-w-[20rem] bg-surface-raised border border-border rounded-lg shadow-xl overflow-hidden">
             {options.map((opt) => (
               <button
                 key={opt.label}
@@ -620,7 +620,7 @@ function YeastPitchSection({ recipe }: { recipe: BeerJsonRecipe }) {
       title="Yeast pitch"
       subtitle={`Target cell count for ${formLabel}. Adjust pack count and viability to match what you have on hand.`}
     >
-      <div className="rounded-xl bg-surface border border-border p-6">
+      <div className="rounded-xl bg-surface border border-border p-4 sm:p-6">
         {/* Input row */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
           <CarbField
@@ -665,11 +665,11 @@ function YeastPitchSection({ recipe }: { recipe: BeerJsonRecipe }) {
 
         {/* Verdict */}
         <div className="grid grid-cols-2 gap-px bg-border rounded-xl overflow-hidden">
-          <div className="bg-surface px-5 py-4">
-            <p className="text-caption uppercase tracking-widest text-text-muted">
+          <div className="bg-surface px-3 py-3 sm:px-5 sm:py-4">
+            <p className="text-[10px] sm:text-caption uppercase tracking-widest text-text-muted">
               Recommended
             </p>
-            <p className="font-mono text-h2 mt-1 text-accent">
+            <p className="font-mono text-h3 sm:text-h2 mt-1 text-accent">
               {out.recommended_pack_count}{" "}
               <span className="text-body-sm text-text-muted">
                 {yeastForm === "dry" ? "sachets" : "packs"}
@@ -679,12 +679,12 @@ function YeastPitchSection({ recipe }: { recipe: BeerJsonRecipe }) {
               {out.packs_needed.toFixed(2)} packs exact
             </p>
           </div>
-          <div className="bg-surface px-5 py-4">
-            <p className="text-caption uppercase tracking-widest text-text-muted">
+          <div className="bg-surface px-3 py-3 sm:px-5 sm:py-4">
+            <p className="text-[10px] sm:text-caption uppercase tracking-widest text-text-muted">
               Status
             </p>
             <p
-              className={`font-mono text-h2 mt-1 ${needStarter ? "text-warning" : "text-success"}`}
+              className={`font-mono text-h3 sm:text-h2 mt-1 ${needStarter ? "text-warning" : "text-success"}`}
             >
               {needStarter ? "Under-pitch" : "Sufficient"}
             </p>
@@ -858,7 +858,7 @@ function WaterChemistrySection({ recipe }: { recipe: BeerJsonRecipe }) {
       title="Water chemistry"
       subtitle="Source water + brewing-salt additions. Pick a target profile to see deltas on the resulting ion strip."
     >
-      <div className="rounded-xl bg-surface border border-border p-6">
+      <div className="rounded-xl bg-surface border border-border p-4 sm:p-6">
         <SourceWaterRow
           source={form.source}
           onChange={updateSource}
@@ -866,7 +866,7 @@ function WaterChemistrySection({ recipe }: { recipe: BeerJsonRecipe }) {
           savedMatches={ionsEqual(form.source, savedSource)}
         />
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mt-6">
           <CarbField
             label="Total water"
             unit="L"
@@ -880,7 +880,7 @@ function WaterChemistrySection({ recipe }: { recipe: BeerJsonRecipe }) {
             }
             hint={`Default ${defaultVolumeL.toFixed(1)} L (mash + sparge)`}
           />
-          <label className="block col-span-2 md:col-span-3">
+          <label className="block sm:col-span-1 md:col-span-3">
             <span className="block text-caption uppercase tracking-widest text-text-muted mb-1">
               Target profile
             </span>
@@ -951,7 +951,7 @@ function SourceWaterRow({
           {savedMatches ? "✓ saved as default" : "Save as default"}
         </button>
       </div>
-      <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
         <IonField label="Ca²⁺" value={source.ca_ppm} onChange={(v) => onChange({ ...source, ca_ppm: v })} />
         <IonField label="Mg²⁺" value={source.mg_ppm} onChange={(v) => onChange({ ...source, mg_ppm: v })} />
         <IonField label="Na⁺" value={source.na_ppm} onChange={(v) => onChange({ ...source, na_ppm: v })} />
@@ -975,7 +975,7 @@ function SaltsRow({
       <p className="text-caption uppercase tracking-widest text-text-muted mb-3">
         Salt additions (g, total volume)
       </p>
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
         <SaltField label="Gypsum" sub="CaSO₄" value={salts.gypsum_g} onChange={(v) => onChange("gypsum_g", v)} />
         <SaltField label="CaCl₂" sub="dihydrate" value={salts.calcium_chloride_g} onChange={(v) => onChange("calcium_chloride_g", v)} />
         <SaltField label="Epsom" sub="MgSO₄" value={salts.epsom_g} onChange={(v) => onChange("epsom_g", v)} />
@@ -1002,7 +1002,7 @@ function ResultStrip({
     { label: "HCO₃⁻", value: result.hco3_ppm, targetVal: target?.hco3_ppm },
   ];
   return (
-    <div className="mt-6 grid grid-cols-3 md:grid-cols-6 gap-px bg-border rounded-xl overflow-hidden">
+    <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-px bg-border rounded-xl overflow-hidden">
       {ions.map((ion) => {
         const delta = ion.targetVal !== undefined ? ion.value - ion.targetVal : null;
         // Tolerance is generous — water chemistry isn't a precision
@@ -1010,9 +1010,9 @@ function ResultStrip({
         const tolerance = ion.targetVal !== undefined ? Math.max(15, ion.targetVal * 0.2) : 0;
         const offTarget = delta !== null && Math.abs(delta) > tolerance;
         return (
-          <div key={ion.label} className="bg-surface px-4 py-3">
-            <p className="text-caption uppercase tracking-widest text-text-muted">{ion.label}</p>
-            <p className={`font-mono text-h3 mt-1 ${offTarget ? "text-warning" : "text-text"}`}>
+          <div key={ion.label} className="bg-surface px-3 py-3 sm:px-4">
+            <p className="text-[10px] sm:text-caption uppercase tracking-widest text-text-muted">{ion.label}</p>
+            <p className={`font-mono text-body sm:text-h3 mt-1 ${offTarget ? "text-warning" : "text-text"}`}>
               {ion.value.toFixed(0)}
             </p>
             {ion.targetVal !== undefined && (
@@ -1172,7 +1172,7 @@ function CarbonationSection({ recipe }: { recipe: BeerJsonRecipe }) {
       title="Carbonation"
       subtitle="Priming sugar amounts for bottle conditioning, plus the regulator pressure for force-carbonation in a keg."
     >
-      <div className="rounded-xl bg-surface border border-border p-6">
+      <div className="rounded-xl bg-surface border border-border p-4 sm:p-6">
         {/* Input row */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <CarbField
@@ -1251,18 +1251,18 @@ function CarbonationSection({ recipe }: { recipe: BeerJsonRecipe }) {
             Force-carbonation pressure
           </p>
           <div className="grid grid-cols-2 gap-px bg-border rounded-xl overflow-hidden">
-            <div className="bg-surface px-5 py-4">
-              <p className="text-caption uppercase tracking-widest text-text-muted">PSI</p>
-              <p className="font-mono text-h2 mt-1 text-accent">
+            <div className="bg-surface px-3 py-3 sm:px-5 sm:py-4">
+              <p className="text-[10px] sm:text-caption uppercase tracking-widest text-text-muted">PSI</p>
+              <p className="font-mono text-h3 sm:text-h2 mt-1 text-accent">
                 {out.force_pressure_psi.toFixed(1)}
               </p>
               <p className="font-mono text-caption mt-1 text-text-muted">
                 regulator at {form.serving_temp_c.toFixed(1)} °C
               </p>
             </div>
-            <div className="bg-surface px-5 py-4">
-              <p className="text-caption uppercase tracking-widest text-text-muted">Bar</p>
-              <p className="font-mono text-h2 mt-1">{out.force_pressure_bar.toFixed(2)}</p>
+            <div className="bg-surface px-3 py-3 sm:px-5 sm:py-4">
+              <p className="text-[10px] sm:text-caption uppercase tracking-widest text-text-muted">Bar</p>
+              <p className="font-mono text-h3 sm:text-h2 mt-1">{out.force_pressure_bar.toFixed(2)}</p>
               <p className="font-mono text-caption mt-1 text-text-muted">same pressure, metric</p>
             </div>
           </div>
@@ -1343,9 +1343,9 @@ function CarbResult({
 }) {
   const display = value > 0 ? `${value.toFixed(0)} g` : "—";
   return (
-    <div className="bg-surface px-5 py-4">
-      <p className="text-caption uppercase tracking-widest text-text-muted">{label}</p>
-      <p className="font-mono text-h3 mt-1 text-text">{display}</p>
+    <div className="bg-surface px-3 py-3 sm:px-5 sm:py-4">
+      <p className="text-[10px] sm:text-caption uppercase tracking-widest text-text-muted">{label}</p>
+      <p className="font-mono text-body sm:text-h3 mt-1 text-text">{display}</p>
       <p className="font-mono text-caption mt-1 text-text-muted">{note}</p>
     </div>
   );
@@ -1422,7 +1422,7 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="mb-12">
+    <section className="mb-8 sm:mb-10 lg:mb-12">
       <h2 className="text-h3 font-semibold mb-1">{title}</h2>
       {subtitle && <p className="text-body-sm text-text-muted mb-4">{subtitle}</p>}
       {!subtitle && <div className="mb-4" />}
@@ -1447,10 +1447,10 @@ function Tile({
   styleHint?: RangeHint | null | undefined;
 }) {
   return (
-    <div className="bg-surface px-5 py-4">
-      <p className="text-caption uppercase tracking-widest text-text-muted">{label}</p>
+    <div className="bg-surface px-3 py-3 sm:px-5 sm:py-4">
+      <p className="text-[10px] sm:text-caption uppercase tracking-widest text-text-muted">{label}</p>
       <p
-        className={`font-mono text-h2 mt-1 ${
+        className={`font-mono text-h3 sm:text-h2 mt-1 ${
           highlight ? "text-accent" : warn ? "text-warning" : "text-text"
         }`}
       >

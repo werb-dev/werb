@@ -31,14 +31,14 @@ export function JournalScreen({
 
   return (
     <div className="min-h-dvh bg-bg text-text">
-      <main className="mx-auto max-w-3xl px-8 py-12">
-        <header className="mb-10">
+      <main className="mx-auto max-w-3xl px-4 pt-12 pb-8 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
+        <header className="mb-8 sm:mb-10">
           <p className="text-caption uppercase tracking-widest text-text-muted">
             {loading
               ? "Werb · loading…"
               : `Werb · ${sessions.length} brew${sessions.length === 1 ? "" : "s"}`}
           </p>
-          <h1 className="text-h1 font-semibold mt-3">Journal</h1>
+          <h1 className="text-h2 sm:text-h1 font-semibold mt-3">Journal</h1>
           <p className="text-body text-text-muted mt-2 max-w-2xl">
             Every brew session you've started. Tap one to revisit its
             timeline, measurements and notes.
@@ -91,8 +91,8 @@ function SessionRow({
   const duration = sessionDuration(session);
 
   return (
-    <div className="px-6 py-5 hover:bg-surface-raised/40 transition-colors">
-      <div className="flex items-baseline justify-between gap-4">
+    <div className="px-4 py-4 sm:px-6 sm:py-5 hover:bg-surface-raised/40 transition-colors">
+      <div className="flex items-baseline justify-between gap-3 sm:gap-4">
         <button
           type="button"
           onClick={onOpen}
@@ -159,7 +159,7 @@ function ExportMenu({
             className="fixed inset-0 z-40"
             aria-hidden
           />
-          <div className="absolute right-0 top-full mt-2 z-50 min-w-[14rem] bg-surface-raised border border-border rounded-lg shadow-xl overflow-hidden">
+          <div className="absolute right-0 top-full mt-2 z-50 w-[calc(100vw-2rem)] sm:w-auto sm:min-w-[14rem] max-w-[18rem] bg-surface-raised border border-border rounded-lg shadow-xl overflow-hidden">
             <button
               type="button"
               onClick={() => run(onExportHtml)}
@@ -213,7 +213,7 @@ function StatusBadge({ status }: { status: WerbSession["status"] }) {
 
 function EmptyState() {
   return (
-    <div className="rounded-xl bg-surface border border-border border-dashed p-12 text-center">
+    <div className="rounded-xl bg-surface border border-border border-dashed p-8 sm:p-12 text-center">
       <p className="text-body text-text">No brews yet.</p>
       <p className="text-body-sm text-text-muted mt-2 max-w-md mx-auto">
         Open a recipe and tap <span className="text-text">Start brewing</span> to
@@ -231,7 +231,7 @@ function Skeleton() {
       aria-live="polite"
     >
       {[0, 1, 2].map((i) => (
-        <li key={i} className="px-6 py-5 animate-pulse">
+        <li key={i} className="px-4 py-4 sm:px-6 sm:py-5 animate-pulse">
           <div className="flex items-baseline justify-between gap-4">
             <div className="flex-1 space-y-2">
               <div className="h-4 w-1/3 rounded bg-surface-raised" />

@@ -57,12 +57,12 @@ export function SettingsScreen() {
 
   return (
     <div className="min-h-dvh bg-bg text-text">
-      <main className="mx-auto max-w-2xl px-8 py-12">
-        <header className="mb-10">
+      <main className="mx-auto max-w-2xl px-4 pt-12 pb-8 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
+        <header className="mb-8 sm:mb-10">
           <p className="text-caption uppercase tracking-widest text-text-muted">
             Werb · settings
           </p>
-          <h1 className="text-h1 font-semibold mt-3">Sync &amp; storage</h1>
+          <h1 className="text-h2 sm:text-h1 font-semibold mt-3">Sync &amp; storage</h1>
           <p className="text-body text-text-muted mt-2 max-w-2xl">
             Keep recipes, equipment profiles, and brew sessions in sync
             across devices via a private GitHub repo. Manual push / pull
@@ -99,7 +99,7 @@ function UnitsCard() {
     setPrefs((prev) => ({ ...prev, [key]: value }));
 
   return (
-    <div className="rounded-xl bg-surface border border-border p-6">
+    <div className="rounded-xl bg-surface border border-border p-4 sm:p-6">
       <p className="text-body-sm text-text-muted mb-5 max-w-prose">
         Display-only. The editor and stored data are unchanged — these
         preferences just change how recipes and brew screens render
@@ -286,7 +286,7 @@ function DataCard({ backend }: { backend: StorageBackend }) {
     });
 
   return (
-    <div className="rounded-xl bg-surface border border-border p-6">
+    <div className="rounded-xl bg-surface border border-border p-4 sm:p-6">
       <p className="text-body-sm text-text-muted mb-5 max-w-prose">
         Export a JSON backup of your recipes, equipment, and brew sessions —
         or wipe everything for a fresh start. Unit preferences and sync
@@ -390,7 +390,7 @@ function Connect({ onConnected }: { onConnected: (s: SyncConfig) => void }) {
   };
 
   return (
-    <div className="rounded-xl bg-surface border border-border p-6">
+    <div className="rounded-xl bg-surface border border-border p-4 sm:p-6">
       <p className="text-body text-text-muted mb-5 max-w-prose">
         Paste a Personal Access Token with{" "}
         <code className="font-mono text-mono text-text">Contents: read+write</code>{" "}
@@ -492,7 +492,7 @@ function Connected({
   };
 
   return (
-    <div className="rounded-xl bg-surface border border-border p-6">
+    <div className="rounded-xl bg-surface border border-border p-4 sm:p-6">
       <p className="text-body-sm text-text">
         Connected as{" "}
         <span className="font-mono text-mono">{sync.login}</span> · syncing{" "}
@@ -561,7 +561,7 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="mb-10">
+    <section className="mb-8 sm:mb-10">
       <h2 className="text-h3 font-semibold mb-4">{title}</h2>
       {children}
     </section>
