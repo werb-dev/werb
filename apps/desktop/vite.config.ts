@@ -23,7 +23,11 @@ export default defineConfig({
     // entirely offline — useful in brew mode by the kettle.
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["icons/icon-192.png", "icons/icon-512.png"],
+      includeAssets: [
+        "icons/icon-192.png",
+        "icons/icon-512.png",
+        "icons/icon-512-maskable.png",
+      ],
       manifest: {
         name: "Werb",
         short_name: "Werb",
@@ -37,21 +41,26 @@ export default defineConfig({
         start_url: ".",
         scope: ".",
         icons: [
+          // "any" purpose — rounded-rect with transparent corners so
+          // the OS-rendered bg (light or dark) shows through cleanly
+          // outside the rounded shape.
           {
             src: "icons/icon-192.png",
             sizes: "192x192",
             type: "image/png",
+            purpose: "any",
           },
           {
             src: "icons/icon-512.png",
             sizes: "512x512",
             type: "image/png",
+            purpose: "any",
           },
-          // Maskable variant for Android adaptive icons. Reusing the
-          // same source file — works as long as the icon's main
-          // content sits inside its center 80%.
+          // "maskable" purpose — full-bleed dark background so Android
+          // adaptive-icon masks (circle, squircle, …) can crop to any
+          // shape without exposing transparency.
           {
-            src: "icons/icon-512.png",
+            src: "icons/icon-512-maskable.png",
             sizes: "512x512",
             type: "image/png",
             purpose: "maskable",
