@@ -1,14 +1,20 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
+  clearWerbData,
   copyKeysToBackend,
   gitHubBackend,
+  restoreSnapshot,
+  snapshotBackend,
   useStorage,
   usePersistedJson,
   verifyGitHubAccess,
+  type DataSnapshot,
   type GitHubBackendConfig,
+  type StorageBackend,
 } from "../storage/index.ts";
 import { useUnitsControl } from "../data/preferences.tsx";
 import type { UnitPreferences } from "../data/units-format.ts";
+import { downloadTextFile, pickAndReadTextFile } from "../data/browser-fs.ts";
 
 /**
  * Sync + advanced storage settings. v1 covers a single GitHub-based
@@ -74,6 +80,10 @@ export function SettingsScreen() {
           ) : (
             <Connect onConnected={setSync} />
           )}
+        </Section>
+
+        <Section title="Data">
+          <DataCard backend={backend} />
         </Section>
       </main>
     </div>
@@ -184,6 +194,171 @@ function UnitPicker<T extends string>({
       </div>
     </div>
   );
+}
+
+// ─── Data management ─────────────────────────────────────────────────────
+
+function DataCard({ backend }: { backend: StorageBackend }) {
+  const [stats, setStats] = useState<{ recipes: number; sessions: number; equipment: number; other: number; total: number } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // Recount whenever the section mounts. The brewer pushes / pulls /
+  // wipes from here, so the numbers should reflect what was just
+  // done — but tracking every storage write into a live counter is
+  // overkill for a screen people visit occasionally.
+  useEffect(() => {
+    let cancelled = false;
+    async function refresh() {
+      const keys = await backend.list("werb.");
+      if (cancelled) return;
+      let recipes = 0;
+      let sessions = 0;
+      let equipment = 0;
+      let other = 0;
+      for (const k of keys) {
+        if (k === "werb.recipes") recipes = await countItems(backend, k, "recipes");
+        else if (k === "werb.equipment") equipment = await countItems(backend, k, "profiles");
+        else if (k.startsWith("werb.session.")) sessions++;
+        else other++;
+      }
+      if (!cancelled) {
+        setStats({ recipes, sessions, equipment, other, total: keys.length });
+      }
+    }
+    void refresh();
+    return () => {
+      cancelled = true;
+    };
+  }, [backend, message]);
+
+  const run = async (fn: () => Promise<string | null>) => {
+    setBusy(true);
+    setMessage(null);
+    setError(null);
+    try {
+      const msg = await fn();
+      if (msg) setMessage(msg);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onExport = () =>
+    run(async () => {
+      const snapshot = await snapshotBackend(backend);
+      const filename = `werb-backup-${snapshot.exported_at.slice(0, 10)}.json`;
+      downloadTextFile(filename, JSON.stringify(snapshot, null, 2), "application/json");
+      const count = Object.keys(snapshot.data).length;
+      return `Exported ${count} ${count === 1 ? "item" : "items"} to ${filename}.`;
+    });
+
+  const onRestore = () =>
+    run(async () => {
+      const picked = await pickAndReadTextFile();
+      if (!picked) return null;
+      let parsed: DataSnapshot;
+      try {
+        parsed = JSON.parse(picked.text) as DataSnapshot;
+      } catch {
+        throw new Error("That file isn't valid JSON.");
+      }
+      if (typeof parsed !== "object" || parsed === null || !("schema_version" in parsed)) {
+        throw new Error("That file isn't a Werb backup.");
+      }
+      const count = await restoreSnapshot(backend, parsed);
+      return `Restored ${count} ${count === 1 ? "item" : "items"} from backup. Reload the app to see the changes.`;
+    });
+
+  const onClear = () =>
+    run(async () => {
+      const confirmed = confirm(
+        "Delete every recipe, equipment profile, and brew session?\n\n" +
+          "Unit preferences and your GitHub sync settings are NOT affected. " +
+          "Export a backup first if you might want to undo this.",
+      );
+      if (!confirmed) return null;
+      const count = await clearWerbData(backend);
+      return `Cleared ${count} ${count === 1 ? "item" : "items"}. Reload the app to see an empty state.`;
+    });
+
+  return (
+    <div className="rounded-xl bg-surface border border-border p-6">
+      <p className="text-body-sm text-text-muted mb-5 max-w-prose">
+        Export a JSON backup of your recipes, equipment, and brew sessions —
+        or wipe everything for a fresh start. Unit preferences and sync
+        settings are stored separately and aren't touched by these actions.
+      </p>
+
+      {stats && (
+        <p className="text-caption font-mono text-text-muted mb-5">
+          {stats.recipes} recipe{stats.recipes === 1 ? "" : "s"} ·{" "}
+          {stats.equipment} equipment profile{stats.equipment === 1 ? "" : "s"} ·{" "}
+          {stats.sessions} brew session{stats.sessions === 1 ? "" : "s"}
+          {stats.other > 0 && ` · ${stats.other} other`}
+        </p>
+      )}
+
+      <div className="flex flex-wrap gap-3">
+        <button
+          type="button"
+          onClick={onExport}
+          disabled={busy}
+          className="px-5 py-2 rounded-lg bg-accent text-bg text-body-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
+        >
+          {busy ? "Working…" : "Export backup"}
+        </button>
+        <button
+          type="button"
+          onClick={onRestore}
+          disabled={busy}
+          className="px-5 py-2 rounded-lg bg-surface-raised border border-border text-body-sm font-medium hover:border-accent hover:text-accent disabled:opacity-50 transition-colors"
+        >
+          {busy ? "Working…" : "Restore from file"}
+        </button>
+        <button
+          type="button"
+          onClick={onClear}
+          disabled={busy}
+          className="ml-auto px-4 py-2 rounded-lg text-body-sm text-text-muted hover:text-danger disabled:opacity-50 transition-colors"
+        >
+          Clear all data
+        </button>
+      </div>
+
+      {message && (
+        <p className="mt-4 text-caption text-success">{message}</p>
+      )}
+      {error && (
+        <p className="mt-4 text-body-sm text-warning">{error}</p>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Count how many items live inside a blob whose top-level shape is
+ * `{ [arrayKey]: T[] }`. Used to surface "N recipes / M profiles" in
+ * the Data section header. Returns 0 on parse failure rather than
+ * blowing up the whole stats display.
+ */
+async function countItems(
+  backend: StorageBackend,
+  key: string,
+  arrayKey: string,
+): Promise<number> {
+  const raw = await backend.read(key);
+  if (!raw) return 0;
+  try {
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    const arr = parsed[arrayKey];
+    return Array.isArray(arr) ? arr.length : 0;
+  } catch {
+    return 0;
+  }
 }
 
 // ─── Connection form ──────────────────────────────────────────────────────

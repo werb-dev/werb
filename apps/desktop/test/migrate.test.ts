@@ -1,8 +1,12 @@
 import { describe, it, expect } from "vitest";
 import {
   MemoryBackend,
+  clearWerbData,
   copyKeysToBackend,
   migrateBackend,
+  restoreSnapshot,
+  snapshotBackend,
+  type DataSnapshot,
 } from "../src/storage/index.ts";
 
 describe("migrateBackend", () => {
@@ -141,5 +145,122 @@ describe("copyKeysToBackend", () => {
     // Initial event reports total + 0 done; one event per key written.
     expect(events[0]).toEqual([0, 3]);
     expect(events[events.length - 1]).toEqual([3, 3]);
+  });
+});
+
+describe("snapshotBackend", () => {
+  it("collects every werb.* key into a serializable bundle", async () => {
+    const backend = new MemoryBackend({
+      "werb.recipes": '{"recipes":[]}',
+      "werb.equipment": '{"profiles":[],"activeId":null}',
+      "werb.session.abc": '{"id":"abc"}',
+    });
+
+    const snapshot = await snapshotBackend(backend);
+
+    expect(snapshot.schema_version).toBe(1);
+    expect(snapshot.exported_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(Object.keys(snapshot.data).sort()).toEqual([
+      "werb.equipment",
+      "werb.recipes",
+      "werb.session.abc",
+    ]);
+    expect(snapshot.data["werb.recipes"]).toBe('{"recipes":[]}');
+  });
+
+  it("excludes keys outside the werb.* namespace", async () => {
+    const backend = new MemoryBackend({
+      "werb.recipes": "{}",
+      "local.sync.github": '{"token":"keep-private"}',
+      "local.prefs.units": '{"temperature":"F"}',
+    });
+
+    const snapshot = await snapshotBackend(backend);
+
+    expect(snapshot.data["local.sync.github"]).toBeUndefined();
+    expect(snapshot.data["local.prefs.units"]).toBeUndefined();
+    expect(snapshot.data["werb.recipes"]).toBeDefined();
+  });
+});
+
+describe("restoreSnapshot", () => {
+  it("writes every key in the snapshot back into the backend", async () => {
+    const backend = new MemoryBackend();
+    const snapshot: DataSnapshot = {
+      schema_version: 1,
+      exported_at: "2026-01-01T00:00:00.000Z",
+      data: {
+        "werb.recipes": '{"recipes":[{"name":"IPA"}]}',
+        "werb.session.x": '{"id":"x"}',
+      },
+    };
+
+    const count = await restoreSnapshot(backend, snapshot);
+
+    expect(count).toBe(2);
+    expect(await backend.read("werb.recipes")).toBe(snapshot.data["werb.recipes"]);
+    expect(await backend.read("werb.session.x")).toBe(snapshot.data["werb.session.x"]);
+  });
+
+  it("overwrites existing keys (full restore semantics)", async () => {
+    const backend = new MemoryBackend({ "werb.recipes": "stale" });
+    const snapshot: DataSnapshot = {
+      schema_version: 1,
+      exported_at: "2026-01-01T00:00:00.000Z",
+      data: { "werb.recipes": "from-backup" },
+    };
+    await restoreSnapshot(backend, snapshot);
+    expect(await backend.read("werb.recipes")).toBe("from-backup");
+  });
+
+  it("refuses keys outside werb.* so a malicious backup can't inject", async () => {
+    const backend = new MemoryBackend();
+    const snapshot: DataSnapshot = {
+      schema_version: 1,
+      exported_at: "2026-01-01T00:00:00.000Z",
+      data: {
+        "werb.recipes": "{}",
+        "local.sync.github": '{"token":"injected"}',
+      },
+    };
+    const count = await restoreSnapshot(backend, snapshot);
+    expect(count).toBe(1);
+    expect(await backend.read("local.sync.github")).toBeNull();
+  });
+
+  it("throws on unknown schema versions", async () => {
+    const backend = new MemoryBackend();
+    const snapshot = {
+      schema_version: 99,
+      exported_at: "2026-01-01T00:00:00.000Z",
+      data: {},
+    } as unknown as DataSnapshot;
+    await expect(restoreSnapshot(backend, snapshot)).rejects.toThrow(
+      /schema version/i,
+    );
+  });
+});
+
+describe("clearWerbData", () => {
+  it("deletes every werb.* key and reports the count", async () => {
+    const backend = new MemoryBackend({
+      "werb.recipes": "{}",
+      "werb.session.a": "{}",
+      "werb.session.b": "{}",
+    });
+    const count = await clearWerbData(backend);
+    expect(count).toBe(3);
+    expect(await backend.list("werb.")).toEqual([]);
+  });
+
+  it("leaves non-werb keys (prefs, sync config) untouched", async () => {
+    const backend = new MemoryBackend({
+      "werb.recipes": "{}",
+      "local.sync.github": '{"token":"keep"}',
+      "local.prefs.units": '{"temperature":"F"}',
+    });
+    await clearWerbData(backend);
+    expect(await backend.read("local.sync.github")).toBe('{"token":"keep"}');
+    expect(await backend.read("local.prefs.units")).toBe('{"temperature":"F"}');
   });
 });

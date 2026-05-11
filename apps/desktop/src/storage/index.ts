@@ -7,6 +7,13 @@ export {
   verifyGitHubAccess,
   type GitHubBackendConfig,
 } from "./github.ts";
-export { migrateBackend, copyKeysToBackend } from "./migrate.ts";
+export {
+  migrateBackend,
+  copyKeysToBackend,
+  snapshotBackend,
+  restoreSnapshot,
+  clearWerbData,
+  type DataSnapshot,
+} from "./migrate.ts";
 export { StorageProvider, useStorage } from "./context.tsx";
 export { usePersistedJson } from "./use-persisted-json.ts";
