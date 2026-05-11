@@ -33,6 +33,7 @@ export interface UnitPreferences {
   mass: "kg" | "lb";
   gravity: "sg" | "plato";
   color: "SRM" | "EBC";
+  currency: "EUR" | "USD" | "GBP";
 }
 
 export const DEFAULT_PREFS: UnitPreferences = {
@@ -41,7 +42,32 @@ export const DEFAULT_PREFS: UnitPreferences = {
   mass: "kg",
   gravity: "sg",
   color: "EBC",
+  currency: "EUR",
 };
+
+const CURRENCY_SYMBOL: Record<UnitPreferences["currency"], string> = {
+  EUR: "€",
+  USD: "$",
+  GBP: "£",
+};
+
+/** Render a money value in the user's preferred currency. */
+export function formatMoney(value: number, p: UnitPreferences): string {
+  const symbol = CURRENCY_SYMBOL[p.currency];
+  // Two-decimal places matches the way prices are displayed in shops —
+  // gives the brewer enough resolution for per-bottle costs (which can
+  // land at €0.42 or similar). Hop-per-gram prices come in around €0.04,
+  // also visible at 2 decimals.
+  const formatted = value.toFixed(2);
+  // Currency convention: USD prefixes the symbol ($1.50); EUR/GBP also
+  // commonly prefix in homebrew supplier UIs. Keep prefix consistent
+  // across the three to avoid mixed visual scanning.
+  return `${symbol}${formatted}`;
+}
+
+export function currencySymbol(p: UnitPreferences): string {
+  return CURRENCY_SYMBOL[p.currency];
+}
 
 export interface Formatted {
   /** Numeric value in the target unit. */

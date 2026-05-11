@@ -152,6 +152,16 @@ function UnitsCard() {
             { value: "SRM", label: "SRM" },
           ]}
         />
+        <UnitPicker
+          label="Currency"
+          value={prefs.currency}
+          onChange={(v) => update("currency", v)}
+          options={[
+            { value: "EUR", label: "€ Euro" },
+            { value: "USD", label: "$ US dollar" },
+            { value: "GBP", label: "£ Pound sterling" },
+          ]}
+        />
       </div>
     </div>
   );

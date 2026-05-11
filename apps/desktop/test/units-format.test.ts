@@ -31,6 +31,7 @@ const IMPERIAL: UnitPreferences = {
   mass: "lb",
   gravity: "plato",
   color: "SRM",
+  currency: "USD",
 };
 
 describe("formatTemperature", () => {

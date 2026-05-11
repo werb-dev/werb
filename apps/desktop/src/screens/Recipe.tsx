@@ -37,15 +37,20 @@ import { profileToWaterOverrides, type ProfileWithId } from "../data/equipment.t
 import { exportBeerJson, exportBeerXml, exportRecipeHtml } from "../data/recipe-export.ts";
 import { useBrewSessionExists } from "../hooks/useBrewSession.ts";
 import { useRecipeTastings } from "../hooks/useBrewLog.ts";
+import { usePriceCatalog } from "../hooks/usePriceCatalog.ts";
+import { computeRecipeCost, type CostLine } from "../data/cost.ts";
+import type { PriceEntry, PriceUnit } from "../data/prices.ts";
 import { SensoryRadar } from "../components/SensoryRadar.tsx";
 import { usePersistedJson } from "../storage/index.ts";
 import { useUnits } from "../data/preferences.tsx";
 import {
+  currencySymbol,
   formatColor,
   formatGravity,
   formatLiters,
   formatMassLarge,
   formatMassSmall,
+  formatMoney,
   formatSpecificGravity,
   formatSrm,
   formatTemperature,
@@ -472,6 +477,9 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
 
         {/* ─── Carbonation calculator ───────────────────────────────────── */}
         <CarbonationSection recipe={recipe} />
+
+        {/* ─── Cost estimator ───────────────────────────────────────────── */}
+        <CostSection recipe={recipe} />
 
         {/* ─── Footer note about IBU discrepancy ──────────────────────── */}
         {claimedIbu !== null && Math.abs(computed.ibu.total_ibu - claimedIbu) > 15 && (
@@ -1274,6 +1282,268 @@ function CarbonationSection({ recipe }: { recipe: BeerJsonRecipe }) {
         </div>
       </div>
     </Section>
+  );
+}
+
+// ─── Cost estimator ────────────────────────────────────────────────────────
+
+const CATEGORY_LABEL: Record<CostLine["category"], string> = {
+  fermentable: "Grain",
+  hop: "Hop",
+  culture: "Yeast",
+  misc: "Misc",
+};
+
+// Per-category default unit when the brewer enters a fresh price.
+// Grain in kg, hops + miscs in g (typical homebrew dose size), yeast
+// per pack. Brewer can override the unit in the dropdown.
+const DEFAULT_UNIT_FOR_CATEGORY: Record<CostLine["category"], PriceUnit> = {
+  fermentable: "kg",
+  hop: "g",
+  culture: "pack",
+  misc: "g",
+};
+
+function CostSection({ recipe }: { recipe: BeerJsonRecipe }) {
+  const prefs = useUnits();
+  const { catalog, setPrice, unsetPrice } = usePriceCatalog();
+  const breakdown = useMemo(
+    () => computeRecipeCost(recipe, catalog),
+    [recipe, catalog],
+  );
+
+  if (breakdown.total_count === 0) return null;
+
+  const unpriced = breakdown.total_count - breakdown.priced_count;
+
+  return (
+    <Section
+      title="Cost"
+      subtitle={
+        unpriced > 0
+          ? `${unpriced} ingredient${unpriced === 1 ? "" : "s"} without a price — set them once, the catalog applies to every recipe.`
+          : `Computed from ${breakdown.priced_count} priced ingredient${breakdown.priced_count === 1 ? "" : "s"}.`
+      }
+    >
+      <div className="rounded-xl bg-surface border border-border">
+        <ul className="divide-y divide-border">
+          {breakdown.lines.map((line, i) => (
+            <CostLineRow
+              key={`${line.category}-${line.name}-${i}`}
+              line={line}
+              prefs={prefs}
+              onSetPrice={(price, unit) => setPrice(line.name, price, unit)}
+              onUnsetPrice={() => unsetPrice(line.name)}
+            />
+          ))}
+        </ul>
+
+        <div className="px-4 py-4 sm:px-6 sm:py-5 border-t border-border grid grid-cols-2 sm:grid-cols-3 gap-px bg-border">
+          <CostStat
+            label="Batch total"
+            value={formatMoney(breakdown.total, prefs)}
+            tone="highlight"
+          />
+          <CostStat
+            label={`Per ${formatLiters(1, prefs).unit}`}
+            value={formatMoney(breakdown.per_liter, prefs)}
+          />
+          <CostStat
+            label="Per 330 mL bottle"
+            value={formatMoney(breakdown.per_bottle_330, prefs)}
+          />
+        </div>
+      </div>
+    </Section>
+  );
+}
+
+function CostLineRow({
+  line,
+  prefs,
+  onSetPrice,
+  onUnsetPrice,
+}: {
+  line: CostLine;
+  prefs: UnitPreferences;
+  onSetPrice: (price: number, unit: PriceUnit) => void;
+  onUnsetPrice: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const initialUnit: PriceUnit =
+    line.price?.natural_unit ?? DEFAULT_UNIT_FOR_CATEGORY[line.category];
+  const [draftPrice, setDraftPrice] = useState<number>(line.price?.unit_price ?? 0);
+  const [draftUnit, setDraftUnit] = useState<PriceUnit>(initialUnit);
+
+  const startEdit = () => {
+    setDraftPrice(line.price?.unit_price ?? 0);
+    setDraftUnit(initialUnit);
+    setEditing(true);
+  };
+
+  const save = () => {
+    if (Number.isFinite(draftPrice) && draftPrice > 0) {
+      onSetPrice(draftPrice, draftUnit);
+    }
+    setEditing(false);
+  };
+
+  return (
+    <li className="px-4 py-3 sm:px-6 sm:py-4">
+      <div className="flex items-baseline justify-between gap-3 sm:gap-4">
+        <div className="min-w-0">
+          <p className="text-body-sm font-medium truncate">{line.name}</p>
+          <p className="text-caption text-text-muted mt-0.5">
+            {CATEGORY_LABEL[line.category]}
+            {line.price && (
+              <>
+                {" · "}
+                {formatMoney(line.price.unit_price, prefs)}/{line.price.natural_unit}
+              </>
+            )}
+          </p>
+        </div>
+        <div className="text-right shrink-0">
+          {line.line_cost !== null ? (
+            <p className="font-mono text-body tabular-nums">
+              {formatMoney(line.line_cost, prefs)}
+            </p>
+          ) : (
+            <p className="font-mono text-body text-text-muted">—</p>
+          )}
+          {!editing ? (
+            <button
+              type="button"
+              onClick={startEdit}
+              className="text-caption text-text-muted hover:text-accent transition-colors mt-0.5"
+            >
+              {line.price ? "Edit price" : "Set price"}
+            </button>
+          ) : null}
+        </div>
+      </div>
+
+      {editing && (
+        <PriceInlineEditor
+          prefs={prefs}
+          price={draftPrice}
+          unit={draftUnit}
+          onPriceChange={setDraftPrice}
+          onUnitChange={setDraftUnit}
+          onSave={save}
+          onCancel={() => setEditing(false)}
+          onRemove={line.price ? () => { onUnsetPrice(); setEditing(false); } : undefined}
+        />
+      )}
+    </li>
+  );
+}
+
+function PriceInlineEditor({
+  prefs,
+  price,
+  unit,
+  onPriceChange,
+  onUnitChange,
+  onSave,
+  onCancel,
+  onRemove,
+}: {
+  prefs: UnitPreferences;
+  price: number;
+  unit: PriceUnit;
+  onPriceChange: (v: number) => void;
+  onUnitChange: (u: PriceUnit) => void;
+  onSave: () => void;
+  onCancel: () => void;
+  onRemove?: (() => void) | undefined;
+}) {
+  return (
+    <div className="mt-3 rounded-lg bg-bg border border-border p-3 grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-2 items-end">
+      <label className="block">
+        <span className="block text-caption uppercase tracking-widest text-text-muted mb-1">
+          Unit price
+        </span>
+        <div className="flex items-baseline gap-2 bg-surface border border-border rounded-lg px-3 py-2 focus-within:border-accent">
+          <span className="text-caption font-mono text-text-muted shrink-0">
+            {currencySymbol(prefs)}
+          </span>
+          <input
+            type="number"
+            value={Number.isFinite(price) ? price : ""}
+            step={0.01}
+            min={0}
+            onChange={(e) => {
+              const n = Number(e.target.value);
+              onPriceChange(Number.isFinite(n) ? n : 0);
+            }}
+            className="w-full bg-transparent text-body font-mono tabular-nums text-text focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
+          />
+          <span className="text-caption font-mono text-text-muted shrink-0">/</span>
+          <select
+            value={unit}
+            onChange={(e) => onUnitChange(e.target.value as PriceUnit)}
+            className="bg-transparent text-caption text-text focus:outline-none"
+          >
+            <option value="kg">kg</option>
+            <option value="g">g</option>
+            <option value="L">L</option>
+            <option value="pack">pack</option>
+          </select>
+        </div>
+      </label>
+      <button
+        type="button"
+        onClick={onSave}
+        disabled={!(price > 0)}
+        className="px-4 py-2 rounded-lg bg-accent text-bg text-body-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity min-h-[38px]"
+      >
+        Save
+      </button>
+      <div className="flex gap-2">
+        {onRemove && (
+          <button
+            type="button"
+            onClick={onRemove}
+            className="px-3 py-2 rounded-lg text-caption text-text-muted hover:text-danger transition-colors"
+          >
+            Remove
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={onCancel}
+          className="px-3 py-2 rounded-lg text-caption text-text-muted hover:text-text transition-colors"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function CostStat({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone?: "highlight";
+}) {
+  return (
+    <div className="bg-surface px-4 py-3">
+      <p className="text-caption uppercase tracking-widest text-text-muted">
+        {label}
+      </p>
+      <p
+        className={`font-mono text-body sm:text-h3 mt-1 tabular-nums ${
+          tone === "highlight" ? "text-accent" : "text-text"
+        }`}
+      >
+        {value}
+      </p>
+    </div>
   );
 }
 

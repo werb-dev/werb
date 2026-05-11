@@ -31,10 +31,15 @@ const UnitsContext = createContext<UnitsContextValue>({
  * underlying usePersistedJson can resolve `useStorage()`.
  */
 export function PreferencesProvider({ children }: { children: ReactNode }) {
-  const [prefs, setPrefs] = usePersistedJson<UnitPreferences>(
+  const [storedPrefs, setPrefs] = usePersistedJson<UnitPreferences>(
     STORAGE_KEY,
     DEFAULT_PREFS,
   );
+  // Backfill any missing keys from DEFAULT_PREFS so users who saved
+  // their preferences before a new field was added (e.g. `currency`)
+  // don't render `undefined` through the formatters. New fields take
+  // their default value; existing fields are left alone.
+  const prefs: UnitPreferences = { ...DEFAULT_PREFS, ...storedPrefs };
   return (
     <UnitsContext.Provider value={{ prefs, setPrefs }}>
       {children}
