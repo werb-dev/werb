@@ -15,6 +15,7 @@ import {
   type StorageBackend,
 } from "./storage/index.ts";
 import { migrateLegacySessionKeys } from "./hooks/useBrewSession.ts";
+import { PreferencesProvider } from "./data/preferences.tsx";
 
 // Pick the best available StorageBackend at boot. OPFS persists across
 // reloads, isn't bound by localStorage's 5-10 MB quota, and is the
@@ -57,7 +58,9 @@ async function boot() {
   root.render(
     <StrictMode>
       <StorageProvider backend={backend}>
-        <App />
+        <PreferencesProvider>
+          <App />
+        </PreferencesProvider>
       </StorageProvider>
     </StrictMode>,
   );

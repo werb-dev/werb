@@ -7,6 +7,8 @@ import {
   verifyGitHubAccess,
   type GitHubBackendConfig,
 } from "../storage/index.ts";
+import { useUnitsControl } from "../data/preferences.tsx";
+import type { UnitPreferences } from "../data/units-format.ts";
 
 /**
  * Sync + advanced storage settings. v1 covers a single GitHub-based
@@ -62,6 +64,10 @@ export function SettingsScreen() {
           </p>
         </header>
 
+        <Section title="Units">
+          <UnitsCard />
+        </Section>
+
         <Section title="GitHub sync">
           {sync ? (
             <Connected backend={backend} sync={sync} onDisconnect={() => setSync(null)} />
@@ -70,6 +76,112 @@ export function SettingsScreen() {
           )}
         </Section>
       </main>
+    </div>
+  );
+}
+
+// ─── Units ────────────────────────────────────────────────────────────────
+
+function UnitsCard() {
+  const { prefs, setPrefs } = useUnitsControl();
+
+  const update = <K extends keyof UnitPreferences>(key: K, value: UnitPreferences[K]) =>
+    setPrefs((prev) => ({ ...prev, [key]: value }));
+
+  return (
+    <div className="rounded-xl bg-surface border border-border p-6">
+      <p className="text-body-sm text-text-muted mb-5 max-w-prose">
+        Display-only. The editor and stored data are unchanged — these
+        preferences just change how recipes and brew screens render
+        numbers.
+      </p>
+
+      <div className="space-y-4">
+        <UnitPicker
+          label="Temperature"
+          value={prefs.temperature}
+          onChange={(v) => update("temperature", v)}
+          options={[
+            { value: "C", label: "°C" },
+            { value: "F", label: "°F" },
+          ]}
+        />
+        <UnitPicker
+          label="Volume"
+          value={prefs.volume}
+          onChange={(v) => update("volume", v)}
+          options={[
+            { value: "l", label: "Liters" },
+            { value: "gal", label: "US gallons" },
+          ]}
+        />
+        <UnitPicker
+          label="Mass"
+          value={prefs.mass}
+          onChange={(v) => update("mass", v)}
+          options={[
+            { value: "kg", label: "kg / g" },
+            { value: "lb", label: "lb / oz" },
+          ]}
+        />
+        <UnitPicker
+          label="Gravity"
+          value={prefs.gravity}
+          onChange={(v) => update("gravity", v)}
+          options={[
+            { value: "sg", label: "Specific gravity (1.052)" },
+            { value: "plato", label: "Plato (12.9 °P)" },
+          ]}
+        />
+        <UnitPicker
+          label="Color"
+          value={prefs.color}
+          onChange={(v) => update("color", v)}
+          options={[
+            { value: "EBC", label: "EBC" },
+            { value: "SRM", label: "SRM" },
+          ]}
+        />
+      </div>
+    </div>
+  );
+}
+
+function UnitPicker<T extends string>({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: T;
+  onChange: (v: T) => void;
+  options: ReadonlyArray<{ value: T; label: string }>;
+}) {
+  return (
+    <div>
+      <p className="text-caption uppercase tracking-widest text-text-muted mb-2">
+        {label}
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {options.map((opt) => {
+          const active = opt.value === value;
+          return (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => onChange(opt.value)}
+              className={`px-4 py-2 rounded-lg text-body-sm font-medium transition-colors ${
+                active
+                  ? "bg-accent text-bg"
+                  : "bg-bg border border-border text-text-muted hover:text-text hover:border-accent"
+              }`}
+            >
+              {opt.label}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

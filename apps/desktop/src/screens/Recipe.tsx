@@ -9,8 +9,6 @@ import {
   recipeToYeastPitchInput,
   applyScale,
   fitMashToTun,
-  toGrams,
-  toKilograms,
   toLiters,
   toMinutes,
   toCelsius,
@@ -34,6 +32,19 @@ import { profileToWaterOverrides, type ProfileWithId } from "../data/equipment.t
 import { exportBeerJson, exportBeerXml, exportRecipeHtml } from "../data/recipe-export.ts";
 import { useBrewSessionExists } from "../hooks/useBrewSession.ts";
 import { usePersistedJson } from "../storage/index.ts";
+import { useUnits } from "../data/preferences.tsx";
+import {
+  formatColor,
+  formatGravity,
+  formatLiters,
+  formatMassLarge,
+  formatMassSmall,
+  formatSpecificGravity,
+  formatSrm,
+  formatTemperature,
+  formatVolume,
+  type UnitPreferences,
+} from "../data/units-format.ts";
 
 const TIMING_LABEL: Record<string, string> = {
   add_to_boil: "Boil",
@@ -54,6 +65,7 @@ interface RecipeScreenProps {
 
 export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartBrewing, onEdit, onApplyScaled }: RecipeScreenProps) {
   const hasActiveSession = useBrewSessionExists(recipeId);
+  const prefs = useUnits();
   const computed = useMemo(() => {
     const ibu = computeIbu(recipeToIbuInput(recipe));
     const water = computeWater(recipeToWaterInput(recipe, profileToWaterOverrides(activeProfile)));
@@ -76,32 +88,40 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
   }, [recipe, activeProfile]);
 
   const claimedIbu = recipe.ibu_estimate?.ibu?.value ?? null;
-  const claimedOg = recipe.original_gravity?.value ?? null;
-  const claimedFg = recipe.final_gravity?.value ?? null;
+  // Gravity values from BeerJSON are normalized through the formatter
+  // so the user's pref (SG vs Plato) drives display. We keep the raw
+  // SG numbers around too — they're what the calc engine + rangeHint
+  // compare against.
+  const claimedOgSg = recipe.original_gravity?.value ?? null;
+  const claimedFgSg = recipe.final_gravity?.value ?? null;
+  const claimedOgDisplay = claimedOgSg !== null
+    ? formatSpecificGravity(claimedOgSg, prefs).display
+    : "—";
+  const claimedFgDisplay = claimedFgSg !== null
+    ? formatSpecificGravity(claimedFgSg, prefs).display
+    : "—";
   const claimedAbv = recipe.alcohol_by_volume?.value ?? null;
   const claimedSrm = recipe.color_estimate ? toSrm(recipe.color_estimate) : null;
   const claimedColorDisplay = recipe.color_estimate
-    ? `${recipe.color_estimate.value.toFixed(0)} ${recipe.color_estimate.unit}`
+    ? formatColor(recipe.color_estimate, prefs).display
     : null;
-  const useEbc = recipe.color_estimate?.unit === "EBC";
-  const computedColorDisplay = useEbc
-    ? `${computed.color.ebc.toFixed(0)} EBC`
-    : `${computed.color.srm.toFixed(1)} SRM`;
+  const computedColorDisplay = formatSrm(computed.color.srm, prefs).display;
+  const computedOgDisplay = formatSpecificGravity(computed.gravity.og, prefs).display;
 
   // BJCP range hints. `current` prefers the recipe's claimed value and falls
   // back to our computed estimate so the indicator works on bare imports.
   const styleHints = {
     og: rangeHint({
-      current: claimedOg ?? computed.gravity.og,
+      current: claimedOgSg ?? computed.gravity.og,
       min: recipe.style?.original_gravity?.minimum?.value,
       max: recipe.style?.original_gravity?.maximum?.value,
-      format: (v) => v.toFixed(3),
+      format: (v) => formatSpecificGravity(v, prefs).display,
     }),
     fg: rangeHint({
-      current: claimedFg,
+      current: claimedFgSg,
       min: recipe.style?.final_gravity?.minimum?.value,
       max: recipe.style?.final_gravity?.maximum?.value,
-      format: (v) => v.toFixed(3),
+      format: (v) => formatSpecificGravity(v, prefs).display,
     }),
     ibu: rangeHint({
       current: claimedIbu ?? computed.ibu.total_ibu,
@@ -123,7 +143,7 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
       max: recipe.style?.color?.maximum
         ? toSrm(recipe.style.color.maximum)
         : undefined,
-      format: (srm) => (useEbc ? `${(srm * 1.97).toFixed(0)} EBC` : `${srm.toFixed(1)} SRM`),
+      format: (srm) => formatSrm(srm, prefs).display,
     }),
   };
 
@@ -155,7 +175,10 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
             <p className="text-caption text-text-muted mt-1">by {recipe.author}</p>
           )}
           <p className="text-body text-text-muted mt-2 font-mono">
-            {toLiters(recipe.batch_size).toFixed(0)} L
+            {(() => {
+              const v = formatVolume(recipe.batch_size, prefs);
+              return `${v.value.toFixed(0)} ${v.unit}`;
+            })()}
             {recipe.boil?.boil_time && ` · ${toMinutes(recipe.boil.boil_time).toFixed(0)} min boil`}
             {recipe.efficiency?.brewhouse && ` · ${recipe.efficiency.brewhouse.value}% efficiency`}
             {recipe.type && ` · ${recipe.type}`}
@@ -174,6 +197,7 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
                 onApply={onApplyScaled}
                 recipe={recipe}
                 profile={activeProfile}
+                prefs={prefs}
               />
             )}
             {onEdit && (
@@ -192,16 +216,17 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
         <section className="mb-12 grid grid-cols-2 md:grid-cols-5 gap-px bg-border rounded-xl overflow-hidden">
           <Tile
             label="OG"
-            value={claimedOg?.toFixed(3) ?? "—"}
-            sub={`≈${computed.gravity.og.toFixed(3)}`}
+            value={claimedOgDisplay}
+            sub={`≈${computedOgDisplay}`}
             warn={
-              claimedOg !== null && Math.abs(computed.gravity.og - claimedOg) > 0.008
+              claimedOgSg !== null &&
+              Math.abs(computed.gravity.og - claimedOgSg) > 0.008
             }
             styleHint={styleHints.og}
           />
           <Tile
             label="FG"
-            value={claimedFg?.toFixed(3) ?? "—"}
+            value={claimedFgDisplay}
             styleHint={styleHints.fg}
           />
           <Tile
@@ -243,10 +268,10 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
           }
         >
           <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-border rounded-xl overflow-hidden">
-            <Tile label="Mash" value={`${computed.water.mash_water_l.toFixed(1)} L`} />
-            <Tile label="Sparge" value={`${computed.water.sparge_water_l.toFixed(1)} L`} />
-            <Tile label="Pre-boil" value={`${computed.water.pre_boil_volume_l.toFixed(1)} L`} />
-            <Tile label="Total water" value={`${computed.water.total_water_l.toFixed(1)} L`} highlight />
+            <Tile label="Mash" value={formatLiters(computed.water.mash_water_l, prefs).display} />
+            <Tile label="Sparge" value={formatLiters(computed.water.sparge_water_l, prefs).display} />
+            <Tile label="Pre-boil" value={formatLiters(computed.water.pre_boil_volume_l, prefs).display} />
+            <Tile label="Total water" value={formatLiters(computed.water.total_water_l, prefs).display} highlight />
           </div>
         </Section>
 
@@ -254,7 +279,12 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
         <Section title="Fermentables">
           <ul className="rounded-xl bg-surface border border-border divide-y divide-border">
             {recipe.ingredients.fermentable_additions.map((f, i) => {
-              const kg = isMass(f.amount) ? toKilograms(f.amount) : null;
+              const massDisplay = isMass(f.amount)
+                ? formatMassLarge(f.amount, prefs).display
+                : "—";
+              const colorDisplay = f.color
+                ? formatColor(f.color, prefs).display
+                : null;
               return (
                 <li key={i} className="px-6 py-5 flex items-baseline justify-between gap-6">
                   <div className="min-w-0">
@@ -262,12 +292,12 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
                     <p className="text-body-sm text-text-muted mt-1">
                       <span className="capitalize">{f.type}</span>
                       {f.producer && ` · ${f.producer}`}
-                      {f.color && ` · ${f.color.value} ${f.color.unit}`}
+                      {colorDisplay && ` · ${colorDisplay}`}
                       {f.yield?.fine_grind && ` · yield ${f.yield.fine_grind.value}%`}
                     </p>
                   </div>
                   <div className="font-mono text-mono-lg shrink-0 text-right">
-                    {kg !== null ? `${kg.toFixed(2)} kg` : "—"}
+                    {massDisplay}
                   </div>
                 </li>
               );
@@ -282,7 +312,9 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
         >
           <ul className="rounded-xl bg-surface border border-border divide-y divide-border">
             {(recipe.ingredients.hop_additions ?? []).map((h, i) => {
-              const g = isMass(h.amount) ? toGrams(h.amount) : null;
+              const massDisplay = isMass(h.amount)
+                ? formatMassSmall(h.amount, prefs).display
+                : "—";
               const useLabel = TIMING_LABEL[h.timing?.use ?? ""] ?? "—";
               const time = h.timing?.time ? toMinutes(h.timing.time) : 0;
               const ibuValue = computed.ibuByIndex.get(i);
@@ -312,9 +344,7 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
                     </p>
                   </div>
                   <div className="text-right shrink-0">
-                    <div className="font-mono text-mono-lg">
-                      {g !== null ? `${g.toFixed(0)} g` : "—"}
-                    </div>
+                    <div className="font-mono text-mono-lg">{massDisplay}</div>
                     {ibuValue !== undefined && ibuValue > 0 && (
                       <div className="font-mono text-caption text-data mt-1">
                         +{ibuValue.toFixed(1)} IBU
@@ -336,9 +366,9 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
                   const useLabel = TIMING_LABEL[m.timing?.use ?? ""] ?? null;
                   const time = m.timing?.time ? toMinutes(m.timing.time) : 0;
                   const amount = isMass(m.amount)
-                    ? `${toGrams(m.amount).toFixed(0)} g`
+                    ? formatMassSmall(m.amount, prefs).display
                     : isVolume(m.amount)
-                    ? `${toLiters(m.amount).toFixed(2)} L`
+                    ? formatVolume(m.amount, prefs).display
                     : "—";
                   return (
                     <li key={i} className="px-6 py-5 flex items-baseline justify-between gap-6">
@@ -372,14 +402,14 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
                     <p className="text-body font-medium">{step.name}</p>
                     <p className="text-body-sm text-text-muted mt-1 capitalize">
                       {step.type}
-                      {step.amount && ` · ${toLiters(step.amount).toFixed(1)} L infusion`}
+                      {step.amount && ` · ${formatVolume(step.amount, prefs).display} infusion`}
                       {step.infuse_temperature &&
-                        ` @ ${toCelsius(step.infuse_temperature).toFixed(1)}°C`}
+                        ` @ ${formatTemperature(step.infuse_temperature, prefs).display}`}
                     </p>
                   </div>
                   <div className="text-right shrink-0">
                     <div className="font-mono text-mono-lg text-accent">
-                      {toCelsius(step.step_temperature).toFixed(1)}°C
+                      {formatTemperature(step.step_temperature, prefs).display}
                     </div>
                     <div className="font-mono text-caption text-text-muted mt-1">
                       {toMinutes(step.step_time).toFixed(0)} min
@@ -413,9 +443,9 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
                       {!c.amount
                         ? "—"
                         : isMass(c.amount)
-                        ? `${toGrams(c.amount).toFixed(0)} g`
+                        ? formatMassSmall(c.amount, prefs).display
                         : isVolume(c.amount)
-                        ? `${toLiters(c.amount).toFixed(2)} L`
+                        ? formatVolume(c.amount, prefs).display
                         : `${c.amount.value} ${c.amount.unit}`}
                     </div>
                   </li>
@@ -908,14 +938,19 @@ function ScaleButton({
   onApply,
   recipe,
   profile,
+  prefs,
 }: {
   onApply: (scaled: BeerJsonRecipe) => void;
   recipe: BeerJsonRecipe;
   profile: ProfileWithId;
+  prefs: UnitPreferences;
 }) {
-  const fromBatch = toLiters(recipe.batch_size);
+  // toLiters here is metric internal: profile.batch_size_l and the
+  // dead-space / cap math are all in liters by contract. Display
+  // strings go through the formatter so the user's pref is honored.
+  const fromBatchL = toLiters(recipe.batch_size);
   const fromEff = recipe.efficiency?.brewhouse?.value ?? null;
-  const sameBatch = Math.abs(fromBatch - profile.batch_size_l) < 0.5;
+  const sameBatch = Math.abs(fromBatchL - profile.batch_size_l) < 0.5;
   const sameEff = fromEff !== null && Math.abs(fromEff - profile.efficiency_pct) < 1;
   const isNoOp = sameBatch && sameEff;
 
@@ -928,11 +963,13 @@ function ScaleButton({
       ? fitMashToTun(scaled, profile.mash_tun)
       : { recipe: scaled, capped: null };
 
+    const fromBatchDisplay = formatLiters(fromBatchL, prefs).display;
+    const targetBatchDisplay = formatLiters(profile.batch_size_l, prefs).display;
     const lines = [
-      `Batch: ${fromBatch.toFixed(0)} L → ${profile.batch_size_l} L`,
+      `Batch: ${fromBatchDisplay} → ${targetBatchDisplay}`,
       fromEff !== null ? `Efficiency: ${fromEff}% → ${profile.efficiency_pct}%` : null,
       fit.capped
-        ? `Strike water capped: ${fit.capped.from_l.toFixed(1)} L → ${fit.capped.to_l.toFixed(1)} L (won't fit ${profile.mash_tun?.capacity_l} L mash tun otherwise — sparge picks up the rest)`
+        ? `Strike water capped: ${formatLiters(fit.capped.from_l, prefs).display} → ${formatLiters(fit.capped.to_l, prefs).display} (won't fit ${profile.mash_tun ? formatLiters(profile.mash_tun.capacity_l, prefs).display : ""} mash tun otherwise — sparge picks up the rest)`
         : null,
     ].filter(Boolean);
 
@@ -941,6 +978,7 @@ function ScaleButton({
     }
   };
 
+  const targetBatchDisplay = formatLiters(profile.batch_size_l, prefs).display;
   return (
     <button
       onClick={handleClick}
@@ -948,7 +986,7 @@ function ScaleButton({
       title={
         isNoOp
           ? "Recipe already matches your rig — nothing to scale."
-          : `Rescale to ${profile.name} (${profile.batch_size_l} L · ${profile.efficiency_pct}% efficiency). Caps strike water to your mash tun if needed.`
+          : `Rescale to ${profile.name} (${targetBatchDisplay} · ${profile.efficiency_pct}% efficiency). Caps strike water to your mash tun if needed.`
       }
       className="px-4 py-3 rounded-xl bg-surface-raised border border-border text-body-sm font-medium hover:border-accent hover:text-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
     >
