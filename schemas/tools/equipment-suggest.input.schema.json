@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://werb.dev/schemas/tools/equipment-suggest.input.schema.json",
+  "title": "EquipmentSuggestInput",
+  "description": "Given a target batch size and a brewery setup type, recommend vessel capacities, losses, and rates to seed an equipment profile.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "setup_type",
+    "batch_size_l"
+  ],
+  "properties": {
+    "setup_type": {
+      "type": "string",
+      "enum": ["three_vessel", "two_vessel", "biab"],
+      "description": "three_vessel: HLT + mash tun + kettle (HERMS-style). two_vessel: mash tun + kettle, kettle doubles as HLT for heating sparge water. biab: brew in a bag — single kettle holds full-volume mash and the boil, no HLT or mash tun."
+    },
+    "batch_size_l": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Target fermenter volume after losses, in liters. Drives every other capacity."
+    },
+    "target_og": {
+      "type": "number",
+      "exclusiveMinimum": 1,
+      "maximum": 1.2,
+      "default": 1.06,
+      "description": "Expected original gravity to size the mash tun against. Defaults to 1.060 — covers most pale ales / IPAs without short-changing high-gravity brews enough to matter."
+    },
+    "efficiency_pct": {
+      "type": "number",
+      "minimum": 50,
+      "maximum": 100,
+      "default": 75,
+      "description": "Expected brewhouse efficiency, used to estimate grain mass from target OG."
+    },
+    "boil_time_min": {
+      "type": "number",
+      "minimum": 0,
+      "default": 60,
+      "description": "Standard boil duration. Drives boil-off volume and therefore pre-boil / kettle sizing."
+    }
+  }
+}

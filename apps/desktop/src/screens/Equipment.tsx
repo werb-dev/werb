@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { DEFAULT_PROFILE_VALUES, type ProfileWithId } from "../data/equipment.ts";
 import type { useEquipment } from "../hooks/useEquipment.ts";
+import { computeEquipmentSuggest } from "@werb/calc";
+import type { EquipmentSuggestInput, EquipmentSuggestOutput } from "@werb/types";
 
 interface EquipmentScreenProps {
   api: ReturnType<typeof useEquipment>;
@@ -177,6 +179,25 @@ function ProfileForm({
     onSave(patch);
   };
 
+  const applySuggestion = (out: EquipmentSuggestOutput) => {
+    // Replace every sizing field but preserve identity + free-form text:
+    // name, description, and notes are user-authored and shouldn't be
+    // overwritten by the wizard.
+    const next: ProfileWithId = {
+      ...draft,
+      batch_size_l: out.batch_size_l,
+      efficiency_pct: out.efficiency_pct,
+      hlt: out.hlt,
+      mash_tun: out.mash_tun,
+      kettle: out.kettle,
+      fermenter: out.fermenter,
+      transfer_loss_l: out.transfer_loss_l,
+    };
+    setDraft(next);
+    const { id, ...patch } = next;
+    onSave(patch);
+  };
+
   return (
     <form
       onSubmit={(e) => {
@@ -199,6 +220,8 @@ function ProfileForm({
         onBlur={commit}
         textarea
       />
+
+      <SuggestPanel initialBatchSize={draft.batch_size_l} onApply={applySuggestion} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
         <NumberField
@@ -371,6 +394,178 @@ function ProfileForm({
         </button>
       </div>
     </form>
+  );
+}
+
+// ─── Suggest panel ────────────────────────────────────────────────────────
+
+/**
+ * Quick-start widget that sizes every capacity field from a target batch
+ * volume + setup type. Computed live via @werb/calc so the brewer sees
+ * the intermediate volumes (grain bill, mash water, sparge, pre-boil)
+ * before they apply.
+ */
+function SuggestPanel({
+  initialBatchSize,
+  onApply,
+}: {
+  initialBatchSize: number;
+  onApply: (out: EquipmentSuggestOutput) => void;
+}) {
+  const [setupType, setSetupType] =
+    useState<EquipmentSuggestInput["setup_type"]>("three_vessel");
+  // Seed from the current draft so the wizard reflects what the brewer
+  // already entered. They tweak only if they want to re-derive.
+  const [batchSize, setBatchSize] = useState(initialBatchSize);
+
+  const preview = useMemo(
+    () =>
+      computeEquipmentSuggest({
+        setup_type: setupType,
+        batch_size_l: batchSize > 0 ? batchSize : 20,
+      }),
+    [setupType, batchSize],
+  );
+
+  return (
+    <details className="rounded-xl bg-surface-raised border border-border border-dashed group">
+      <summary className="cursor-pointer px-4 py-3 sm:px-5 sm:py-4 list-none flex items-center justify-between gap-4 select-none">
+        <div className="min-w-0">
+          <p className="text-caption uppercase tracking-widest text-text-muted">
+            Quick start
+          </p>
+          <p className="text-body-sm text-text mt-1">
+            Size every field from a target batch + setup type
+          </p>
+        </div>
+        <span
+          aria-hidden
+          className="text-text-muted group-open:rotate-180 transition-transform shrink-0"
+        >
+          ▾
+        </span>
+      </summary>
+      <div className="px-4 pb-4 sm:px-5 sm:pb-5 space-y-4 border-t border-border pt-4">
+        <SetupTypePicker value={setupType} onChange={setSetupType} />
+
+        <div className="grid grid-cols-1 sm:grid-cols-[12rem_1fr_auto] gap-3 items-end">
+          <label className="block">
+            <span className="block text-caption uppercase tracking-widest text-text-muted mb-2">
+              Target batch
+            </span>
+            <div className="flex items-baseline gap-2 bg-surface border border-border rounded-lg px-3 py-2 focus-within:border-accent">
+              <input
+                type="number"
+                value={Number.isFinite(batchSize) ? batchSize : ""}
+                step={0.5}
+                onChange={(e) => {
+                  const n = Number(e.target.value);
+                  setBatchSize(Number.isFinite(n) ? n : 0);
+                }}
+                className="w-full bg-transparent text-body font-mono tabular-nums text-text focus:outline-none"
+              />
+              <span className="text-caption font-mono text-text-muted shrink-0">L</span>
+            </div>
+          </label>
+          <DerivedPreview preview={preview} />
+          <button
+            type="button"
+            onClick={() => onApply(preview)}
+            disabled={!Number.isFinite(batchSize) || batchSize <= 0}
+            className="px-5 py-2.5 rounded-lg bg-accent text-bg text-body-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity min-h-[40px]"
+          >
+            Apply
+          </button>
+        </div>
+        <p className="text-caption text-text-muted">
+          Replaces all capacity, dead-space, and rate fields below. Name,
+          description, and notes are kept.
+        </p>
+      </div>
+    </details>
+  );
+}
+
+const SETUP_OPTIONS: Array<{
+  value: EquipmentSuggestInput["setup_type"];
+  label: string;
+  hint: string;
+}> = [
+  {
+    value: "three_vessel",
+    label: "3-vessel",
+    hint: "HLT + mash tun + kettle (HERMS / RIMS)",
+  },
+  {
+    value: "two_vessel",
+    label: "2-vessel",
+    hint: "Mash tun + kettle (kettle doubles as HLT)",
+  },
+  {
+    value: "biab",
+    label: "BIAB",
+    hint: "Single kettle — full-volume mash, no sparge",
+  },
+];
+
+function SetupTypePicker({
+  value,
+  onChange,
+}: {
+  value: EquipmentSuggestInput["setup_type"];
+  onChange: (v: EquipmentSuggestInput["setup_type"]) => void;
+}) {
+  const active = SETUP_OPTIONS.find((o) => o.value === value);
+  return (
+    <div>
+      <p className="text-caption uppercase tracking-widest text-text-muted mb-2">
+        Setup type
+      </p>
+      <div className="grid grid-cols-3 gap-2">
+        {SETUP_OPTIONS.map((opt) => {
+          const isActive = opt.value === value;
+          return (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => onChange(opt.value)}
+              className={`px-3 py-2 rounded-lg text-body-sm font-medium transition-colors ${
+                isActive
+                  ? "bg-accent text-bg"
+                  : "bg-surface border border-border text-text-muted hover:text-text hover:border-accent"
+              }`}
+            >
+              {opt.label}
+            </button>
+          );
+        })}
+      </div>
+      {active && (
+        <p className="text-caption text-text-muted mt-2">{active.hint}</p>
+      )}
+    </div>
+  );
+}
+
+function DerivedPreview({ preview }: { preview: EquipmentSuggestOutput }) {
+  // Compact summary line so the brewer can sanity-check before applying.
+  return (
+    <div className="text-caption font-mono text-text-muted leading-relaxed">
+      <p>
+        ~{preview.derived.grain_kg} kg grain · {preview.derived.mash_water_l} L
+        mash
+        {preview.derived.sparge_water_l > 0 &&
+          ` + ${preview.derived.sparge_water_l} L sparge`}
+        {" · "}pre-boil {preview.derived.pre_boil_volume_l} L
+      </p>
+      <p>
+        {preview.hlt.capacity_l > 0 && `HLT ${preview.hlt.capacity_l} L · `}
+        {preview.mash_tun.capacity_l > 0 &&
+          `MT ${preview.mash_tun.capacity_l} L · `}
+        kettle {preview.kettle.capacity_l} L · fermenter{" "}
+        {preview.fermenter.capacity_l} L
+      </p>
+    </div>
   );
 }
 

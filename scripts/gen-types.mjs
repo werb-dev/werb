@@ -45,6 +45,8 @@ const TARGETS = [
   { schema: "tools/yeast-pitch.output.schema.json", name: "YeastPitchOutput" },
   { schema: "tools/water-additions.input.schema.json", name: "WaterAdditionsInput" },
   { schema: "tools/water-additions.output.schema.json", name: "WaterAdditionsOutput" },
+  { schema: "tools/equipment-suggest.input.schema.json", name: "EquipmentSuggestInput" },
+  { schema: "tools/equipment-suggest.output.schema.json", name: "EquipmentSuggestOutput" },
 ];
 
 const compileOpts = {

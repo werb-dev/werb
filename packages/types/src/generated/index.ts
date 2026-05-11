@@ -18,3 +18,5 @@ export * from "./yeast-pitch.input.js";
 export * from "./yeast-pitch.output.js";
 export * from "./water-additions.input.js";
 export * from "./water-additions.output.js";
+export * from "./equipment-suggest.input.js";
+export * from "./equipment-suggest.output.js";

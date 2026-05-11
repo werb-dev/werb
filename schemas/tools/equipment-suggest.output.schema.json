@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://werb.dev/schemas/tools/equipment-suggest.output.schema.json",
+  "title": "EquipmentSuggestOutput",
+  "description": "Recommended equipment profile values + the intermediate volumes the math is anchored on, so the UI can show the brewer how each number was reached.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "batch_size_l",
+    "efficiency_pct",
+    "hlt",
+    "mash_tun",
+    "kettle",
+    "fermenter",
+    "transfer_loss_l",
+    "derived"
+  ],
+  "properties": {
+    "batch_size_l": {
+      "type": "number"
+    },
+    "efficiency_pct": {
+      "type": "number"
+    },
+    "hlt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capacity_l", "dead_space_l"],
+      "properties": {
+        "capacity_l": {
+          "type": "number",
+          "description": "Recommended HLT capacity in liters. 0 for two-vessel and BIAB setups — the kettle holds water in those cases, so the HLT fit-check should be disabled."
+        },
+        "dead_space_l": { "type": "number" }
+      }
+    },
+    "mash_tun": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capacity_l", "dead_space_l", "grain_absorption_l_per_kg"],
+      "properties": {
+        "capacity_l": {
+          "type": "number",
+          "description": "Recommended mash-tun capacity. 0 for BIAB — the kettle handles the mash."
+        },
+        "dead_space_l": { "type": "number" },
+        "grain_absorption_l_per_kg": {
+          "type": "number",
+          "description": "Grain water absorption rate. Slightly higher for BIAB (no sparge to recover from grain)."
+        }
+      }
+    },
+    "kettle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "capacity_l",
+        "dead_space_l",
+        "evaporation_rate_l_per_hour",
+        "post_boil_shrinkage_pct"
+      ],
+      "properties": {
+        "capacity_l": { "type": "number" },
+        "dead_space_l": { "type": "number" },
+        "evaporation_rate_l_per_hour": { "type": "number" },
+        "post_boil_shrinkage_pct": { "type": "number" }
+      }
+    },
+    "fermenter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capacity_l", "trub_loss_l"],
+      "properties": {
+        "capacity_l": { "type": "number" },
+        "trub_loss_l": { "type": "number" }
+      }
+    },
+    "transfer_loss_l": { "type": "number" },
+    "derived": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "grain_kg",
+        "mash_water_l",
+        "sparge_water_l",
+        "pre_boil_volume_l"
+      ],
+      "properties": {
+        "grain_kg": {
+          "type": "number",
+          "description": "Estimated grain bill at the target OG and efficiency. Drives mash-tun and BIAB-kettle sizing."
+        },
+        "mash_water_l": { "type": "number" },
+        "sparge_water_l": {
+          "type": "number",
+          "description": "0 for BIAB."
+        },
+        "pre_boil_volume_l": { "type": "number" }
+      }
+    }
+  }
+}
