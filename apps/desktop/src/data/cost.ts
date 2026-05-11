@@ -119,6 +119,72 @@ function makeLine(
   };
 }
 
+/**
+ * Walk every recipe in the library and collect distinct ingredient
+ * names grouped by category. Used by the Prices card in Settings to
+ * surface "X ingredients across your library are missing a price".
+ *
+ * De-dup is case-insensitive: "Mosaic" and "mosaic" collapse to one
+ * entry, using the first capitalization encountered so the brewer sees
+ * a recognizable name.
+ */
+export interface LibraryIngredient {
+  category: CostCategory;
+  /** Display name — the first capitalization we saw across recipes. */
+  display_name: string;
+  /** Normalized lookup key — matches the price catalog. */
+  key: string;
+  /** How many recipes contain this ingredient. Helps the brewer prioritize. */
+  recipe_count: number;
+}
+
+export function collectLibraryIngredients(
+  recipes: ReadonlyArray<BeerJsonRecipe>,
+): LibraryIngredient[] {
+  const map = new Map<string, LibraryIngredient>();
+  const visit = (category: CostCategory, name: string, seenInThisRecipe: Set<string>) => {
+    const key = name.trim().toLowerCase();
+    if (!key) return;
+    // Don't double-count when a recipe lists the same ingredient twice
+    // (e.g. Mosaic at 60 min + 0 min: one Mosaic, two additions).
+    if (seenInThisRecipe.has(key)) return;
+    seenInThisRecipe.add(key);
+    const existing = map.get(key);
+    if (existing) {
+      existing.recipe_count += 1;
+    } else {
+      map.set(key, {
+        category,
+        display_name: name.trim(),
+        key,
+        recipe_count: 1,
+      });
+    }
+  };
+
+  for (const recipe of recipes) {
+    const seen = new Set<string>();
+    for (const f of recipe.ingredients.fermentable_additions ?? []) {
+      visit("fermentable", f.name, seen);
+    }
+    for (const h of recipe.ingredients.hop_additions ?? []) {
+      visit("hop", h.name, seen);
+    }
+    for (const c of recipe.ingredients.culture_additions ?? []) {
+      visit("culture", c.name, seen);
+    }
+    for (const m of recipe.ingredients.miscellaneous_additions ?? []) {
+      visit("misc", m.name, seen);
+    }
+  }
+
+  // Sort by recipe count desc (most-used first), then alphabetically.
+  return Array.from(map.values()).sort((a, b) => {
+    if (a.recipe_count !== b.recipe_count) return b.recipe_count - a.recipe_count;
+    return a.display_name.localeCompare(b.display_name);
+  });
+}
+
 export function computeRecipeCost(
   recipe: BeerJsonRecipe,
   catalog: PriceCatalog,

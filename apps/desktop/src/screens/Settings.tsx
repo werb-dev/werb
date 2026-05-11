@@ -12,9 +12,21 @@ import {
   type GitHubBackendConfig,
   type StorageBackend,
 } from "../storage/index.ts";
-import { useUnitsControl } from "../data/preferences.tsx";
-import type { UnitPreferences } from "../data/units-format.ts";
+import { useUnitsControl, useUnits } from "../data/preferences.tsx";
+import {
+  currencySymbol,
+  formatMoney,
+  type UnitPreferences,
+} from "../data/units-format.ts";
 import { downloadTextFile, pickAndReadTextFile } from "../data/browser-fs.ts";
+import { usePriceCatalog } from "../hooks/usePriceCatalog.ts";
+import { useRecipes } from "../hooks/useRecipes.ts";
+import {
+  collectLibraryIngredients,
+  type CostCategory,
+  type LibraryIngredient,
+} from "../data/cost.ts";
+import type { PriceEntry, PriceUnit } from "../data/prices.ts";
 
 /**
  * Sync + advanced storage settings. v1 covers a single GitHub-based
@@ -72,6 +84,10 @@ export function SettingsScreen() {
 
         <Section title="Units">
           <UnitsCard />
+        </Section>
+
+        <Section title="Prices">
+          <PricesCard />
         </Section>
 
         <Section title="GitHub sync">
@@ -202,6 +218,374 @@ function UnitPicker<T extends string>({
           );
         })}
       </div>
+    </div>
+  );
+}
+
+// ─── Prices ──────────────────────────────────────────────────────────────
+
+const CATEGORY_LABEL: Record<CostCategory, string> = {
+  fermentable: "Grain",
+  hop: "Hop",
+  culture: "Yeast",
+  misc: "Misc",
+};
+
+const DEFAULT_UNIT_FOR_CATEGORY: Record<CostCategory, PriceUnit> = {
+  fermentable: "kg",
+  hop: "g",
+  culture: "pack",
+  misc: "g",
+};
+
+function PricesCard() {
+  const prefs = useUnits();
+  const { catalog, setPrice, unsetPrice } = usePriceCatalog();
+  const { recipes } = useRecipes();
+  const [filter, setFilter] = useState("");
+
+  // Aggregate every ingredient appearing in any recipe so the brewer
+  // can see what they haven't priced yet — far less painful than
+  // chasing them through individual recipe screens.
+  const libraryIngredients = collectLibraryIngredients(
+    recipes.map((r) => r.recipe),
+  );
+  const catalogKeys = new Set(catalog.prices.map((p) => p.key));
+  const missing = libraryIngredients.filter((i) => !catalogKeys.has(i.key));
+
+  const needle = filter.trim().toLowerCase();
+  const filterPrices = (entries: PriceEntry[]) =>
+    needle
+      ? entries.filter((p) => p.key.includes(needle))
+      : entries;
+  const filterMissing = (entries: LibraryIngredient[]) =>
+    needle
+      ? entries.filter((i) => i.key.includes(needle))
+      : entries;
+
+  const visiblePrices = filterPrices(catalog.prices).slice().sort((a, b) =>
+    a.key.localeCompare(b.key),
+  );
+  const visibleMissing = filterMissing(missing);
+
+  return (
+    <div className="rounded-xl bg-surface border border-border p-4 sm:p-6">
+      <p className="text-body-sm text-text-muted mb-5 max-w-prose">
+        One global price book. Set a unit price per ingredient and every
+        recipe using that name picks it up. Stored locally and synced
+        through GitHub like everything else.
+      </p>
+
+      <input
+        type="text"
+        value={filter}
+        onChange={(e) => setFilter(e.target.value)}
+        placeholder="Search by name…"
+        className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-body-sm text-text placeholder:text-text-muted focus:outline-none focus:border-accent mb-5"
+      />
+
+      {/* Missing-from-library block — the headline UX. */}
+      {missing.length > 0 && (
+        <div className="mb-6">
+          <div className="flex items-baseline justify-between mb-3">
+            <h3 className="text-caption uppercase tracking-widest text-warning font-medium">
+              Missing prices · {missing.length}
+            </h3>
+            <p className="text-caption text-text-muted">
+              In your recipes, no catalog entry yet
+            </p>
+          </div>
+          {visibleMissing.length === 0 ? (
+            <p className="text-caption text-text-muted">
+              No missing prices match the filter.
+            </p>
+          ) : (
+            <ul className="rounded-lg bg-bg border border-border divide-y divide-border">
+              {visibleMissing.map((ing) => (
+                <MissingPriceRow
+                  key={ing.key}
+                  ingredient={ing}
+                  prefs={prefs}
+                  onSave={(price, unit) => setPrice(ing.display_name, price, unit)}
+                />
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {/* Saved prices block. */}
+      <div className="mb-4">
+        <div className="flex items-baseline justify-between mb-3">
+          <h3 className="text-caption uppercase tracking-widest text-text-muted font-medium">
+            Saved · {catalog.prices.length}
+          </h3>
+        </div>
+        {visiblePrices.length === 0 ? (
+          <p className="text-caption text-text-muted">
+            {catalog.prices.length === 0
+              ? "No prices set yet."
+              : "No saved prices match the filter."}
+          </p>
+        ) : (
+          <ul className="rounded-lg bg-bg border border-border divide-y divide-border">
+            {visiblePrices.map((entry) => (
+              <SavedPriceRow
+                key={entry.key}
+                entry={entry}
+                prefs={prefs}
+                onUpdate={(price, unit) => setPrice(entry.key, price, unit)}
+                onRemove={() => unsetPrice(entry.key)}
+              />
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <NewPriceForm
+        prefs={prefs}
+        onAdd={(name, price, unit) => setPrice(name, price, unit)}
+      />
+    </div>
+  );
+}
+
+function MissingPriceRow({
+  ingredient,
+  prefs,
+  onSave,
+}: {
+  ingredient: LibraryIngredient;
+  prefs: UnitPreferences;
+  onSave: (price: number, unit: PriceUnit) => void;
+}) {
+  const [price, setPrice] = useState<number>(0);
+  const [unit, setUnit] = useState<PriceUnit>(
+    DEFAULT_UNIT_FOR_CATEGORY[ingredient.category],
+  );
+
+  return (
+    <li className="px-3 py-3 sm:px-4 grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-center">
+      <div className="min-w-0">
+        <p className="text-body-sm font-medium truncate">
+          {ingredient.display_name}
+        </p>
+        <p className="text-caption text-text-muted mt-0.5">
+          {CATEGORY_LABEL[ingredient.category]} · in {ingredient.recipe_count}{" "}
+          recipe{ingredient.recipe_count === 1 ? "" : "s"}
+        </p>
+      </div>
+      <PriceFields
+        prefs={prefs}
+        price={price}
+        unit={unit}
+        onPriceChange={setPrice}
+        onUnitChange={setUnit}
+        onSubmit={() => {
+          if (price > 0) {
+            onSave(price, unit);
+            setPrice(0);
+          }
+        }}
+        submitLabel="Set"
+      />
+    </li>
+  );
+}
+
+function SavedPriceRow({
+  entry,
+  prefs,
+  onUpdate,
+  onRemove,
+}: {
+  entry: PriceEntry;
+  prefs: UnitPreferences;
+  onUpdate: (price: number, unit: PriceUnit) => void;
+  onRemove: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [price, setPrice] = useState<number>(entry.unit_price);
+  const [unit, setUnit] = useState<PriceUnit>(entry.natural_unit);
+
+  if (!editing) {
+    return (
+      <li className="px-3 py-3 sm:px-4 flex items-baseline justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-body-sm font-medium truncate capitalize">
+            {entry.key}
+          </p>
+          <p className="text-caption text-text-muted mt-0.5 font-mono">
+            {formatMoney(entry.unit_price, prefs)} / {entry.natural_unit}
+          </p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={() => {
+              setPrice(entry.unit_price);
+              setUnit(entry.natural_unit);
+              setEditing(true);
+            }}
+            className="text-caption text-text-muted hover:text-accent transition-colors"
+          >
+            Edit
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (confirm(`Remove price for "${entry.key}"?`)) onRemove();
+            }}
+            className="text-caption text-text-muted hover:text-danger transition-colors"
+          >
+            Remove
+          </button>
+        </div>
+      </li>
+    );
+  }
+
+  return (
+    <li className="px-3 py-3 sm:px-4 grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-center">
+      <p className="text-body-sm font-medium truncate capitalize min-w-0">
+        {entry.key}
+      </p>
+      <PriceFields
+        prefs={prefs}
+        price={price}
+        unit={unit}
+        onPriceChange={setPrice}
+        onUnitChange={setUnit}
+        onSubmit={() => {
+          if (price > 0) onUpdate(price, unit);
+          setEditing(false);
+        }}
+        onCancel={() => setEditing(false)}
+        submitLabel="Save"
+      />
+    </li>
+  );
+}
+
+function NewPriceForm({
+  prefs,
+  onAdd,
+}: {
+  prefs: UnitPreferences;
+  onAdd: (name: string, price: number, unit: PriceUnit) => void;
+}) {
+  const [name, setName] = useState("");
+  const [price, setPrice] = useState<number>(0);
+  const [unit, setUnit] = useState<PriceUnit>("kg");
+
+  const submit = () => {
+    if (!name.trim() || !(price > 0)) return;
+    onAdd(name.trim(), price, unit);
+    setName("");
+    setPrice(0);
+  };
+
+  return (
+    <div className="rounded-lg bg-bg border border-border border-dashed p-3 sm:p-4">
+      <p className="text-caption uppercase tracking-widest text-text-muted mb-3">
+        Add a price
+      </p>
+      <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-end">
+        <label className="block">
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Ingredient name (e.g. Mosaic, Pilsner malt)"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") submit();
+            }}
+            className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-body-sm text-text placeholder:text-text-muted focus:outline-none focus:border-accent"
+          />
+        </label>
+        <PriceFields
+          prefs={prefs}
+          price={price}
+          unit={unit}
+          onPriceChange={setPrice}
+          onUnitChange={setUnit}
+          onSubmit={submit}
+          submitLabel="Add"
+        />
+      </div>
+    </div>
+  );
+}
+
+function PriceFields({
+  prefs,
+  price,
+  unit,
+  onPriceChange,
+  onUnitChange,
+  onSubmit,
+  onCancel,
+  submitLabel,
+}: {
+  prefs: UnitPreferences;
+  price: number;
+  unit: PriceUnit;
+  onPriceChange: (v: number) => void;
+  onUnitChange: (u: PriceUnit) => void;
+  onSubmit: () => void;
+  onCancel?: () => void;
+  submitLabel: string;
+}) {
+  return (
+    <div className="flex items-stretch gap-2">
+      <div className="flex items-baseline gap-1 bg-surface border border-border rounded-lg px-2 py-2 focus-within:border-accent">
+        <span className="text-caption font-mono text-text-muted shrink-0">
+          {currencySymbol(prefs)}
+        </span>
+        <input
+          type="number"
+          value={Number.isFinite(price) && price !== 0 ? price : ""}
+          step={0.01}
+          min={0}
+          onChange={(e) => {
+            const n = Number(e.target.value);
+            onPriceChange(Number.isFinite(n) ? n : 0);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") onSubmit();
+          }}
+          placeholder="0.00"
+          className="w-20 bg-transparent text-body-sm font-mono tabular-nums text-text focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
+        />
+        <span className="text-caption font-mono text-text-muted shrink-0">/</span>
+        <select
+          value={unit}
+          onChange={(e) => onUnitChange(e.target.value as PriceUnit)}
+          className="bg-transparent text-caption text-text focus:outline-none"
+        >
+          <option value="kg">kg</option>
+          <option value="g">g</option>
+          <option value="L">L</option>
+          <option value="pack">pack</option>
+        </select>
+      </div>
+      <button
+        type="button"
+        onClick={onSubmit}
+        disabled={!(price > 0)}
+        className="px-3 py-2 rounded-lg bg-accent text-bg text-caption font-medium hover:opacity-90 disabled:opacity-50 transition-opacity min-h-[36px]"
+      >
+        {submitLabel}
+      </button>
+      {onCancel && (
+        <button
+          type="button"
+          onClick={onCancel}
+          className="px-3 py-2 rounded-lg text-caption text-text-muted hover:text-text transition-colors"
+        >
+          Cancel
+        </button>
+      )}
     </div>
   );
 }
