@@ -83,20 +83,20 @@ describe("BeerJSON round-trip", () => {
   it("rejects malformed JSON with a clear error", () => {
     const result = parseBeerJsonText("{ not json");
     expect(result.recipes).toEqual([]);
-    expect(result.error).toMatch(/invalid json/i);
+    expect(result.error?.code).toBe("import.invalid_json");
   });
 
   it("rejects valid JSON that isn't BeerJSON-shaped", () => {
     const result = parseBeerJsonText(JSON.stringify({ something: "else" }));
     expect(result.recipes).toEqual([]);
-    expect(result.error).toBeTruthy();
+    expect(result.error?.code).toBe("import.not_beerjson");
   });
 
   it("rejects valid BeerJSON with no recipes inside", () => {
     const empty = JSON.stringify({ beerjson: { version: 2.06, recipes: [] } });
     const result = parseBeerJsonText(empty);
     expect(result.recipes).toEqual([]);
-    expect(result.error).toMatch(/no recipes/i);
+    expect(result.error?.code).toBe("import.no_recipes_beerjson");
   });
 });
 

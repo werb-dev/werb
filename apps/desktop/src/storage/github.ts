@@ -1,4 +1,5 @@
 import type { StorageBackend } from "./backend.ts";
+import { WerbError } from "../data/errors.ts";
 
 /**
  * StorageBackend backed by a GitHub repository, via the REST Contents
@@ -84,7 +85,7 @@ export function gitHubBackend(
     const res = await request(`${urlFor(key)}?ref=${encodeURIComponent(branch)}`);
     if (res.status === 404) return null;
     if (!res.ok) {
-      throw new Error(`GitHub read failed (${res.status}): ${await res.text()}`);
+      throw new WerbError("github.read_failed", { status: res.status, detail: await res.text() });
     }
     const data = (await res.json()) as GitHubContentItem | GitHubContentItem[];
     // The Contents API returns an array when the path resolves to a
@@ -124,7 +125,7 @@ export function gitHubBackend(
         body: JSON.stringify(body),
       });
       if (!res.ok) {
-        throw new Error(`GitHub write failed (${res.status}): ${await res.text()}`);
+        throw new WerbError("github.write_failed", { status: res.status, detail: await res.text() });
       }
     },
 
@@ -141,7 +142,7 @@ export function gitHubBackend(
         }),
       });
       if (!res.ok && res.status !== 404) {
-        throw new Error(`GitHub delete failed (${res.status}): ${await res.text()}`);
+        throw new WerbError("github.delete_failed", { status: res.status, detail: await res.text() });
       }
     },
 
@@ -152,7 +153,7 @@ export function gitHubBackend(
       const res = await request(dirUrl);
       if (res.status === 404) return [];
       if (!res.ok) {
-        throw new Error(`GitHub list failed (${res.status}): ${await res.text()}`);
+        throw new WerbError("github.list_failed", { status: res.status, detail: await res.text() });
       }
       const items = (await res.json()) as GitHubContentItem | GitHubContentItem[];
       const list = Array.isArray(items) ? items : [items];
@@ -183,10 +184,10 @@ export async function verifyGitHubAccess(
   // 1. Token must auth as a user.
   const userRes = await fetchImpl("https://api.github.com/user", { headers });
   if (userRes.status === 401) {
-    throw new Error("Invalid token. Check that it hasn't expired or been revoked.");
+    throw new WerbError("github.invalid_token");
   }
   if (!userRes.ok) {
-    throw new Error(`Couldn't reach GitHub (${userRes.status}). Check your network.`);
+    throw new WerbError("github.unreachable_api", { status: userRes.status });
   }
   const user = (await userRes.json()) as { login: string };
 
@@ -196,17 +197,14 @@ export async function verifyGitHubAccess(
     { headers },
   );
   if (repoRes.status === 404) {
-    throw new Error(
-      `Repo "${config.repo}" not found, or the token doesn't have access. ` +
-        `For fine-grained tokens, make sure Contents: read+write is enabled.`,
-    );
+    throw new WerbError("github.repo_not_found", { repo: config.repo });
   }
   if (!repoRes.ok) {
-    throw new Error(`Couldn't reach the repo (${repoRes.status}).`);
+    throw new WerbError("github.unreachable_repo", { status: repoRes.status });
   }
   const repo = (await repoRes.json()) as { full_name: string; permissions?: { push?: boolean } };
   if (repo.permissions && !repo.permissions.push) {
-    throw new Error(`The token has read but not write access to "${config.repo}".`);
+    throw new WerbError("github.no_write_access", { repo: config.repo });
   }
   return { login: user.login, repoName: repo.full_name };
 }

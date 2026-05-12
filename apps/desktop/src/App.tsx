@@ -1,4 +1,5 @@
 import { lazy, Suspense, useState } from "react";
+import type { BeerJsonRecipe } from "@werb/adapters";
 import { LibraryScreen } from "./screens/Library.tsx";
 import { RecipeScreen } from "./screens/Recipe.tsx";
 import { BrewScreen } from "./screens/Brew.tsx";
@@ -8,7 +9,7 @@ import { useRecipes } from "./hooks/useRecipes.ts";
 import { useEquipment } from "./hooks/useEquipment.ts";
 import { BUNDLED_SAMPLES, createBlankRecipe, importBeerJsonFromDisk, importBeerXmlFromDisk } from "./data/recipes.ts";
 import { exportSessionHtml, exportSessionJson } from "./data/recipe-export.ts";
-import { partitionForImport, skippedMessage } from "./data/import-dedup.ts";
+import { partitionForImport, skippedSummary } from "./data/import-dedup.ts";
 import { useT, useUnits } from "./data/preferences.tsx";
 
 // Lazy-loaded screens — the editor is the biggest screen by far
@@ -55,6 +56,13 @@ export function App() {
   const recipesApi = useRecipes();
   const equipmentApi = useEquipment();
   const prefs = useUnits();
+  const t = useT();
+  // Pure modules return structured skip summaries; flatten to a UI
+  // string here so they go through the active locale.
+  const formatSkipped = (skipped: BeerJsonRecipe[]) => {
+    const sum = skippedSummary(skipped);
+    return sum ? t("library.import.skipped", { count: sum.count, names: sum.names }) : undefined;
+  };
 
   const goLibrary = () => setState({ view: "library" });
   const goRecipe = (recipeId: string) => setState({ view: "recipe", recipeId });
@@ -158,7 +166,7 @@ export function App() {
         onImportSamples={() => {
           const { fresh, skipped } = partitionForImport(BUNDLED_SAMPLES, recipesApi.recipes);
           if (fresh.length > 0) recipesApi.createMany(fresh);
-          return { count: fresh.length, info: skippedMessage(skipped) };
+          return { count: fresh.length, info: formatSkipped(skipped) };
         }}
         onCreateBlank={() => {
           // Seed batch + efficiency from the active equipment profile
@@ -195,13 +203,13 @@ export function App() {
           const { recipes, error } = await importBeerJsonFromDisk();
           const { fresh, skipped } = partitionForImport(recipes, recipesApi.recipes);
           if (fresh.length > 0) recipesApi.createMany(fresh);
-          return { count: fresh.length, error, info: skippedMessage(skipped) };
+          return { count: fresh.length, error, info: formatSkipped(skipped) };
         }}
         onImportBeerXmlFile={async () => {
           const { recipes, error } = await importBeerXmlFromDisk();
           const { fresh, skipped } = partitionForImport(recipes, recipesApi.recipes);
           if (fresh.length > 0) recipesApi.createMany(fresh);
-          return { count: fresh.length, error, info: skippedMessage(skipped) };
+          return { count: fresh.length, error, info: formatSkipped(skipped) };
         }}
         activeProfile={equipmentApi.activeProfile}
         onGoEquipment={goEquipment}

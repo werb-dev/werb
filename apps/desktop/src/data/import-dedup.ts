@@ -26,12 +26,21 @@ export function partitionForImport(
 }
 
 /**
- * Compose a human-readable status message describing skipped duplicates.
- * Returns `undefined` when nothing was skipped, so callers can pass the
- * result through to UI without conditionals.
+ * Structured "skipped duplicates" notice. Returns `null` when nothing
+ * was skipped. The UI layer formats with t() since this module is pure
+ * (no React access). Caller pattern:
+ *
+ *   const skip = skippedSummary(skipped);
+ *   const info = skip
+ *     ? t("library.import.skipped", { count: skip.count, names: skip.names })
+ *     : undefined;
  */
-export function skippedMessage(skipped: BeerJsonRecipe[]): string | undefined {
-  if (skipped.length === 0) return undefined;
-  const names = skipped.map((r) => `"${r.name}"`).join(", ");
-  return `Skipped ${skipped.length} duplicate${skipped.length === 1 ? "" : "s"} already in your library: ${names}. Use the "+" on a card to make an intentional copy.`;
+export function skippedSummary(
+  skipped: BeerJsonRecipe[],
+): { count: number; names: string } | null {
+  if (skipped.length === 0) return null;
+  return {
+    count: skipped.length,
+    names: skipped.map((r) => `"${r.name}"`).join(", "),
+  };
 }

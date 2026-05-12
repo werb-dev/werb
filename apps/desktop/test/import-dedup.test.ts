@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { BeerJsonRecipe } from "@werb/adapters";
-import { partitionForImport, skippedMessage } from "../src/data/import-dedup.ts";
+import { partitionForImport, skippedSummary } from "../src/data/import-dedup.ts";
 import type { StoredRecipe } from "../src/data/recipes.ts";
 
 function recipe(name: string): BeerJsonRecipe {
@@ -73,26 +73,21 @@ describe("partitionForImport", () => {
   });
 });
 
-describe("skippedMessage", () => {
-  it("returns undefined when nothing was skipped", () => {
-    expect(skippedMessage([])).toBeUndefined();
+describe("skippedSummary", () => {
+  it("returns null when nothing was skipped", () => {
+    expect(skippedSummary([])).toBeNull();
   });
 
-  it("singular for one skipped recipe", () => {
-    const msg = skippedMessage([recipe("Foo")])!;
-    expect(msg).toContain("Skipped 1 duplicate");
-    expect(msg).toContain('"Foo"');
+  it("count + quoted name for one skipped recipe", () => {
+    const sum = skippedSummary([recipe("Foo")])!;
+    expect(sum.count).toBe(1);
+    expect(sum.names).toBe('"Foo"');
   });
 
-  it("plural for multiple", () => {
-    const msg = skippedMessage([recipe("Foo"), recipe("Bar")])!;
-    expect(msg).toContain("Skipped 2 duplicates");
-    expect(msg).toContain('"Foo"');
-    expect(msg).toContain('"Bar"');
-  });
-
-  it('mentions the "+" intentional-copy escape hatch', () => {
-    const msg = skippedMessage([recipe("Foo")])!;
-    expect(msg).toContain("+");
+  it("count + comma-joined names for multiple", () => {
+    const sum = skippedSummary([recipe("Foo"), recipe("Bar")])!;
+    expect(sum.count).toBe(2);
+    expect(sum.names).toContain('"Foo"');
+    expect(sum.names).toContain('"Bar"');
   });
 });

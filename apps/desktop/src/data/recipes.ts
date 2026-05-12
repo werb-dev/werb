@@ -2,6 +2,7 @@ import type { BeerJsonFile, BeerJsonRecipe } from "@werb/adapters";
 import { validateBeerJson } from "@werb/validate";
 import type { StorageBackend } from "../storage/index.ts";
 import { isTauri } from "./runtime.ts";
+import { WerbError } from "./errors.ts";
 // Statically imported so triggering the file picker doesn't cross a
 // microtask boundary — iOS Safari requires `input.click()` to fire in
 // the same task as the user's tap.
@@ -138,7 +139,7 @@ export function createBlankRecipe(opts?: {
 
 export interface ImportResult {
   recipes: BeerJsonRecipe[];
-  error?: string;
+  error?: WerbError;
 }
 
 /**
@@ -151,17 +152,20 @@ export function parseBeerJsonText(raw: string): ImportResult {
   try {
     parsed = JSON.parse(raw);
   } catch (err) {
-    return { recipes: [], error: `Invalid JSON: ${(err as Error).message}` };
+    return {
+      recipes: [],
+      error: new WerbError("import.invalid_json", { detail: (err as Error).message }),
+    };
   }
   const result = validateBeerJson(parsed);
   if (!result.valid) {
     const first = result.errors[0];
     const detail = first ? `${first.path}: ${first.message}` : "unknown";
-    return { recipes: [], error: `Not valid BeerJSON 2.x — ${detail}` };
+    return { recipes: [], error: new WerbError("import.not_beerjson", { detail }) };
   }
   const recipes = (parsed as BeerJsonFile).beerjson?.recipes ?? [];
   if (recipes.length === 0) {
-    return { recipes: [], error: "File is valid BeerJSON but contains no recipes." };
+    return { recipes: [], error: new WerbError("import.no_recipes_beerjson") };
   }
   return { recipes };
 }
@@ -201,7 +205,10 @@ async function importBeerJsonViaTauri(): Promise<ImportResult> {
   try {
     raw = await readTextFile(selected);
   } catch (err) {
-    return { recipes: [], error: `Read failed: ${(err as Error).message}` };
+    return {
+      recipes: [],
+      error: new WerbError("import.read_failed", { detail: (err as Error).message }),
+    };
   }
   return parseBeerJsonText(raw);
 }
@@ -222,12 +229,12 @@ export async function parseBeerXmlText(raw: string): Promise<ImportResult> {
     // gotchas. See the crate's lib.rs for the rationale.
     const recipes = JSON.parse(wasm.parseBeerXmlJson(raw)) as BeerJsonRecipe[];
     if (recipes.length === 0) {
-      return { recipes: [], error: "File parsed but contained no recipes." };
+      return { recipes: [], error: new WerbError("import.no_recipes_beerxml") };
     }
     return { recipes };
   } catch (err) {
     const detail = err instanceof Error ? err.message : String(err);
-    return { recipes: [], error: `BeerXML parse failed: ${detail}` };
+    return { recipes: [], error: new WerbError("import.beerxml_parse_failed", { detail }) };
   }
 }
 
@@ -264,7 +271,10 @@ async function importBeerXmlViaTauri(): Promise<ImportResult> {
   try {
     raw = await readTextFile(selected);
   } catch (err) {
-    return { recipes: [], error: `Read failed: ${(err as Error).message}` };
+    return {
+      recipes: [],
+      error: new WerbError("import.read_failed", { detail: (err as Error).message }),
+    };
   }
   return parseBeerXmlText(raw);
 }

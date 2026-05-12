@@ -2,14 +2,15 @@ import { useState } from "react";
 import type { WerbSession } from "@werb/types";
 import { useBrewLog } from "../hooks/useBrewLog.ts";
 import { useT } from "../data/preferences.tsx";
+import { translateError, type WerbError } from "../data/errors.ts";
 
 interface JournalScreenProps {
   /** Open a specific session in the brew screen. */
   onOpenSession: (recipeId: string, sessionId: string) => void;
   /** Export a session as JSON. */
-  onExportJson: (session: WerbSession) => Promise<{ error?: string }>;
+  onExportJson: (session: WerbSession) => Promise<{ error?: WerbError | undefined }>;
   /** Export a session as printable HTML. */
-  onExportHtml: (session: WerbSession) => Promise<{ error?: string }>;
+  onExportHtml: (session: WerbSession) => Promise<{ error?: WerbError | undefined }>;
 }
 
 /**
@@ -94,8 +95,8 @@ function SessionRow({
 }: {
   session: WerbSession;
   onOpen: () => void;
-  onExportJson: () => Promise<{ error?: string }>;
-  onExportHtml: () => Promise<{ error?: string }>;
+  onExportJson: () => Promise<{ error?: WerbError | undefined }>;
+  onExportHtml: () => Promise<{ error?: WerbError | undefined }>;
 }) {
   const stepsDone = session.steps.filter((s) => s.status === "done").length;
   const totalSteps = session.steps.length;
@@ -142,15 +143,16 @@ function ExportMenu({
   onExportJson,
   onExportHtml,
 }: {
-  onExportJson: () => Promise<{ error?: string }>;
-  onExportHtml: () => Promise<{ error?: string }>;
+  onExportJson: () => Promise<{ error?: WerbError | undefined }>;
+  onExportHtml: () => Promise<{ error?: WerbError | undefined }>;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
 
-  const run = async (fn: () => Promise<{ error?: string }>) => {
+  const run = async (fn: () => Promise<{ error?: WerbError | undefined }>) => {
     setOpen(false);
     const r = await fn();
-    if (r.error) alert(r.error);
+    if (r.error) alert(translateError(r.error, t));
   };
 
   return (

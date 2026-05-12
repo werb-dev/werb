@@ -11,6 +11,7 @@ import type { StoredRecipe } from "../data/recipes.ts";
 import { filterAndSort, type SortKey } from "../data/library-sort.ts";
 import { profileToWaterOverrides, type ProfileWithId } from "../data/equipment.ts";
 import { useT, useUnits } from "../data/preferences.tsx";
+import { WerbError, translateError } from "../data/errors.ts";
 import {
   formatColor,
   formatLiters,
@@ -27,12 +28,12 @@ interface LibraryScreenProps {
   onImportSamples: () => { count: number; info?: string | undefined };
   onImportBeerJsonFile: () => Promise<{
     count: number;
-    error?: string | undefined;
+    error?: WerbError | undefined;
     info?: string | undefined;
   }>;
   onImportBeerXmlFile: () => Promise<{
     count: number;
-    error?: string | undefined;
+    error?: WerbError | undefined;
     info?: string | undefined;
   }>;
   onCreateBlank: () => void;
@@ -67,18 +68,18 @@ export function LibraryScreen({
     setImportInfo(null);
     const { count, info } = onImportSamples();
     if (info) setImportInfo(info);
-    else if (count === 0) setImportError("No bundled samples found.");
+    else if (count === 0) setImportError(t("error.import.no_samples"));
   };
 
   const runImport = async (
-    fn: () => Promise<{ count: number; error?: string | undefined; info?: string | undefined }>,
+    fn: () => Promise<{ count: number; error?: WerbError | undefined; info?: string | undefined }>,
   ) => {
     setImportError(null);
     setImportInfo(null);
     setImporting(true);
     try {
       const { error, info } = await fn();
-      if (error) setImportError(error);
+      if (error) setImportError(translateError(error, t));
       if (info) setImportInfo(info);
     } finally {
       setImporting(false);

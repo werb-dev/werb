@@ -1,6 +1,7 @@
 import type { BeerJsonRecipe } from "@werb/adapters";
 import type { WerbSession, SessionStep, Measurement } from "@werb/types";
 import { isTauri } from "./runtime.ts";
+import { WerbError } from "./errors.ts";
 // Static import: triggering the download anchor must stay in the user-
 // gesture task on iOS, which means no awaits between the user's tap
 // and the anchor's click().
@@ -27,8 +28,8 @@ import {
 export interface ExportResult {
   /** True when a file was written. False when the user cancelled. */
   written: boolean;
-  /** Human-readable error message when something went wrong. */
-  error?: string;
+  /** Structured error when something went wrong. */
+  error?: WerbError;
   /** Path the file was saved to (when written). */
   path?: string;
 }
@@ -79,7 +80,10 @@ async function saveTextFile(opts: SaveOptions): Promise<ExportResult> {
     return { written: true };
   } catch (err) {
     const detail = err instanceof Error ? err.message : String(err);
-    return { written: false, error: `Download failed: ${detail || "unknown error"}` };
+    return {
+      written: false,
+      error: new WerbError("export.download_failed", { detail }),
+    };
   }
 }
 
@@ -96,7 +100,10 @@ async function saveTextFileViaTauri(opts: SaveOptions): Promise<ExportResult> {
     return { written: true, path: selected };
   } catch (err) {
     const detail = err instanceof Error ? err.message : String(err);
-    return { written: false, error: `Write failed: ${detail || "unknown error"}` };
+    return {
+      written: false,
+      error: new WerbError("export.write_failed", { detail }),
+    };
   }
 }
 

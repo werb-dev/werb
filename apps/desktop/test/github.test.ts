@@ -200,7 +200,7 @@ describe("verifyGitHubAccess", () => {
     const fetchImpl = fakeFetch(() => new Response("", { status: 401 }));
     await expect(
       verifyGitHubAccess({ token: "bad", repo: "alice/recipes" }, fetchImpl),
-    ).rejects.toThrow(/invalid token/i);
+    ).rejects.toThrow(/github\.invalid_token/);
   });
 
   it("throws a helpful error on 404 from the repo lookup", async () => {
@@ -210,7 +210,7 @@ describe("verifyGitHubAccess", () => {
     });
     await expect(
       verifyGitHubAccess({ token: "tk", repo: "alice/private" }, fetchImpl),
-    ).rejects.toThrow(/not found|access/i);
+    ).rejects.toThrow(/github\.repo_not_found/);
   });
 
   it("rejects read-only access for a token that can't push", async () => {
@@ -223,7 +223,7 @@ describe("verifyGitHubAccess", () => {
     });
     await expect(
       verifyGitHubAccess({ token: "tk", repo: "alice/recipes" }, fetchImpl),
-    ).rejects.toThrow(/write access/i);
+    ).rejects.toThrow(/github\.no_write_access/);
   });
 });
 

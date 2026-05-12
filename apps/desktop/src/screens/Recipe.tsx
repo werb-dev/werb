@@ -35,6 +35,7 @@ import type {
 } from "@werb/types";
 import { profileToWaterOverrides, type ProfileWithId } from "../data/equipment.ts";
 import { exportBeerJson, exportBeerXml, exportRecipeHtml } from "../data/recipe-export.ts";
+import { translateError, type WerbError } from "../data/errors.ts";
 import { useBrewSessionExists } from "../hooks/useBrewSession.ts";
 import { useRecipeTastings } from "../hooks/useBrewLog.ts";
 import { computeRecipeCost, type CostLine } from "../data/cost.ts";
@@ -503,16 +504,16 @@ function ExportMenu({ recipe, prefs }: { recipe: BeerJsonRecipe; prefs: UnitPref
   const t = useT();
   const [open, setOpen] = useState(false);
 
-  const run = async (fn: () => Promise<{ error?: string | undefined }>) => {
+  const run = async (fn: () => Promise<{ error?: WerbError | undefined }>) => {
     setOpen(false);
     const r = await fn();
-    if (r.error) alert(r.error);
+    if (r.error) alert(translateError(r.error, t));
   };
 
   const options: {
     label: string;
     sublabel: string;
-    fn: () => Promise<{ error?: string | undefined }>;
+    fn: () => Promise<{ error?: WerbError | undefined }>;
   }[] = [
     {
       label: t("recipe.export.beerjson_label"),

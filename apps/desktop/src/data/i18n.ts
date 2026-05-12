@@ -634,6 +634,56 @@ const STRINGS: Record<string, Entry> = {
     en: "If this keeps happening, file an issue and include the message above.",
     fr: "Si le problème persiste, ouvrez une issue en incluant le message ci-dessus.",
   },
+
+  // ─── Structured errors (WerbError codes) ─────────────────────
+  // Import (BeerJSON / BeerXML)
+  "error.import.invalid_json": { en: "Invalid JSON: {detail}", fr: "JSON invalide : {detail}" },
+  "error.import.not_beerjson": { en: "Not valid BeerJSON 2.x — {detail}", fr: "BeerJSON 2.x invalide — {detail}" },
+  "error.import.no_recipes_beerjson": {
+    en: "File is valid BeerJSON but contains no recipes.",
+    fr: "Le fichier est un BeerJSON valide, mais ne contient aucune recette.",
+  },
+  "error.import.no_recipes_beerxml": {
+    en: "File parsed but contained no recipes.",
+    fr: "Le fichier a été analysé mais ne contient aucune recette.",
+  },
+  "error.import.beerxml_parse_failed": { en: "BeerXML parse failed: {detail}", fr: "Échec de l'analyse BeerXML : {detail}" },
+  "error.import.read_failed": { en: "Read failed: {detail}", fr: "Échec de lecture : {detail}" },
+  "error.import.no_samples": { en: "No bundled samples found.", fr: "Aucun exemple intégré trouvé." },
+  "library.import.skipped": {
+    en: "Skipped {count} duplicate{s} already in your library: {names}. Use the \"+\" on a card to make an intentional copy.",
+    fr: "{count} doublon{s} ignoré{s} déjà dans votre bibliothèque : {names}. Utilisez le « + » sur une carte pour faire une copie intentionnelle.",
+  },
+
+  // Export (download / write)
+  "error.export.download_failed": { en: "Download failed: {detail}", fr: "Échec du téléchargement : {detail}" },
+  "error.export.write_failed": { en: "Write failed: {detail}", fr: "Échec d'écriture : {detail}" },
+
+  // GitHub sync
+  "error.github.invalid_token": {
+    en: "Invalid token. Check that it hasn't expired or been revoked.",
+    fr: "Token invalide. Vérifiez qu'il n'a pas expiré ou été révoqué.",
+  },
+  "error.github.unreachable_api": {
+    en: "Couldn't reach GitHub ({status}). Check your network.",
+    fr: "Impossible de joindre GitHub ({status}). Vérifiez votre réseau.",
+  },
+  "error.github.repo_not_found": {
+    en: "Repo \"{repo}\" not found, or the token doesn't have access. For fine-grained tokens, make sure Contents: read+write is enabled.",
+    fr: "Dépôt « {repo} » introuvable, ou le token n'y a pas accès. Pour les tokens fine-grained, vérifiez que Contents : read+write est activé.",
+  },
+  "error.github.unreachable_repo": {
+    en: "Couldn't reach the repo ({status}).",
+    fr: "Impossible de joindre le dépôt ({status}).",
+  },
+  "error.github.no_write_access": {
+    en: "The token has read but not write access to \"{repo}\".",
+    fr: "Le token a un accès en lecture mais pas en écriture sur « {repo} ».",
+  },
+  "error.github.read_failed": { en: "GitHub read failed ({status}): {detail}", fr: "Échec de lecture GitHub ({status}) : {detail}" },
+  "error.github.write_failed": { en: "GitHub write failed ({status}): {detail}", fr: "Échec d'écriture GitHub ({status}) : {detail}" },
+  "error.github.delete_failed": { en: "GitHub delete failed ({status}): {detail}", fr: "Échec de suppression GitHub ({status}) : {detail}" },
+  "error.github.list_failed": { en: "GitHub list failed ({status}): {detail}", fr: "Échec de listage GitHub ({status}) : {detail}" },
 };
 
 export function translate(

@@ -16,6 +16,7 @@ import { useT, useUnitsControl } from "../data/preferences.tsx";
 import type { UnitPreferences } from "../data/units-format.ts";
 import { SUPPORTED_LOCALES } from "../data/i18n.ts";
 import { downloadTextFile, pickAndReadTextFile } from "../data/browser-fs.ts";
+import { translateError } from "../data/errors.ts";
 
 /**
  * Sync + advanced storage settings. v1 covers a single GitHub-based
@@ -478,8 +479,7 @@ function Connect({ onConnected }: { onConnected: (s: SyncConfig) => void }) {
       });
       setStatus({ kind: "idle" });
     } catch (err) {
-      const detail = err instanceof Error ? err.message : String(err);
-      setStatus({ kind: "idle", error: detail });
+      setStatus({ kind: "idle", error: translateError(err, t) });
     }
   };
 
@@ -578,8 +578,10 @@ function Connected({
             : t("settings.connected.pulled", { count }),
       });
     } catch (err) {
-      const detail = err instanceof Error ? err.message : String(err);
-      setStatus({ kind: "idle", error: t("settings.connected.failed", { detail }) });
+      setStatus({
+        kind: "idle",
+        error: t("settings.connected.failed", { detail: translateError(err, t) }),
+      });
     } finally {
       setProgress(null);
     }
