@@ -28,7 +28,7 @@ Most brewing apps lock your recipes inside a proprietary cloud silo. Werb takes 
 - **Export** as BeerJSON, BeerXML, or a printable HTML (foldable into a PDF).
 - **Sync** across devices via a private GitHub repo (optional, manual push/pull, your PAT never leaves the machine).
 
-Everything works offline. Web build is a full PWA — installable to your home screen on phones and tablets.
+The app speaks **English and French** end-to-end (auto-detected, switchable in Settings) and ships **dark and light themes** — the signature Cassis dark for indoor brew days, a warm-cream light for outdoor sessions in the sun. Everything works offline. Web build is a full PWA — installable to your home screen on phones and tablets.
 
 ## Quick start
 
@@ -37,7 +37,7 @@ Requirements: Node.js 20+, [pnpm](https://pnpm.io/), Rust toolchain (for the Bee
 ```bash
 pnpm install
 pnpm gen:types   # generate TS types from JSON Schemas
-pnpm test        # 251+ tests across calc / adapters / desktop hooks
+pnpm test        # 264+ tests across calc / adapters / desktop hooks
 
 # Web dev:
 pnpm -F @werb/desktop dev
@@ -87,7 +87,7 @@ Every calc tool is contract-first: define the JSON Schema, regenerate types, imp
 
 ## Status
 
-v0.1 — public alpha. The brewing math is well-tested and matches reference tables; UI is responsive (tablet-first, phone-usable). Cost estimator uses approximate EUR baseline prices — calibrate via Settings → Cost adjustment.
+v0.2 — public alpha. The brewing math is well-tested and matches reference tables; UI is responsive (tablet-first, phone-usable), localised in English and French, and ships in both Cassis dark and warm-cream light. Cost estimator uses approximate EUR baseline prices — calibrate via Settings → Cost adjustment.
 
 Tested against an iPad Air 2 (iOS 15.8.4) for the PWA path including the older Safari file-picker quirks.
 

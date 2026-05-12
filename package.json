@@ -1,7 +1,7 @@
 {
   "name": "werb",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "File-driven homebrewing tool (BeerJSON in, brew sessions out).",
   "license": "MIT",
   "author": "Nicolas Dreno",
