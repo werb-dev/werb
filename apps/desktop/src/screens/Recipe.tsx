@@ -42,6 +42,7 @@ import { SensoryRadar } from "../components/SensoryRadar.tsx";
 import { usePersistedJson } from "../storage/index.ts";
 import { useT, useUnits } from "../data/preferences.tsx";
 import {
+  formatCelsius,
   formatColor,
   formatLiters,
   formatMassLarge,
@@ -580,6 +581,7 @@ function defaultViability(form: YeastPitchInput["yeast_form"]): number {
 }
 
 function YeastPitchSection({ recipe }: { recipe: BeerJsonRecipe }) {
+  const tt = useT();
   const input = recipeToYeastPitchInput(recipe);
   // Default form depends on the first culture; falls back to "liquid"
   // when the recipe has no cultures yet.
@@ -602,9 +604,9 @@ function YeastPitchSection({ recipe }: { recipe: BeerJsonRecipe }) {
   // than zero numbers if so.
   if (!input) {
     return (
-      <Section title="Yeast pitch">
+      <Section title={tt("recipe.section.yeast")}>
         <p className="text-body-sm text-text-muted">
-          Set an original gravity on the recipe to compute pitch rate.
+          {tt("recipe.yeast.no_og")}
         </p>
       </Section>
     );
@@ -616,53 +618,61 @@ function YeastPitchSection({ recipe }: { recipe: BeerJsonRecipe }) {
     viability_pct: form.viability_pct,
   });
   const needStarter = !out.has_sufficient;
-  const formLabel = yeastForm === "dry" ? "dry yeast" : "liquid yeast";
+  const formLabel = tt(
+    yeastForm === "dry" ? "recipe.yeast.form.dry" : "recipe.yeast.form.liquid",
+  );
+  const packUnit = tt(
+    yeastForm === "dry" ? "recipe.yeast.pack_unit.dry" : "recipe.yeast.pack_unit.liquid",
+  );
 
   return (
     <Section
-      title="Yeast pitch"
-      subtitle={`Target cell count for ${formLabel}. Adjust pack count and viability to match what you have on hand.`}
+      title={tt("recipe.section.yeast")}
+      subtitle={tt("recipe.yeast.subtitle", { form: formLabel })}
     >
       <div className="rounded-xl bg-surface border border-border p-4 sm:p-6">
         {/* Input row */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
           <CarbField
-            label="Packs on hand"
-            unit={yeastForm === "dry" ? "sachets" : "packs"}
+            label={tt("recipe.yeast.packs")}
+            unit={packUnit}
             value={form.yeast_pack_count}
             step={1}
             onChange={(v) => update("yeast_pack_count", Math.max(0, Math.round(v)))}
-            hint={
+            hint={tt(
               yeastForm === "dry"
-                ? "~11.5 g sachets, ~115 B cells fresh"
-                : "Wyeast / White Labs smack-pack, ~100 B at production"
-            }
+                ? "recipe.yeast.packs_hint.dry"
+                : "recipe.yeast.packs_hint.liquid",
+            )}
           />
           <CarbField
-            label="Viability"
+            label={tt("recipe.yeast.viability")}
             unit="%"
             value={form.viability_pct}
             step={1}
             onChange={(v) => update("viability_pct", Math.min(100, Math.max(0, v)))}
-            hint={
+            hint={tt(
               yeastForm === "dry"
-                ? "Dry yeast holds well — 97% fresh, drop to ~85% after a year"
-                : "Liquid yeast drops ~21%/month from production"
-            }
+                ? "recipe.yeast.viability_hint.dry"
+                : "recipe.yeast.viability_hint.liquid",
+            )}
           />
         </div>
 
         {/* Derived stats */}
         <div className="grid grid-cols-2 gap-4 mb-6">
           <CarbStat
-            label="Target"
+            label={tt("recipe.yeast.target")}
             value={`${out.target_cells_billion.toFixed(0)} B`}
-            sub={`${out.target_rate_m_per_ml_per_plato.toFixed(2)} M/mL/°P at ${out.og_plato.toFixed(1)} °P`}
+            sub={tt("recipe.yeast.target_sub", {
+              rate: out.target_rate_m_per_ml_per_plato.toFixed(2),
+              og: `${out.og_plato.toFixed(1)} °P`,
+            })}
           />
           <CarbStat
-            label="Per pack (viable)"
+            label={tt("recipe.yeast.per_pack")}
             value={`${out.cells_per_pack_effective_billion.toFixed(0)} B`}
-            sub={`Pack × viability`}
+            sub={tt("recipe.yeast.per_pack_sub")}
           />
         </div>
 
@@ -670,31 +680,31 @@ function YeastPitchSection({ recipe }: { recipe: BeerJsonRecipe }) {
         <div className="grid grid-cols-2 gap-px bg-border rounded-xl overflow-hidden">
           <div className="bg-surface px-3 py-3 sm:px-5 sm:py-4">
             <p className="text-[10px] sm:text-caption uppercase tracking-widest text-text-muted">
-              Recommended
+              {tt("recipe.yeast.recommended")}
             </p>
             <p className="font-mono text-h3 sm:text-h2 mt-1 text-accent">
               {out.recommended_pack_count}{" "}
               <span className="text-body-sm text-text-muted">
-                {yeastForm === "dry" ? "sachets" : "packs"}
+                {packUnit}
               </span>
             </p>
             <p className="font-mono text-caption mt-1 text-text-muted">
-              {out.packs_needed.toFixed(2)} packs exact
+              {tt("recipe.yeast.exact_packs", { packs: out.packs_needed.toFixed(2) })}
             </p>
           </div>
           <div className="bg-surface px-3 py-3 sm:px-5 sm:py-4">
             <p className="text-[10px] sm:text-caption uppercase tracking-widest text-text-muted">
-              Status
+              {tt("recipe.yeast.status")}
             </p>
             <p
               className={`font-mono text-h3 sm:text-h2 mt-1 ${needStarter ? "text-warning" : "text-success"}`}
             >
-              {needStarter ? "Under-pitch" : "Sufficient"}
+              {tt(needStarter ? "recipe.yeast.under_pitch" : "recipe.yeast.sufficient")}
             </p>
             <p className={`font-mono text-caption mt-1 ${needStarter ? "text-warning" : "text-text-muted"}`}>
               {needStarter
-                ? `Short ${out.shortfall_billion_cells.toFixed(0)} B — buy more or make a starter`
-                : `${form.yeast_pack_count} pack${form.yeast_pack_count === 1 ? "" : "s"} covers the target`}
+                ? tt("recipe.yeast.shortfall", { cells: out.shortfall_billion_cells.toFixed(0) })
+                : tt("recipe.yeast.sufficient_body", { count: form.yeast_pack_count })}
             </p>
           </div>
         </div>
@@ -758,55 +768,52 @@ const ZERO_SALTS: SaltAmounts = {
 // Style-aligned ion targets (ppm). Round-numbered, drawn from Palmer /
 // Bru'n Water common-target tables. "Off" disables target comparison
 // — useful when the brewer just wants the resulting strip.
-const TARGETS: Array<{ key: string; label: string; profile: IonProfile | null }> = [
-  { key: "off", label: "No target", profile: null },
+// Target ion profiles for common beer styles. The `key` doubles as
+// the i18n suffix so the picker can translate via
+// `recipe.water.target.{key}`.
+const TARGETS: Array<{ key: string; profile: IonProfile | null }> = [
+  { key: "off", profile: null },
   {
     key: "balanced",
-    label: "Balanced (general purpose)",
     profile: { ca_ppm: 80, mg_ppm: 10, na_ppm: 20, cl_ppm: 80, so4_ppm: 80, hco3_ppm: 80 },
   },
   {
     key: "pilsner",
-    label: "Pilsner / light lager",
     profile: { ca_ppm: 50, mg_ppm: 5, na_ppm: 5, cl_ppm: 25, so4_ppm: 25, hco3_ppm: 0 },
   },
   {
     key: "pale_ale",
-    label: "Pale ale",
     profile: { ca_ppm: 100, mg_ppm: 10, na_ppm: 15, cl_ppm: 60, so4_ppm: 150, hco3_ppm: 0 },
   },
   {
     key: "american_ipa",
-    label: "American IPA (hop-forward)",
     profile: { ca_ppm: 110, mg_ppm: 10, na_ppm: 15, cl_ppm: 50, so4_ppm: 250, hco3_ppm: 0 },
   },
   {
     key: "burton",
-    label: "Burton / English IPA",
     profile: { ca_ppm: 270, mg_ppm: 60, na_ppm: 35, cl_ppm: 65, so4_ppm: 600, hco3_ppm: 200 },
   },
   {
     key: "munich",
-    label: "Munich / amber lager",
     profile: { ca_ppm: 80, mg_ppm: 20, na_ppm: 10, cl_ppm: 70, so4_ppm: 60, hco3_ppm: 150 },
   },
   {
     key: "dublin_stout",
-    label: "Dublin stout",
     profile: { ca_ppm: 120, mg_ppm: 10, na_ppm: 15, cl_ppm: 70, so4_ppm: 60, hco3_ppm: 250 },
   },
 ];
 
-const FLAVOR_HINT_LABELS: Record<WaterAdditionsOutput["flavor_hint"], string> = {
-  very_malty: "Very malty",
-  malty: "Malty leaning",
-  balanced: "Balanced",
-  hoppy: "Hop accent",
-  very_hoppy: "Hop forward",
+const FLAVOR_HINT_KEYS: Record<WaterAdditionsOutput["flavor_hint"], string> = {
+  very_malty: "recipe.water.flavor_label.very_malty",
+  malty: "recipe.water.flavor_label.malty",
+  balanced: "recipe.water.flavor_label.balanced",
+  hoppy: "recipe.water.flavor_label.hoppy",
+  very_hoppy: "recipe.water.flavor_label.very_hoppy",
   none: "—",
 };
 
 function WaterChemistrySection({ recipe }: { recipe: BeerJsonRecipe }) {
+  const tt = useT();
   const batchL = toLiters(recipe.batch_size);
 
   // The total water that mixes with salts is mash + sparge — well
@@ -858,8 +865,8 @@ function WaterChemistrySection({ recipe }: { recipe: BeerJsonRecipe }) {
 
   return (
     <Section
-      title="Water chemistry"
-      subtitle="Source water + brewing-salt additions. Pick a target profile to see deltas on the resulting ion strip."
+      title={tt("recipe.water.section_title")}
+      subtitle={tt("recipe.water.subtitle")}
     >
       <div className="rounded-xl bg-surface border border-border p-4 sm:p-6">
         <SourceWaterRow
@@ -871,7 +878,7 @@ function WaterChemistrySection({ recipe }: { recipe: BeerJsonRecipe }) {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mt-6">
           <CarbField
-            label="Total water"
+            label={tt("recipe.water.total")}
             unit="L"
             value={waterVolume}
             step={0.5}
@@ -881,20 +888,20 @@ function WaterChemistrySection({ recipe }: { recipe: BeerJsonRecipe }) {
                 volume_l_override: Math.abs(v - defaultVolumeL) < 0.01 ? null : v,
               }))
             }
-            hint={`Default ${defaultVolumeL.toFixed(1)} L (mash + sparge)`}
+            hint={tt("recipe.water.default_volume", { volume: defaultVolumeL.toFixed(1) })}
           />
           <label className="block sm:col-span-1 md:col-span-3">
             <span className="block text-caption uppercase tracking-widest text-text-muted mb-1">
-              Target profile
+              {tt("recipe.water.target_profile")}
             </span>
             <select
               value={form.target_key}
               onChange={(e) => setForm((p) => ({ ...p, target_key: e.target.value }))}
               className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-body text-text focus:outline-none focus:border-accent"
             >
-              {TARGETS.map((t) => (
-                <option key={t.key} value={t.key}>
-                  {t.label}
+              {TARGETS.map((tgt) => (
+                <option key={tgt.key} value={tgt.key}>
+                  {tt(`recipe.water.target.${tgt.key}`)}
                 </option>
               ))}
             </select>
@@ -908,7 +915,7 @@ function WaterChemistrySection({ recipe }: { recipe: BeerJsonRecipe }) {
         <div className="mt-5 grid grid-cols-2 gap-4">
           <div className="rounded-lg bg-surface-raised border border-border px-4 py-3">
             <p className="text-caption uppercase tracking-widest text-text-muted">
-              SO₄ : Cl
+              {tt("recipe.water.so4_cl")}
             </p>
             <p className="font-mono text-h3 mt-1">
               {result.so4_cl_ratio > 0 ? result.so4_cl_ratio.toFixed(2) : "—"}
@@ -916,10 +923,12 @@ function WaterChemistrySection({ recipe }: { recipe: BeerJsonRecipe }) {
           </div>
           <div className="rounded-lg bg-surface-raised border border-border px-4 py-3">
             <p className="text-caption uppercase tracking-widest text-text-muted">
-              Flavor lean
+              {tt("recipe.water.flavor")}
             </p>
             <p className="font-mono text-h3 mt-1">
-              {FLAVOR_HINT_LABELS[result.flavor_hint]}
+              {result.flavor_hint === "none"
+                ? "—"
+                : tt(FLAVOR_HINT_KEYS[result.flavor_hint])}
             </p>
           </div>
         </div>
@@ -939,11 +948,12 @@ function SourceWaterRow({
   onSaveDefault: () => void;
   savedMatches: boolean;
 }) {
+  const t = useT();
   return (
     <>
       <div className="flex items-baseline justify-between gap-3 mb-3">
         <p className="text-caption uppercase tracking-widest text-text-muted">
-          Source water (ppm)
+          {t("recipe.water.source_ppm")}
         </p>
         <button
           type="button"
@@ -951,7 +961,7 @@ function SourceWaterRow({
           disabled={savedMatches}
           className="text-caption text-text-muted hover:text-accent disabled:opacity-40 disabled:cursor-default transition-colors"
         >
-          {savedMatches ? "✓ saved as default" : "Save as default"}
+          {savedMatches ? t("recipe.water.saved_default") : t("recipe.water.save_default")}
         </button>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
@@ -973,17 +983,18 @@ function SaltsRow({
   salts: SaltAmounts;
   onChange: <K extends keyof SaltAmounts>(key: K, value: number) => void;
 }) {
+  const t = useT();
   return (
     <div className="mt-6">
       <p className="text-caption uppercase tracking-widest text-text-muted mb-3">
-        Salt additions (g, total volume)
+        {t("recipe.water.salts")}
       </p>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-        <SaltField label="Gypsum" sub="CaSO₄" value={salts.gypsum_g} onChange={(v) => onChange("gypsum_g", v)} />
-        <SaltField label="CaCl₂" sub="dihydrate" value={salts.calcium_chloride_g} onChange={(v) => onChange("calcium_chloride_g", v)} />
-        <SaltField label="Epsom" sub="MgSO₄" value={salts.epsom_g} onChange={(v) => onChange("epsom_g", v)} />
-        <SaltField label="Table salt" sub="NaCl" value={salts.table_salt_g} onChange={(v) => onChange("table_salt_g", v)} />
-        <SaltField label="Baking soda" sub="NaHCO₃" value={salts.baking_soda_g} onChange={(v) => onChange("baking_soda_g", v)} />
+        <SaltField label={t("recipe.water.gypsum")} sub="CaSO₄" value={salts.gypsum_g} onChange={(v) => onChange("gypsum_g", v)} />
+        <SaltField label={t("recipe.water.cacl2")} sub="dihydrate" value={salts.calcium_chloride_g} onChange={(v) => onChange("calcium_chloride_g", v)} />
+        <SaltField label={t("recipe.water.epsom")} sub="MgSO₄" value={salts.epsom_g} onChange={(v) => onChange("epsom_g", v)} />
+        <SaltField label={t("recipe.water.table_salt")} sub="NaCl" value={salts.table_salt_g} onChange={(v) => onChange("table_salt_g", v)} />
+        <SaltField label={t("recipe.water.baking_soda")} sub="NaHCO₃" value={salts.baking_soda_g} onChange={(v) => onChange("baking_soda_g", v)} />
       </div>
     </div>
   );
@@ -996,6 +1007,7 @@ function ResultStrip({
   result: WaterAdditionsOutput;
   target: IonProfile | null;
 }) {
+  const t = useT();
   const ions: Array<{ label: string; value: number; targetVal: number | undefined }> = [
     { label: "Ca²⁺", value: result.ca_ppm, targetVal: target?.ca_ppm },
     { label: "Mg²⁺", value: result.mg_ppm, targetVal: target?.mg_ppm },
@@ -1020,7 +1032,7 @@ function ResultStrip({
             </p>
             {ion.targetVal !== undefined && (
               <p className={`font-mono text-caption mt-1 ${offTarget ? "text-warning" : "text-text-muted"}`}>
-                target {ion.targetVal}
+                {t("recipe.water.target", { value: ion.targetVal })}
                 {delta !== null && Math.abs(delta) >= 1 && (
                   <>
                     {" · "}
@@ -1135,6 +1147,8 @@ function defaultPackageTemp(recipe: BeerJsonRecipe): number {
 }
 
 function CarbonationSection({ recipe }: { recipe: BeerJsonRecipe }) {
+  const tt = useT();
+  const prefs = useUnits();
   const [form, setForm] = usePersistedJson<CarbonationFormState>(
     `${CARBONATION_STORAGE_PREFIX}${recipe.name}`,
     {
@@ -1170,32 +1184,33 @@ function CarbonationSection({ recipe }: { recipe: BeerJsonRecipe }) {
   const overCarbed = out.volumes_to_add < 0;
   const beerVolume = form.beer_volume_l_override ?? toLiters(recipe.batch_size);
 
+  const servingTempDisplay = formatCelsius(form.serving_temp_c, prefs).display;
   return (
     <Section
-      title="Carbonation"
-      subtitle="Priming sugar amounts for bottle conditioning, plus the regulator pressure for force-carbonation in a keg."
+      title={tt("recipe.section.carbonation")}
+      subtitle={tt("recipe.carb.subtitle")}
     >
       <div className="rounded-xl bg-surface border border-border p-4 sm:p-6">
         {/* Input row */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <CarbField
-            label="Target"
+            label={tt("recipe.carb.target")}
             unit="vols"
             value={form.target_volumes_co2}
             step={0.1}
             onChange={(v) => update("target_volumes_co2", v)}
-            hint="2.4 typical · 1.7 cask · 3.0 wheat"
+            hint={tt("recipe.carb.target_hint")}
           />
           <CarbField
-            label="Package temp"
+            label={tt("recipe.carb.package_temp")}
             unit="°C"
             value={form.package_temp_c}
             step={0.5}
             onChange={(v) => update("package_temp_c", v)}
-            hint="Highest fermentation temp"
+            hint={tt("recipe.carb.package_temp_hint")}
           />
           <CarbField
-            label="Beer volume"
+            label={tt("recipe.carb.beer_volume")}
             unit="L"
             value={beerVolume}
             step={0.5}
@@ -1205,32 +1220,34 @@ function CarbonationSection({ recipe }: { recipe: BeerJsonRecipe }) {
                 Math.abs(v - toLiters(recipe.batch_size)) < 0.01 ? null : v,
               )
             }
-            hint={`Batch ${toLiters(recipe.batch_size).toFixed(1)} L`}
+            hint={tt("recipe.carb.beer_volume_hint", { volume: toLiters(recipe.batch_size).toFixed(1) })}
           />
           <CarbField
-            label="Serving temp"
+            label={tt("recipe.carb.serving_temp")}
             unit="°C"
             value={form.serving_temp_c}
             step={0.5}
             onChange={(v) => update("serving_temp_c", v)}
-            hint="For force-carb pressure"
+            hint={tt("recipe.carb.serving_temp_hint")}
           />
         </div>
 
         {/* Residual + needed strip */}
         <div className="grid grid-cols-2 gap-4 mb-6">
           <CarbStat
-            label="Residual at package"
+            label={tt("recipe.carb.residual")}
             value={`${out.residual_volumes_co2.toFixed(2)} vols`}
-            sub={`Already dissolved at ${form.package_temp_c.toFixed(1)} °C`}
+            sub={tt("recipe.carb.residual_sub", {
+              temp: formatCelsius(form.package_temp_c, prefs).display,
+            })}
           />
           <CarbStat
-            label="Needs to add"
+            label={tt("recipe.carb.to_add")}
             value={`${out.volumes_to_add.toFixed(2)} vols`}
             sub={
               overCarbed
-                ? "Beer is already over the target — no priming"
-                : `Target − residual = ${out.volumes_to_add.toFixed(2)} vols`
+                ? tt("recipe.carb.over_warn")
+                : tt("recipe.carb.to_add_sub", { delta: out.volumes_to_add.toFixed(2) })
             }
             warn={overCarbed}
           />
@@ -1239,34 +1256,34 @@ function CarbonationSection({ recipe }: { recipe: BeerJsonRecipe }) {
         {/* Priming sugar grid */}
         <div className="mb-6">
           <p className="text-caption uppercase tracking-widest text-text-muted mb-3">
-            Priming sugar (bottle / keg conditioning)
+            {tt("recipe.carb.priming")}
           </p>
           <div className="grid grid-cols-3 gap-px bg-border rounded-xl overflow-hidden">
-            <CarbResult label="Corn sugar" value={out.priming.dextrose_g} note="dextrose" />
-            <CarbResult label="Table sugar" value={out.priming.sucrose_g} note="sucrose" />
-            <CarbResult label="DME" value={out.priming.dme_g} note="dry malt extract" />
+            <CarbResult label={tt("recipe.carb.corn_sugar")} value={out.priming.dextrose_g} note={tt("recipe.carb.corn_sugar_note")} />
+            <CarbResult label={tt("recipe.carb.sucrose")} value={out.priming.sucrose_g} note={tt("recipe.carb.sucrose_note")} />
+            <CarbResult label={tt("recipe.carb.dme")} value={out.priming.dme_g} note={tt("recipe.carb.dme_note")} />
           </div>
         </div>
 
         {/* Force carb */}
         <div>
           <p className="text-caption uppercase tracking-widest text-text-muted mb-3">
-            Force-carbonation pressure
+            {tt("recipe.carb.force")}
           </p>
           <div className="grid grid-cols-2 gap-px bg-border rounded-xl overflow-hidden">
             <div className="bg-surface px-3 py-3 sm:px-5 sm:py-4">
-              <p className="text-[10px] sm:text-caption uppercase tracking-widest text-text-muted">PSI</p>
+              <p className="text-[10px] sm:text-caption uppercase tracking-widest text-text-muted">{tt("recipe.carb.psi")}</p>
               <p className="font-mono text-h3 sm:text-h2 mt-1 text-accent">
                 {out.force_pressure_psi.toFixed(1)}
               </p>
               <p className="font-mono text-caption mt-1 text-text-muted">
-                regulator at {form.serving_temp_c.toFixed(1)} °C
+                {tt("recipe.carb.psi_sub", { temp: servingTempDisplay })}
               </p>
             </div>
             <div className="bg-surface px-3 py-3 sm:px-5 sm:py-4">
-              <p className="text-[10px] sm:text-caption uppercase tracking-widest text-text-muted">Bar</p>
+              <p className="text-[10px] sm:text-caption uppercase tracking-widest text-text-muted">{tt("recipe.carb.bar")}</p>
               <p className="font-mono text-h3 sm:text-h2 mt-1">{out.force_pressure_bar.toFixed(2)}</p>
-              <p className="font-mono text-caption mt-1 text-text-muted">same pressure, metric</p>
+              <p className="font-mono text-caption mt-1 text-text-muted">{tt("recipe.carb.bar_sub")}</p>
             </div>
           </div>
         </div>
@@ -1281,15 +1298,16 @@ function CarbonationSection({ recipe }: { recipe: BeerJsonRecipe }) {
 // adjust the global "Cost adjustment" coefficient in Settings to match
 // their local market — single knob, no per-ingredient maintenance.
 
-const CATEGORY_LABEL: Record<CostLine["category"], string> = {
-  fermentable: "Grain",
-  hop: "Hop",
-  culture: "Yeast",
-  misc: "Misc",
+const CATEGORY_KEY: Record<CostLine["category"], string> = {
+  fermentable: "recipe.cost.category.fermentable",
+  hop: "recipe.cost.category.hop",
+  culture: "recipe.cost.category.culture",
+  misc: "recipe.cost.category.misc",
 };
 
 function CostSection({ recipe }: { recipe: BeerJsonRecipe }) {
   const prefs = useUnits();
+  const tt = useT();
   const breakdown = useMemo(
     () => computeRecipeCost(recipe, prefs.cost_inflation_pct),
     [recipe, prefs.cost_inflation_pct],
@@ -1299,11 +1317,11 @@ function CostSection({ recipe }: { recipe: BeerJsonRecipe }) {
 
   const inflationNote =
     prefs.cost_inflation_pct === 100
-      ? "Approximate. Adjust the global price coefficient in Settings to match your market."
-      : `Approximate · ${prefs.cost_inflation_pct}% of bundled prices (Settings → Cost adjustment).`;
+      ? tt("recipe.cost.note_default")
+      : tt("recipe.cost.note_inflated", { pct: prefs.cost_inflation_pct });
 
   return (
-    <Section title="Cost" subtitle={inflationNote}>
+    <Section title={tt("recipe.section.cost")} subtitle={inflationNote}>
       <div className="rounded-xl bg-surface border border-border">
         <ul className="divide-y divide-border">
           {breakdown.lines.map((line, i) => (
@@ -1317,16 +1335,16 @@ function CostSection({ recipe }: { recipe: BeerJsonRecipe }) {
 
         <div className="px-4 py-4 sm:px-6 sm:py-5 border-t border-border grid grid-cols-2 sm:grid-cols-3 gap-px bg-border">
           <CostStat
-            label="Batch total"
+            label={tt("recipe.cost.batch_total")}
             value={formatMoney(breakdown.total, prefs)}
             tone="highlight"
           />
           <CostStat
-            label={`Per ${formatLiters(1, prefs).unit}`}
+            label={tt("recipe.cost.per_unit", { unit: formatLiters(1, prefs).unit })}
             value={formatMoney(breakdown.per_liter, prefs)}
           />
           <CostStat
-            label="Per 330 mL bottle"
+            label={tt("recipe.cost.per_bottle")}
             value={formatMoney(breakdown.per_bottle_330, prefs)}
           />
         </div>
@@ -1366,6 +1384,7 @@ function CostLineRow({
   line: CostLine;
   prefs: UnitPreferences;
 }) {
+  const t = useT();
   const amountDisplay = formatCostAmount(line, prefs);
   return (
     <li className="px-4 py-3 sm:px-6 sm:py-4 flex items-baseline justify-between gap-3 sm:gap-4">
@@ -1379,7 +1398,7 @@ function CostLineRow({
           )}
         </p>
         <p className="text-caption text-text-muted mt-0.5">
-          {CATEGORY_LABEL[line.category]}
+          {t(CATEGORY_KEY[line.category])}
           {line.default_unit_price !== null && line.natural_unit && (
             <>
               {" · "}

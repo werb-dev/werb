@@ -11,14 +11,22 @@ import type { SensoryAxes } from "@werb/types";
  * brew's profile).
  */
 
-export const SENSORY_AXES: ReadonlyArray<{ key: keyof SensoryAxes; label: string }> = [
-  { key: "bitterness", label: "Bitter" },
-  { key: "hop_character", label: "Hop" },
-  { key: "sourness", label: "Sour" },
-  { key: "carbonation", label: "Carb" },
-  { key: "body", label: "Body" },
-  { key: "malt_character", label: "Malt" },
-  { key: "sweetness", label: "Sweet" },
+export const SENSORY_AXES: ReadonlyArray<{
+  key: keyof SensoryAxes;
+  /** English fallback label, also used directly when the radar is
+   *  rendered outside a locale-aware context (e.g. the journal HTML
+   *  export). UI consumers should prefer `labelKey` + their translator. */
+  label: string;
+  /** i18n key — pair with the workspace `t()` translator. */
+  labelKey: string;
+}> = [
+  { key: "bitterness", label: "Bitter", labelKey: "tasting.axis.bitter" },
+  { key: "hop_character", label: "Hop", labelKey: "tasting.axis.hop" },
+  { key: "sourness", label: "Sour", labelKey: "tasting.axis.sour" },
+  { key: "carbonation", label: "Carb", labelKey: "tasting.axis.carb" },
+  { key: "body", label: "Body", labelKey: "tasting.axis.body" },
+  { key: "malt_character", label: "Malt", labelKey: "tasting.axis.malt" },
+  { key: "sweetness", label: "Sweet", labelKey: "tasting.axis.sweet" },
 ];
 
 interface SensoryRadarProps {

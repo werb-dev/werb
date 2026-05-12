@@ -3,6 +3,7 @@ import { DEFAULT_PROFILE_VALUES, type ProfileWithId } from "../data/equipment.ts
 import type { useEquipment } from "../hooks/useEquipment.ts";
 import { computeEquipmentSuggest } from "@werb/calc";
 import type { EquipmentSuggestInput, EquipmentSuggestOutput } from "@werb/types";
+import { useT } from "../data/preferences.tsx";
 
 interface EquipmentScreenProps {
   api: ReturnType<typeof useEquipment>;
@@ -10,6 +11,7 @@ interface EquipmentScreenProps {
 
 export function EquipmentScreen({ api }: EquipmentScreenProps) {
   const eq = api;
+  const t = useT();
   const [selectedId, setSelectedId] = useState<string | null>(
     eq.activeId ?? eq.profiles[0]?.id ?? null,
   );
@@ -36,13 +38,12 @@ export function EquipmentScreen({ api }: EquipmentScreenProps) {
         <header className="mb-8 sm:mb-10">
           <p className="text-caption uppercase tracking-widest text-text-muted">
             {eq.loading
-              ? "Werb · loading…"
-              : `Werb · ${eq.profiles.length} profile${eq.profiles.length === 1 ? "" : "s"}`}
+              ? t("equipment.subtitle_loading")
+              : t("equipment.subtitle_count", { count: eq.profiles.length })}
           </p>
-          <h1 className="text-h2 sm:text-h1 font-semibold mt-3">Equipment</h1>
+          <h1 className="text-h2 sm:text-h1 font-semibold mt-3">{t("equipment.title")}</h1>
           <p className="text-body text-text-muted mt-2 max-w-2xl">
-            Define your kettle, mash tun, fermenter and losses. The active profile drives
-            water volume calculations across the library, recipe view and brew mode.
+            {t("equipment.intro")}
           </p>
         </header>
 
@@ -68,14 +69,14 @@ export function EquipmentScreen({ api }: EquipmentScreenProps) {
                 onSetActive={() => eq.setActive(selected.id)}
                 onUnsetActive={() => eq.setActive(null)}
                 onDelete={() => {
-                  if (confirm(`Delete "${selected.name}"?`)) {
+                  if (confirm(t("equipment.delete_confirm", { name: selected.name }))) {
                     eq.remove(selected.id);
                     setSelectedId(eq.profiles.find((p) => p.id !== selected.id)?.id ?? null);
                   }
                 }}
               />
             ) : (
-              <p className="text-body text-text-muted">Select a profile.</p>
+              <p className="text-body text-text-muted">{t("equipment.select_profile")}</p>
             )}
           </div>
         )}
@@ -99,6 +100,7 @@ function ProfileList({
   onSelect: (id: string) => void;
   onCreate: () => void;
 }) {
+  const t = useT();
   return (
     <aside>
       <ul className="rounded-xl bg-surface border border-border divide-y divide-border overflow-hidden">
@@ -116,7 +118,7 @@ function ProfileList({
                 <span className="text-body font-medium truncate">{p.name}</span>
                 {p.id === activeId && (
                   <span className="shrink-0 text-caption text-success font-mono uppercase tracking-widest">
-                    active
+                    {t("equipment.active_badge")}
                   </span>
                 )}
               </div>
@@ -131,7 +133,7 @@ function ProfileList({
         onClick={onCreate}
         className="mt-3 w-full px-4 py-3 rounded-xl bg-accent text-bg text-body-sm font-medium hover:opacity-90 transition-opacity"
       >
-        + New profile
+        {t("equipment.new_profile")}
       </button>
     </aside>
   );
@@ -198,6 +200,7 @@ function ProfileForm({
     onSave(patch);
   };
 
+  const t = useT();
   return (
     <form
       onSubmit={(e) => {
@@ -207,14 +210,14 @@ function ProfileForm({
       className="space-y-8"
     >
       <Field
-        label="Name"
+        label={t("equipment.field.name")}
         value={draft.name}
         onChange={(v) => update("name", v)}
         onBlur={commit}
         required
       />
       <Field
-        label="Description"
+        label={t("equipment.field.description")}
         value={draft.description ?? ""}
         onChange={(v) => update("description", v || undefined)}
         onBlur={commit}
@@ -225,14 +228,14 @@ function ProfileForm({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
         <NumberField
-          label="Batch size"
+          label={t("equipment.field.batch_size")}
           unit="L"
           value={draft.batch_size_l}
           onChange={(v) => update("batch_size_l", v)}
           onBlur={commit}
         />
         <NumberField
-          label="Brewhouse efficiency"
+          label={t("equipment.field.efficiency")}
           unit="%"
           value={draft.efficiency_pct}
           onChange={(v) => update("efficiency_pct", v)}
@@ -240,17 +243,17 @@ function ProfileForm({
         />
       </div>
 
-      <Section title="Hot liquor tank">
+      <Section title={t("equipment.section.hlt")}>
         <div className="grid grid-cols-2 gap-4">
           <NumberField
-            label="Capacity"
+            label={t("equipment.field.capacity")}
             unit="L"
             value={draft.hlt?.capacity_l ?? DEFAULT_PROFILE_VALUES.hlt.capacity_l}
             onChange={(v) => updateNested("hlt", "capacity_l", v)}
             onBlur={commit}
           />
           <NumberField
-            label="Dead space"
+            label={t("equipment.field.dead_space")}
             unit="L"
             value={draft.hlt?.dead_space_l ?? DEFAULT_PROFILE_VALUES.hlt.dead_space_l}
             onChange={(v) => updateNested("hlt", "dead_space_l", v)}
@@ -259,24 +262,24 @@ function ProfileForm({
         </div>
       </Section>
 
-      <Section title="Mash tun">
+      <Section title={t("equipment.section.mash_tun")}>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
           <NumberField
-            label="Capacity"
+            label={t("equipment.field.capacity")}
             unit="L"
             value={draft.mash_tun?.capacity_l ?? DEFAULT_PROFILE_VALUES.mash_tun.capacity_l}
             onChange={(v) => updateNested("mash_tun", "capacity_l", v)}
             onBlur={commit}
           />
           <NumberField
-            label="Dead space"
+            label={t("equipment.field.dead_space")}
             unit="L"
             value={draft.mash_tun?.dead_space_l ?? DEFAULT_PROFILE_VALUES.mash_tun.dead_space_l}
             onChange={(v) => updateNested("mash_tun", "dead_space_l", v)}
             onBlur={commit}
           />
           <NumberField
-            label="Grain absorption"
+            label={t("equipment.field.grain_absorption")}
             unit="L/kg"
             value={
               draft.mash_tun?.grain_absorption_l_per_kg ??
@@ -289,24 +292,24 @@ function ProfileForm({
         </div>
       </Section>
 
-      <Section title="Kettle">
+      <Section title={t("equipment.section.kettle")}>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <NumberField
-            label="Capacity"
+            label={t("equipment.field.capacity")}
             unit="L"
             value={draft.kettle?.capacity_l ?? DEFAULT_PROFILE_VALUES.kettle.capacity_l}
             onChange={(v) => updateNested("kettle", "capacity_l", v)}
             onBlur={commit}
           />
           <NumberField
-            label="Dead space"
+            label={t("equipment.field.dead_space")}
             unit="L"
             value={draft.kettle?.dead_space_l ?? DEFAULT_PROFILE_VALUES.kettle.dead_space_l}
             onChange={(v) => updateNested("kettle", "dead_space_l", v)}
             onBlur={commit}
           />
           <NumberField
-            label="Boil-off rate"
+            label={t("equipment.field.boil_off")}
             unit="L/h"
             value={
               draft.kettle?.evaporation_rate_l_per_hour ??
@@ -317,7 +320,7 @@ function ProfileForm({
             step={0.1}
           />
           <NumberField
-            label="Post-boil shrink"
+            label={t("equipment.field.post_boil_shrink")}
             unit="%"
             value={
               draft.kettle?.post_boil_shrinkage_pct ??
@@ -330,17 +333,17 @@ function ProfileForm({
         </div>
       </Section>
 
-      <Section title="Fermenter">
+      <Section title={t("equipment.section.fermenter")}>
         <div className="grid grid-cols-2 gap-4">
           <NumberField
-            label="Capacity"
+            label={t("equipment.field.capacity")}
             unit="L"
             value={draft.fermenter?.capacity_l ?? DEFAULT_PROFILE_VALUES.fermenter.capacity_l}
             onChange={(v) => updateNested("fermenter", "capacity_l", v)}
             onBlur={commit}
           />
           <NumberField
-            label="Trub loss"
+            label={t("equipment.field.trub_loss")}
             unit="L"
             value={draft.fermenter?.trub_loss_l ?? DEFAULT_PROFILE_VALUES.fermenter.trub_loss_l}
             onChange={(v) => updateNested("fermenter", "trub_loss_l", v)}
@@ -351,7 +354,7 @@ function ProfileForm({
       </Section>
 
       <NumberField
-        label="Kettle → fermenter transfer loss"
+        label={t("equipment.field.transfer_loss")}
         unit="L"
         value={draft.transfer_loss_l ?? DEFAULT_PROFILE_VALUES.transfer_loss_l}
         onChange={(v) => update("transfer_loss_l", v)}
@@ -360,7 +363,7 @@ function ProfileForm({
       />
 
       <Field
-        label="Notes"
+        label={t("equipment.field.notes")}
         value={draft.notes ?? ""}
         onChange={(v) => update("notes", v || undefined)}
         onBlur={commit}
@@ -374,7 +377,7 @@ function ProfileForm({
             onClick={onUnsetActive}
             className="px-4 py-2 rounded-lg bg-surface-raised border border-success text-success text-body-sm font-medium hover:bg-success/10 transition-colors"
           >
-            ✓ Active — clear
+            {t("equipment.active_clear")}
           </button>
         ) : (
           <button
@@ -382,7 +385,7 @@ function ProfileForm({
             onClick={onSetActive}
             className="px-4 py-2 rounded-lg bg-accent text-bg text-body-sm font-medium hover:opacity-90 transition-opacity"
           >
-            Set as active
+            {t("equipment.set_active")}
           </button>
         )}
         <button
@@ -390,7 +393,7 @@ function ProfileForm({
           onClick={onDelete}
           className="px-4 py-2 rounded-lg bg-surface-raised border border-border text-text-muted text-body-sm font-medium hover:text-danger hover:border-danger transition-colors"
         >
-          Delete profile
+          {t("equipment.delete_profile")}
         </button>
       </div>
     </form>
@@ -412,6 +415,7 @@ function SuggestPanel({
   initialBatchSize: number;
   onApply: (out: EquipmentSuggestOutput) => void;
 }) {
+  const t = useT();
   const [setupType, setSetupType] =
     useState<EquipmentSuggestInput["setup_type"]>("three_vessel");
   // Seed from the current draft so the wizard reflects what the brewer
@@ -432,10 +436,10 @@ function SuggestPanel({
       <summary className="cursor-pointer px-4 py-3 sm:px-5 sm:py-4 list-none flex items-center justify-between gap-4 select-none">
         <div className="min-w-0">
           <p className="text-caption uppercase tracking-widest text-text-muted">
-            Quick start
+            {t("equipment.wizard.title")}
           </p>
           <p className="text-body-sm text-text mt-1">
-            Size every field from a target batch + setup type
+            {t("equipment.wizard.subtitle")}
           </p>
         </div>
         <span
@@ -451,7 +455,7 @@ function SuggestPanel({
         <div className="grid grid-cols-1 sm:grid-cols-[12rem_1fr_auto] gap-3 items-end">
           <label className="block">
             <span className="block text-caption uppercase tracking-widest text-text-muted mb-2">
-              Target batch
+              {t("equipment.wizard.target_batch")}
             </span>
             <div className="flex items-baseline gap-2 bg-surface border border-border rounded-lg px-3 py-2 focus-within:border-accent">
               <input
@@ -474,37 +478,38 @@ function SuggestPanel({
             disabled={!Number.isFinite(batchSize) || batchSize <= 0}
             className="px-5 py-2.5 rounded-lg bg-accent text-bg text-body-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity min-h-[40px]"
           >
-            Apply
+            {t("equipment.wizard.apply")}
           </button>
         </div>
         <p className="text-caption text-text-muted">
-          Replaces all capacity, dead-space, and rate fields below. Name,
-          description, and notes are kept.
+          {t("equipment.wizard.replaces_note")}
         </p>
       </div>
     </details>
   );
 }
 
+// Setup-type options. `labelKey` and `hintKey` live under
+// equipment.wizard.* — the picker translates at render time.
 const SETUP_OPTIONS: Array<{
   value: EquipmentSuggestInput["setup_type"];
-  label: string;
-  hint: string;
+  labelKey: string;
+  hintKey: string;
 }> = [
   {
     value: "three_vessel",
-    label: "3-vessel",
-    hint: "HLT + mash tun + kettle (HERMS / RIMS)",
+    labelKey: "equipment.wizard.three_vessel",
+    hintKey: "equipment.wizard.three_vessel_hint",
   },
   {
     value: "two_vessel",
-    label: "2-vessel",
-    hint: "Mash tun + kettle (kettle doubles as HLT)",
+    labelKey: "equipment.wizard.two_vessel",
+    hintKey: "equipment.wizard.two_vessel_hint",
   },
   {
     value: "biab",
-    label: "BIAB",
-    hint: "Single kettle — full-volume mash, no sparge",
+    labelKey: "equipment.wizard.biab",
+    hintKey: "equipment.wizard.biab_hint",
   },
 ];
 
@@ -515,11 +520,12 @@ function SetupTypePicker({
   value: EquipmentSuggestInput["setup_type"];
   onChange: (v: EquipmentSuggestInput["setup_type"]) => void;
 }) {
+  const t = useT();
   const active = SETUP_OPTIONS.find((o) => o.value === value);
   return (
     <div>
       <p className="text-caption uppercase tracking-widest text-text-muted mb-2">
-        Setup type
+        {t("equipment.wizard.setup_type")}
       </p>
       <div className="grid grid-cols-3 gap-2">
         {SETUP_OPTIONS.map((opt) => {
@@ -535,28 +541,34 @@ function SetupTypePicker({
                   : "bg-surface border border-border text-text-muted hover:text-text hover:border-accent"
               }`}
             >
-              {opt.label}
+              {t(opt.labelKey)}
             </button>
           );
         })}
       </div>
       {active && (
-        <p className="text-caption text-text-muted mt-2">{active.hint}</p>
+        <p className="text-caption text-text-muted mt-2">{t(active.hintKey)}</p>
       )}
     </div>
   );
 }
 
 function DerivedPreview({ preview }: { preview: EquipmentSuggestOutput }) {
+  const t = useT();
   // Compact summary line so the brewer can sanity-check before applying.
+  const spargePart =
+    preview.derived.sparge_water_l > 0
+      ? t("equipment.wizard.preview.sparge", { sparge: preview.derived.sparge_water_l })
+      : "";
   return (
     <div className="text-caption font-mono text-text-muted leading-relaxed">
       <p>
-        ~{preview.derived.grain_kg} kg grain · {preview.derived.mash_water_l} L
-        mash
-        {preview.derived.sparge_water_l > 0 &&
-          ` + ${preview.derived.sparge_water_l} L sparge`}
-        {" · "}pre-boil {preview.derived.pre_boil_volume_l} L
+        {t("equipment.wizard.preview.line1", {
+          grain: preview.derived.grain_kg,
+          mash: preview.derived.mash_water_l,
+          spargePart,
+          preBoil: preview.derived.pre_boil_volume_l,
+        })}
       </p>
       <p>
         {preview.hlt.capacity_l > 0 && `HLT ${preview.hlt.capacity_l} L · `}
@@ -664,20 +676,20 @@ function NumberField({
 }
 
 function EmptyState({ onCreate }: { onCreate: () => void }) {
+  const t = useT();
   return (
     <div className="rounded-xl bg-surface border border-border border-dashed p-8 sm:p-12 text-center">
       <p className="text-body text-text">
-        No equipment profile yet.
+        {t("equipment.empty.heading")}
       </p>
       <p className="text-body-sm text-text-muted mt-2 max-w-md mx-auto">
-        Without a profile, the calc engine uses generic defaults (75% efficiency, 3 L/h evap,
-        0 dead space). Define yours to get accurate water volumes for every recipe.
+        {t("equipment.empty.body")}
       </p>
       <button
         onClick={onCreate}
         className="mt-6 px-5 py-3 rounded-xl bg-accent text-bg text-body font-medium hover:opacity-90 transition-opacity"
       >
-        Create your first profile
+        {t("equipment.empty.create")}
       </button>
     </div>
   );

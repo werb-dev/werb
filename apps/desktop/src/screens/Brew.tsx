@@ -281,18 +281,18 @@ function HltFitBanner({
   fit: Exclude<HltFit, { kind: "ok" }>;
   prefs: UnitPreferences;
 }) {
+  const t = useT();
   const vol = (l: number) => formatLiters(l, prefs).display;
   if (fit.kind === "overflow") {
-    const label = fit.which === "strike" ? "Strike water" : "Sparge water";
+    const bodyKey =
+      fit.which === "strike" ? "brew.hlt.overflow.strike" : "brew.hlt.overflow.sparge";
     return (
       <section className="mb-6 sm:mb-8 rounded-xl border border-danger bg-danger/10 px-4 sm:px-5 py-3 sm:py-4">
         <p className="text-caption uppercase tracking-widest text-danger font-medium">
-          HLT too small
+          {t("brew.hlt.too_small")}
         </p>
         <p className="text-body-sm text-text mt-1">
-          {label} ({vol(fit.volumeL)}) exceeds your HLT usable capacity (
-          {vol(fit.capacityL)}). You can't heat this batch in one pass — split the
-          heat or use a larger vessel.
+          {t(bodyKey, { volume: vol(fit.volumeL), capacity: vol(fit.capacityL) })}
         </p>
       </section>
     );
@@ -300,12 +300,15 @@ function HltFitBanner({
   return (
     <section className="mb-6 sm:mb-8 rounded-xl border border-warning bg-warning/10 px-4 sm:px-5 py-3 sm:py-4">
       <p className="text-caption uppercase tracking-widest text-warning font-medium">
-        Two-heat session
+        {t("brew.hlt.two_heats.title")}
       </p>
       <p className="text-body-sm text-text mt-1">
-        Strike ({vol(fit.strikeL)}) + sparge ({vol(fit.spargeL)}) ={" "}
-        {vol(fit.strikeL + fit.spargeL)} exceeds your HLT capacity (
-        {vol(fit.capacityL)}). Heat strike first, drain to mash, then heat sparge.
+        {t("brew.hlt.two_heats.body", {
+          strike: vol(fit.strikeL),
+          sparge: vol(fit.spargeL),
+          total: vol(fit.strikeL + fit.spargeL),
+          capacity: vol(fit.capacityL),
+        })}
       </p>
     </section>
   );
@@ -318,16 +321,18 @@ function KettleFitBanner({
   fit: Exclude<KettleFit, { kind: "ok" }>;
   prefs: UnitPreferences;
 }) {
+  const t = useT();
   const vol = (l: number) => formatLiters(l, prefs).display;
   return (
     <section className="mb-6 sm:mb-8 rounded-xl border border-danger bg-danger/10 px-4 sm:px-5 py-3 sm:py-4">
       <p className="text-caption uppercase tracking-widest text-danger font-medium">
-        Kettle too small
+        {t("brew.kettle.too_small")}
       </p>
       <p className="text-body-sm text-text mt-1">
-        Pre-boil volume ({vol(fit.preBoilL)}) exceeds your kettle usable
-        capacity ({vol(fit.capacityL)}). You'll boil over — reduce batch size
-        or use a bigger kettle.
+        {t("brew.kettle.overflow", {
+          preBoil: vol(fit.preBoilL),
+          capacity: vol(fit.capacityL),
+        })}
       </p>
     </section>
   );
@@ -379,7 +384,7 @@ function ActiveStepCard({
       <div className="flex items-baseline justify-between gap-3 sm:gap-6">
         <div className="min-w-0">
           <p className="text-caption uppercase tracking-widest text-text-muted">
-            {kindLabel(step.kind)}
+            {t(`brew.kind.${step.kind}`)}
           </p>
           <h2 className="text-h3 sm:text-h2 font-semibold mt-2 capitalize break-words">{step.label}</h2>
         </div>
@@ -394,9 +399,9 @@ function ActiveStepCard({
           <p className="font-mono text-caption text-text-muted mt-1">
             {target !== null
               ? overrun
-                ? "overrun"
+                ? t("brew.stat.overrun")
                 : `${formatDuration(elapsedSec)} / ${target} min`
-              : `elapsed ${formatDuration(elapsedSec)}`}
+              : `${t("brew.stat.elapsed")} ${formatDuration(elapsedSec)}`}
           </p>
         </div>
       </div>
@@ -433,7 +438,8 @@ function StepInfo({
   sessionId?: string | undefined;
   prefs: UnitPreferences;
 }) {
-  const stats = stepStats(step, ctx, prefs);
+  const t = useT();
+  const stats = stepStats(step, ctx, prefs, t);
   const showHops = step.kind === "boil" && variant === "active" && ctx.boilHops.length > 0;
   const showCultures =
     step.kind === "ferment_pitch" && variant === "active" && ctx.cultures && ctx.cultures.length > 0;
@@ -452,7 +458,7 @@ function StepInfo({
             {step.target_temperature_c !== undefined && (
               <StatTile
                 value={formatCelsius(step.target_temperature_c, prefs).display}
-                label="Target"
+                label={t("brew.stat.target")}
                 tone="data"
               />
             )}
@@ -499,7 +505,14 @@ interface StatLine {
   tone?: "default" | "data" | "accent";
 }
 
-function stepStats(step: SessionStep, ctx: BrewContext, prefs: UnitPreferences): StatLine[] {
+type Translator = (key: string, vars?: Record<string, string | number>) => string;
+
+function stepStats(
+  step: SessionStep,
+  ctx: BrewContext,
+  prefs: UnitPreferences,
+  t: Translator,
+): StatLine[] {
   // Helpers: format raw L / kg with the user's pref. "Thickness"
   // L/kg → gal/lb conversion isn't standard — Anglo-American brewers
   // usually still talk thickness in qt/lb. We keep L/kg as a
@@ -515,52 +528,52 @@ function stepStats(step: SessionStep, ctx: BrewContext, prefs: UnitPreferences):
       // before pouring.
       if (ctx.totalMashedKg <= 0) return [];
       return [
-        { value: vol(ctx.water.mash_water_l), label: "Strike volume" },
+        { value: vol(ctx.water.mash_water_l), label: t("brew.stat.strike_volume") },
         {
           value: `${(ctx.water.mash_water_l / ctx.totalMashedKg).toFixed(2)} L/kg`,
-          label: "Thickness",
+          label: t("brew.stat.thickness"),
         },
       ];
     case "mash_in":
       if (ctx.totalMashedKg <= 0) return [];
       return [
-        { value: mass(ctx.totalMashedKg), label: "Total grain" },
-        { value: `${ctx.mashFermentables.length}`, label: "Items" },
+        { value: mass(ctx.totalMashedKg), label: t("brew.stat.total_grain") },
+        { value: `${ctx.mashFermentables.length}`, label: t("brew.stat.items") },
       ];
     case "mash":
       if (ctx.totalMashedKg <= 0) return [];
       return [
-        { value: vol(ctx.water.mash_water_l), label: "Strike water" },
-        { value: mass(ctx.totalMashedKg), label: "Grain" },
+        { value: vol(ctx.water.mash_water_l), label: t("brew.stat.strike_water") },
+        { value: mass(ctx.totalMashedKg), label: t("brew.stat.grain") },
         {
           value: `${(ctx.water.mash_water_l / ctx.totalMashedKg).toFixed(2)} L/kg`,
-          label: "Thickness",
+          label: t("brew.stat.thickness"),
         },
       ];
     case "sparge":
       return [
         {
           value: ctx.water.sparge_water_l > 0 ? vol(ctx.water.sparge_water_l) : "—",
-          label: "Sparge water",
+          label: t("brew.stat.sparge_water"),
         },
-        { value: vol(ctx.water.pre_boil_volume_l), label: "Pre-boil target" },
-        { value: vol(ctx.water.grain_absorption_l), label: "Absorbed" },
+        { value: vol(ctx.water.pre_boil_volume_l), label: t("brew.stat.pre_boil_target") },
+        { value: vol(ctx.water.grain_absorption_l), label: t("brew.stat.absorbed") },
       ];
     case "boil":
       return [
-        { value: vol(ctx.water.pre_boil_volume_l), label: "Pre-boil" },
-        { value: vol(ctx.water.boil_off_l), label: "Boil-off" },
-        { value: `${ctx.boilHops.length}`, label: "Hop additions" },
+        { value: vol(ctx.water.pre_boil_volume_l), label: t("brew.stat.pre_boil") },
+        { value: vol(ctx.water.boil_off_l), label: t("brew.stat.boil_off") },
+        { value: `${ctx.boilHops.length}`, label: t("brew.stat.hop_additions") },
       ];
     case "chill":
       return [
-        { value: vol(ctx.water.post_cool_kettle_volume_l), label: "In kettle" },
+        { value: vol(ctx.water.post_cool_kettle_volume_l), label: t("brew.stat.in_kettle") },
       ];
     case "transfer":
       return [
         {
           value: vol(ctx.water.post_cool_kettle_volume_l - 0.5),
-          label: "To fermenter",
+          label: t("brew.stat.to_fermenter"),
         },
       ];
     default:
@@ -600,6 +613,7 @@ function HopSchedule({
   storageKey: string;
   prefs: UnitPreferences;
 }) {
+  const t = useT();
   // Per-hop "added" marks, persisted via the active StorageBackend so
   // they survive a navigation away and back during the boil. Stored as
   // an array (Set isn't JSON-serializable); converted back to a Set for
@@ -633,7 +647,7 @@ function HopSchedule({
   return (
     <div className="rounded-lg bg-bg border border-border p-4">
       <p className="text-caption uppercase tracking-widest text-text-muted mb-3">
-        Hop schedule
+        {t("brew.hops.title")}
       </p>
       <ul className="space-y-2">
         {events.map((h, i) => {
@@ -666,13 +680,14 @@ function HopSchedule({
                   <p className="text-caption text-text-muted mt-0.5">{h.notes}</p>
                 )}
                 <p className="font-mono text-caption text-text-muted mt-0.5">
-                  @ {h.additionAtMin} min
-                  {!isAdded && !due && ` · in ${formatDuration(remainingSec)}`}
+                  {t("brew.hops.at_min", { min: h.additionAtMin })}
+                  {!isAdded && !due &&
+                    ` · ${t("brew.hops.in_duration", { duration: formatDuration(remainingSec) })}`}
                 </p>
               </div>
               <button
                 onClick={() => toggle(h.originalIndex)}
-                title={isAdded ? "Tap to undo" : "Tap when added to the boil"}
+                title={isAdded ? t("brew.hops.tap_to_undo") : t("brew.hops.tap_when_added")}
                 className={`shrink-0 px-3 py-2 sm:py-1.5 rounded-pill border text-caption font-medium transition-colors min-h-[36px] ${
                   isAdded
                     ? "border-success text-success bg-success/10 hover:bg-success/20"
@@ -681,7 +696,7 @@ function HopSchedule({
                     : "border-border text-text-muted hover:border-border-strong hover:text-text"
                 }`}
               >
-                {isAdded ? "✓ added" : "Mark added"}
+                {isAdded ? t("brew.hops.added") : t("brew.hops.mark_added")}
               </button>
             </li>
           );
@@ -698,10 +713,11 @@ function MashInList({
   items: MashFermentable[];
   prefs: UnitPreferences;
 }) {
+  const t = useT();
   return (
     <div className="rounded-lg bg-bg border border-border p-4">
       <p className="text-caption uppercase tracking-widest text-text-muted mb-3">
-        Grain bill
+        {t("brew.grain_bill.title")}
       </p>
       <ul className="space-y-2">
         {items.map((f, i) => (
@@ -731,10 +747,11 @@ function CultureList({
   // pkg → g or similar.
   prefs: UnitPreferences;
 }) {
+  const t = useT();
   return (
     <div className="rounded-lg bg-bg border border-border p-4">
       <p className="text-caption uppercase tracking-widest text-text-muted mb-3">
-        Yeast pitch
+        {t("brew.culture.title")}
       </p>
       <ul className="space-y-2">
         {cultures.map((c, i) => (
@@ -745,7 +762,7 @@ function CultureList({
                 {c.form} · {c.type}
                 {c.producer && ` · ${c.producer}`}
                 {c.product_id && ` · ${c.product_id}`}
-                {c.attenuation && ` · ${c.attenuation.value}% atten`}
+                {c.attenuation && ` · ${t("brew.culture.atten", { pct: c.attenuation.value })}`}
               </p>
             </div>
             <p className="font-mono text-mono-lg shrink-0">
@@ -833,7 +850,7 @@ function TimelineRow({
             <textarea
               defaultValue={step.notes ?? ""}
               onBlur={(e) => onNotes(e.target.value)}
-              placeholder="Notes for this step…"
+              placeholder={t("brew.step_notes_placeholder")}
               rows={2}
               className="mt-3 w-full bg-bg border border-border rounded-lg px-3 py-2 text-body-sm text-text placeholder:text-text-muted focus:outline-none focus:border-accent"
             />
@@ -1011,7 +1028,7 @@ function MeasurementsSection({
           <div className="grid grid-cols-2 sm:flex sm:flex-wrap sm:items-end gap-3">
             <label className="col-span-1 sm:flex-1 sm:min-w-[10rem]">
               <span className="block text-caption uppercase tracking-widest text-text-muted mb-1">
-                Reading
+                {t("brew.meas.reading")}
               </span>
               <select
                 value={kind}
@@ -1020,14 +1037,14 @@ function MeasurementsSection({
               >
                 {MEASUREMENT_KINDS.map((k) => (
                   <option key={k.kind} value={k.kind}>
-                    {k.label}
+                    {t(`brew.meas.kind.${k.kind}`)}
                   </option>
                 ))}
               </select>
             </label>
             <label className="col-span-1 sm:flex-1 sm:min-w-[8rem]">
               <span className="block text-caption uppercase tracking-widest text-text-muted mb-1">
-                Value{spec.unit && ` (${spec.unit})`}
+                {t("brew.meas.value")}{spec.unit && ` (${spec.unit})`}
               </span>
               <input
                 type="number"
@@ -1042,13 +1059,13 @@ function MeasurementsSection({
             </label>
             <label className="col-span-2 sm:flex-[2] sm:min-w-[12rem]">
               <span className="block text-caption uppercase tracking-widest text-text-muted mb-1">
-                Notes (optional)
+                {t("brew.meas.notes")}
               </span>
               <input
                 type="text"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="pre-boil, post-chill, …"
+                placeholder={t("brew.meas.notes_placeholder")}
                 className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-body text-text placeholder:text-text-muted focus:outline-none focus:border-accent"
               />
             </label>
@@ -1058,7 +1075,7 @@ function MeasurementsSection({
               disabled={!Number.isFinite(value)}
               className="col-span-2 sm:col-auto w-full sm:w-auto px-5 py-2.5 sm:py-2 rounded-lg bg-accent text-bg text-body-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed min-h-[40px]"
             >
-              Log
+              {t("brew.meas.log")}
             </button>
           </div>
         </div>
@@ -1066,13 +1083,13 @@ function MeasurementsSection({
 
       {measurements.length === 0 ? (
         <p className="text-body-sm text-text-muted px-4">
-          No readings logged yet. {disabled ? "" : "Use the form above to record gravities, pH, temperatures, or volumes as you brew."}
+          {disabled ? t("brew.meas.empty_disabled") : t("brew.meas.empty_active")}
         </p>
       ) : (
         <ul className="rounded-xl bg-surface border border-border divide-y divide-border">
           {measurements.map((m) => {
             const k = MEASUREMENT_KINDS.find((x) => x.kind === m.kind);
-            const label = k?.label ?? m.kind;
+            const label = k ? t(`brew.meas.kind.${k.kind}`) : m.kind;
             const unit = k?.unit ?? "";
             const valStr =
               m.kind === "gravity_sg"
@@ -1095,7 +1112,7 @@ function MeasurementsSection({
                     </span>
                     {stepName && (
                       <span className="text-caption text-text-muted ml-2">
-                        during {stepName}
+                        {t("brew.meas.during", { step: stepName })}
                       </span>
                     )}
                   </p>
@@ -1111,7 +1128,7 @@ function MeasurementsSection({
                     <button
                       type="button"
                       onClick={() => onRemove(m.at)}
-                      title="Delete reading"
+                      title={t("brew.meas.delete")}
                       className="w-7 h-7 rounded-pill flex items-center justify-center text-text-muted hover:text-danger hover:bg-danger/10 transition-colors"
                     >
                       ×
@@ -1129,17 +1146,14 @@ function MeasurementsSection({
 
 // ─── Tasting ───────────────────────────────────────────────────────────────
 
-const TAG_SUGGESTIONS = [
-  "best one yet",
-  "too bitter",
-  "too sweet",
-  "low body",
-  "high carb",
-  "great head",
-  "oxidation",
-  "off-flavor: DMS",
-  "off-flavor: diacetyl",
-  "needs more time",
+// Translation keys for the suggested tag chips. We surface the first
+// five on the empty state; the rest are reachable by typing.
+const TAG_SUGGESTION_KEYS = [
+  "tasting.suggest.best",
+  "tasting.suggest.too_bitter",
+  "tasting.suggest.too_sweet",
+  "tasting.suggest.low_body",
+  "tasting.suggest.high_carb",
 ];
 
 function TastingSection({
@@ -1162,7 +1176,7 @@ function TastingSection({
           tasting={tasting}
           onEdit={() => setEditing(true)}
           onClear={() => {
-            if (confirm("Remove this tasting? The session keeps everything else.")) {
+            if (confirm(tr("tasting.remove_confirm"))) {
               onSave(null);
             }
           }}
@@ -1190,6 +1204,7 @@ function TastingForm({
   onSave: (t: Tasting) => void;
   onCancel?: (() => void) | undefined;
 }) {
+  const tr = useT();
   const [axes, setAxes] = useState<SensoryAxes>(initial?.axes ?? EMPTY_AXES);
   const [rating, setRating] = useState<number>(initial?.overall_rating ?? 4);
   const [notes, setNotes] = useState(initial?.notes ?? "");
@@ -1223,7 +1238,7 @@ function TastingForm({
           {SENSORY_AXES.map((axis) => (
             <SliderRow
               key={axis.key}
-              label={axis.label}
+              label={tr(axis.labelKey)}
               value={axes[axis.key]}
               onChange={(v) => setAxes({ ...axes, [axis.key]: v })}
             />
@@ -1239,25 +1254,26 @@ function TastingForm({
       <div className="mt-6 border-t border-border pt-5 space-y-5">
         <div>
           <p className="text-caption uppercase tracking-widest text-text-muted mb-2">
-            Overall rating
+            {tr("tasting.overall_rating")}
           </p>
           <StarRating value={rating} onChange={setRating} />
         </div>
 
         <div>
           <p className="text-caption uppercase tracking-widest text-text-muted mb-2">
-            Tags <span className="text-text-muted normal-case">(quick lessons surfaced on the recipe screen)</span>
+            {tr("tasting.tags")}{" "}
+            <span className="text-text-muted normal-case">{tr("tasting.tags_hint")}</span>
           </p>
           <div className="flex flex-wrap gap-2">
-            {tags.map((t) => (
+            {tags.map((tag) => (
               <button
-                key={t}
+                key={tag}
                 type="button"
-                onClick={() => removeTag(t)}
-                title="Remove tag"
+                onClick={() => removeTag(tag)}
+                title={tr("tasting.remove_tag")}
                 className="px-3 py-1 rounded-pill bg-accent/20 text-accent text-caption font-medium hover:bg-accent/30 transition-colors"
               >
-                {t} <span aria-hidden className="ml-1 opacity-60">×</span>
+                {tag} <span aria-hidden className="ml-1 opacity-60">×</span>
               </button>
             ))}
             <input
@@ -1271,35 +1287,38 @@ function TastingForm({
                 }
               }}
               onBlur={() => addTag(tagDraft)}
-              placeholder="Add a tag, press Enter…"
+              placeholder={tr("tasting.tag_placeholder")}
               className="flex-1 min-w-[10rem] bg-bg border border-border rounded-pill px-3 py-1 text-caption text-text placeholder:text-text-muted focus:outline-none focus:border-accent"
             />
           </div>
           {tags.length === 0 && (
             <div className="mt-2 flex flex-wrap gap-2">
-              {TAG_SUGGESTIONS.slice(0, 5).map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => addTag(t)}
-                  className="px-3 py-1 rounded-pill bg-bg border border-border border-dashed text-caption text-text-muted hover:text-text hover:border-accent transition-colors"
-                >
-                  + {t}
-                </button>
-              ))}
+              {TAG_SUGGESTION_KEYS.map((key) => {
+                const label = tr(key);
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => addTag(label)}
+                    className="px-3 py-1 rounded-pill bg-bg border border-border border-dashed text-caption text-text-muted hover:text-text hover:border-accent transition-colors"
+                  >
+                    + {label}
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
 
         <div>
           <p className="text-caption uppercase tracking-widest text-text-muted mb-2">
-            Notes
+            {tr("tasting.notes")}
           </p>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={3}
-            placeholder="What worked, what to change next time…"
+            placeholder={tr("tasting.notes_placeholder")}
             className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-body-sm text-text placeholder:text-text-muted focus:outline-none focus:border-accent"
           />
         </div>
@@ -1311,7 +1330,7 @@ function TastingForm({
               onClick={onCancel}
               className="px-5 py-2.5 rounded-lg bg-surface-raised border border-border text-body-sm font-medium text-text-muted hover:text-text transition-colors min-h-[40px]"
             >
-              Cancel
+              {tr("tasting.cancel")}
             </button>
           )}
           <button
@@ -1319,7 +1338,7 @@ function TastingForm({
             onClick={submit}
             className="px-5 py-2.5 rounded-lg bg-accent text-bg text-body-sm font-medium hover:opacity-90 transition-opacity min-h-[40px]"
           >
-            Save tasting
+            {tr("tasting.save")}
           </button>
         </div>
       </div>
@@ -1336,6 +1355,7 @@ function TastingSummary({
   onEdit: () => void;
   onClear: () => void;
 }) {
+  const t = useT();
   return (
     <div className="rounded-xl bg-surface border border-border p-5 sm:p-6">
       <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-6 items-start">
@@ -1376,14 +1396,14 @@ function TastingSummary({
               onClick={onEdit}
               className="px-4 py-2 rounded-lg bg-surface-raised border border-border text-body-sm font-medium hover:border-accent hover:text-accent transition-colors"
             >
-              Edit tasting
+              {t("tasting.edit")}
             </button>
             <button
               type="button"
               onClick={onClear}
               className="px-4 py-2 rounded-lg text-caption text-text-muted hover:text-danger transition-colors"
             >
-              Remove
+              {t("tasting.remove")}
             </button>
           </div>
         </div>
@@ -1472,21 +1492,6 @@ function formatTimeOfDay(iso: string): string {
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
-function kindLabel(kind: SessionStep["kind"]): string {
-  switch (kind) {
-    case "prepare_water": return "Prepare water";
-    case "mash_in": return "Mash in";
-    case "mash": return "Mash";
-    case "sparge": return "Sparge";
-    case "boil": return "Boil";
-    case "hop_addition": return "Hop addition";
-    case "whirlpool": return "Whirlpool";
-    case "chill": return "Chill";
-    case "transfer": return "Transfer";
-    case "ferment_pitch": return "Pitch";
-    case "custom": return "Step";
-  }
-}
 
 function formatDuration(totalSeconds: number): string {
   const sign = totalSeconds < 0 ? "-" : "";
