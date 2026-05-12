@@ -21,7 +21,7 @@ export interface YeastPitchInput {
    */
   style_type: "ale" | "lager" | "high_gravity";
   /**
-   * Dry yeast is packaged dehydrated (Fermentis, LalBrew, Mangrove Jack's) — ~10 B viable cells/g, near 100% viability fresh. Liquid yeast comes in slurries or smack-packs (Wyeast, White Labs) — typically 100 B cells/pack at production, declining roughly 21% per month.
+   * Dry yeast is packaged dehydrated (Fermentis, LalBrew, Mangrove Jack's) — ~17 B viable cells/g fresh (~200 B per 11.5 g sachet), near 100% viability fresh. Liquid yeast comes in slurries or smack-packs (Wyeast, White Labs) — typically 100 B cells/pack at production, declining roughly 21% per month.
    */
   yeast_form: "dry" | "liquid";
   /**
@@ -29,7 +29,7 @@ export interface YeastPitchInput {
    */
   yeast_pack_count?: number;
   /**
-   * Override the default cells-per-pack figure. Default: dry → 11.5 g × 10 B/g = 115 B; liquid → 100 B.
+   * Override the default cells-per-pack figure. Default: dry → 11.5 g × ~17 B/g fresh ≈ 200 B; liquid → 100 B.
    */
   cells_per_pack_billion?: number;
   /**

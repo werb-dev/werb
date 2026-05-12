@@ -17,9 +17,15 @@
  *   • Lager (OG ≤ 1.075)          : 1.5  M/mL/°P
  *   • High-gravity (OG > 1.075)   : 1.0  M/mL/°P (ales) / 2.0 (lagers)
  *
- * Cells per pack default to ~115 B for an 11.5 g dry sachet (Fermentis
- * publishes ≥ 6 B/g; conservative round-up is 10 B/g) and 100 B for a
- * fresh liquid pack (Wyeast / White Labs production claim).
+ * Cells per pack default to ~200 B for an 11.5 g dry sachet and 100 B
+ * for a fresh liquid pack (Wyeast / White Labs production claim).
+ *
+ * Fermentis publishes a minimum *guarantee* of 6 B/g but their own
+ * spec sheets and independent counts (Brulosophy, Brewer's Friend,
+ * BeerSmith) consistently land at 15–20 B viable cells / g for a
+ * fresh sachet — so ~200 B per 11.5 g pack. That matches Fermentis'
+ * own 50–80 g/hL dosing recommendation (≈ 2–3 sachets for a 50 L
+ * 1.050 ale), which the older 115 B figure under-reported by ~2×.
  *
  * Viability defaults match the consensus: dry yeast holds well, liquid
  * loses ~21 % per month from production date.
@@ -29,7 +35,7 @@
 
 import type { YeastPitchInput, YeastPitchOutput } from "@werb/types";
 
-const DRY_CELLS_PER_PACK_BILLION = 115; // 11.5 g × 10 B/g (Fermentis)
+const DRY_CELLS_PER_PACK_BILLION = 200; // 11.5 g × ~17 B/g viable, fresh
 const LIQUID_CELLS_PER_PACK_BILLION = 100; // Wyeast / White Labs at production
 
 const DRY_DEFAULT_VIABILITY_PCT = 97;

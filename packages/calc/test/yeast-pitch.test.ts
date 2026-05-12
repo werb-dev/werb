@@ -5,8 +5,8 @@ describe("computeYeastPitch", () => {
   // Reference: a typical American pale ale — 19 L into the fermenter,
   // OG 1.052, ale style. Mr. Malty / homebrew rule of thumb wants
   // ~180 B viable cells. A single fresh liquid pack (100 B × 0.80
-  // viability = 80 B) doesn't cut it; a single dry sachet
-  // (115 B × 0.97 = 111 B) is closer but still short.
+  // viability = 80 B) doesn't cut it; a single fresh dry sachet
+  // (200 B × 0.97 = 194 B) covers it.
   it("matches the canonical American pale ale pitch", () => {
     const out = computeYeastPitch({
       og_sg: 1.052,
@@ -46,14 +46,14 @@ describe("computeYeastPitch", () => {
     expect(out.target_rate_m_per_ml_per_plato).toBe(1.0);
   });
 
-  it("dry yeast defaults to 115 B per 11.5 g pack at 97% viability", () => {
+  it("dry yeast defaults to 200 B per 11.5 g pack at 97% viability", () => {
     const out = computeYeastPitch({
       og_sg: 1.05,
       beer_volume_l: 20,
       style_type: "ale",
       yeast_form: "dry",
     });
-    expect(out.cells_per_pack_effective_billion).toBeCloseTo(115 * 0.97, 1);
+    expect(out.cells_per_pack_effective_billion).toBeCloseTo(200 * 0.97, 1);
   });
 
   it("liquid yeast defaults to 100 B per pack at 80% viability", () => {
