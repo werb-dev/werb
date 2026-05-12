@@ -1,7 +1,21 @@
 # Screenshots
 
-Drop the captured PNGs here, named exactly as listed below. The repo
-README links to these paths, so naming + sizing matters.
+Captured automatically by a Playwright script — re-run via:
+
+```bash
+pnpm --filter @werb/desktop build      # vite preview needs dist/
+pnpm screenshots                        # boots preview, walks 4 screens, writes PNGs
+```
+
+The script (`apps/desktop/scripts/capture-screenshots.mjs`) drives a
+real Chromium through the same clicks a brewer would make (Import
+samples → first recipe → Start brewing → Journal), so the shots stay
+honest if the layout drifts. Run it after a UI change to refresh the
+README images, then commit.
+
+If you want to capture manually (different viewport, custom data,
+etc.), drop the PNGs here with the names below — the repo README
+links to these paths.
 
 ## Required for v0.1
 

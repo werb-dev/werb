@@ -16,7 +16,8 @@
     "typecheck": "pnpm -r --if-present typecheck",
     "test": "pnpm -r --if-present test",
     "build": "pnpm -r --if-present build",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "screenshots": "pnpm --filter @werb/desktop screenshots"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",

@@ -8,6 +8,7 @@
     "dev": "pnpm build:wasm && vite",
     "build": "pnpm build:wasm && tsc -b && vite build",
     "preview": "vite preview",
+    "screenshots": "node scripts/capture-screenshots.mjs",
     "typecheck": "tsc --noEmit",
     "tauri": "tauri",
     "tauri:dev": "pnpm build:wasm && tauri dev",
@@ -29,6 +30,7 @@
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@tailwindcss/vite": "^4.0.0",
     "@tauri-apps/cli": "^2.1.0",
     "@testing-library/dom": "^10",
