@@ -23,3 +23,14 @@ serde_json = "1"
 opt-level = "s"
 lto = true
 codegen-units = 1
+
+# Disable wasm-pack's post-build `wasm-opt` pass.
+# Current wasm-bindgen emits a multi-table WASM module that the
+# `wasm-opt` binary bundled by wasm-pack rejects with
+# "Only 1 table definition allowed in MVP". The Rust-side `opt-level
+# = "s"` + LTO already gives us the size we care about; skipping
+# `wasm-opt` costs ~5-10 KB in the shipped bundle and unblocks every
+# CI runner. Revisit when wasm-pack ships a wasm-opt that handles
+# the newer reference-types proposal.
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = false
