@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type {
   BeerJsonRecipe,
   CultureAddition,
@@ -8,6 +8,7 @@ import type {
   MashProcedure,
   MashStep,
   MiscAddition,
+  TimeType,
 } from "@werb/adapters";
 import { isMass, toCelsius, toGrams, toKilograms, toLiters, toSrm } from "@werb/adapters";
 import {
@@ -395,25 +396,23 @@ function HopsSection({
             <InlineSelect
               className="col-span-2"
               value={h.timing.use ?? "add_to_boil"}
-              onChange={(v) =>
-                updateRow(i, {
-                  ...h,
-                  timing: { ...h.timing, use: v as (typeof HOP_USES)[number] },
-                })
-              }
+              onChange={(v) => {
+                const next = v as (typeof HOP_USES)[number];
+                // Switching between boil/mash (minutes) and dry hop /
+                // package (days) needs the time unit to follow — a "60"
+                // typed for boil isn't "60 days" in the fermenter.
+                const time = retimeForUse(next, h.timing.time);
+                updateRow(i, { ...h, timing: { ...h.timing, use: next, time } });
+              }}
               options={[...HOP_USES]}
               labels={HOP_USE_LABELS}
             />
-            <InlineNumber
+            <HopTimeInlineInput
               className="col-span-1"
-              value={h.timing.time?.value ?? 0}
-              unit="min"
-              step={1}
-              onChange={(v) =>
-                updateRow(i, {
-                  ...h,
-                  timing: { ...h.timing, time: { value: v, unit: "min" } },
-                })
+              use={h.timing.use ?? "add_to_boil"}
+              time={h.timing.time}
+              onChange={(time) =>
+                updateRow(i, { ...h, timing: { ...h.timing, time } })
               }
             />
             <InlineNumber
@@ -816,6 +815,13 @@ function NumberField({
   step?: number;
   className?: string;
 }) {
+  const [text, setText] = useState(() => formatForStep(value, step));
+  const [focused, setFocused] = useState(false);
+
+  useEffect(() => {
+    if (!focused) setText(formatForStep(value, step));
+  }, [value, step, focused]);
+
   return (
     <label className={`block ${className ?? ""}`}>
       <span className="block text-caption uppercase tracking-widest text-text-muted mb-2">
@@ -823,11 +829,18 @@ function NumberField({
       </span>
       <div className="flex items-baseline gap-2 bg-surface border border-border rounded-lg px-3 py-2 focus-within:border-accent">
         <input
-          type="number"
-          value={Number.isFinite(value) ? value : ""}
-          step={step}
+          type="text"
+          inputMode="decimal"
+          value={text}
+          onFocus={() => setFocused(true)}
+          onBlur={() => {
+            setFocused(false);
+            const n = parseLocaleNumber(text);
+            setText(formatForStep(Number.isFinite(n) ? n : 0, step));
+          }}
           onChange={(e) => {
-            const n = Number(e.target.value);
+            setText(e.target.value);
+            const n = parseLocaleNumber(e.target.value);
             onChange(Number.isFinite(n) ? n : 0);
           }}
           className="w-full bg-transparent text-body font-mono tabular-nums text-text focus:outline-none"
@@ -1306,6 +1319,20 @@ function roundForStep(value: number, step: number): number {
   return Math.round(value * f) / f;
 }
 
+// Parse a user-typed string that may use either "." or "," as the
+// decimal separator (browsers localize <input type="number"> display,
+// but here we use type="text" so we must accept both).
+function parseLocaleNumber(s: string): number {
+  const cleaned = s.replace(/\s/g, "").replace(",", ".");
+  const n = Number(cleaned);
+  return Number.isFinite(n) ? n : NaN;
+}
+
+function formatForStep(value: number, step: number): string {
+  if (!Number.isFinite(value)) return "";
+  return value.toFixed(decimalsForStep(step));
+}
+
 function MassLargeInlineInput({
   valueKg,
   onChangeKg,
@@ -1404,6 +1431,52 @@ function TempInlineInput({
   );
 }
 
+// Hop additions track time in BeerJSON as { value, unit }. Boil and
+// mash additions are minutes; dry-hop and packaging additions are
+// days. The editor exposes whatever the data says and switches the
+// unit when the use is changed so a typed "3" reads as days for a
+// dry hop, minutes for the boil.
+function hopTimeUnitForUse(
+  use: (typeof HOP_USES)[number],
+): TimeType["unit"] {
+  if (use === "add_to_fermentation" || use === "add_to_package") return "day";
+  return "min";
+}
+
+function retimeForUse(
+  use: (typeof HOP_USES)[number],
+  current: TimeType | undefined,
+): TimeType {
+  const want = hopTimeUnitForUse(use);
+  if (current && current.unit === want) return current;
+  // Default new-unit value: boil = 60 min, dry hop = 3 days.
+  const defaultValue = want === "day" ? 3 : 60;
+  return { value: defaultValue, unit: want };
+}
+
+function HopTimeInlineInput({
+  use,
+  time,
+  onChange,
+  className,
+}: {
+  use: (typeof HOP_USES)[number];
+  time: TimeType | undefined;
+  onChange: (time: TimeType) => void;
+  className?: string;
+}) {
+  const unit = time?.unit ?? hopTimeUnitForUse(use);
+  return (
+    <InlineNumber
+      {...(className !== undefined && { className })}
+      value={time?.value ?? 0}
+      unit={unit}
+      step={1}
+      onChange={(v) => onChange({ value: v, unit })}
+    />
+  );
+}
+
 function ColorInlineInput({
   valueSrm,
   onChangeSrm,
@@ -1463,22 +1536,38 @@ function InlineNumber({
   step?: number;
   className?: string;
 }) {
+  // Local text buffer so the user can freely type "1.", "1.5", "1.50"
+  // without React stripping trailing zeros on every keystroke. We resync
+  // from the prop only when not focused — that way an external change
+  // (row reload, picker fill) reformats with the canonical decimal count,
+  // but in-flight typing is preserved.
+  const [text, setText] = useState(() => formatForStep(value, step));
+  const [focused, setFocused] = useState(false);
+
+  useEffect(() => {
+    if (!focused) setText(formatForStep(value, step));
+  }, [value, step, focused]);
+
   return (
     <div
       className={`flex items-baseline gap-1 border-b border-transparent px-1 py-1 focus-within:border-accent hover:border-border transition-colors min-w-0 ${className ?? ""}`}
     >
       <input
-        type="number"
-        value={Number.isFinite(value) ? value : ""}
-        step={step}
+        type="text"
+        inputMode="decimal"
+        value={text}
+        onFocus={() => setFocused(true)}
+        onBlur={() => {
+          setFocused(false);
+          const n = parseLocaleNumber(text);
+          setText(formatForStep(Number.isFinite(n) ? n : 0, step));
+        }}
         onChange={(e) => {
-          const n = Number(e.target.value);
+          setText(e.target.value);
+          const n = parseLocaleNumber(e.target.value);
           onChange(Number.isFinite(n) ? n : 0);
         }}
-        // Hide native browser spinner buttons — they steal column space
-        // and overlap the value in narrow cells (Time, Alpha, Yield, …).
-        // Keyboard arrows still work for nudging values.
-        className="w-full bg-transparent text-body font-mono tabular-nums text-text focus:outline-none min-w-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-inner-spin-button]:m-0 [&::-webkit-outer-spin-button]:m-0"
+        className="w-full bg-transparent text-body font-mono tabular-nums text-text focus:outline-none min-w-0"
       />
       <span className="text-caption font-mono text-text-muted shrink-0">{unit}</span>
     </div>
