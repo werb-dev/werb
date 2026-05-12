@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Cancel an in-flight run when a new commit lands on the same branch
+# (or PR). We only care about the result of the latest push.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Version comes from `packageManager` in root package.json.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install workspace
+        run: pnpm install --frozen-lockfile
+
+      # BeerXML parser is a Rust crate compiled to WebAssembly. Build
+      # it before anything that depends on @werb/desktop's bundle.
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - uses: jetli/wasm-pack-action@v0.4.0
+        with:
+          version: latest
+
+      - name: Generate types from JSON Schemas
+        run: pnpm gen:types
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Type-check
+        run: pnpm typecheck
+
+      - name: Run tests
+        run: pnpm test
+
+      # Build the web bundle on PRs too — catches regressions in code-
+      # split chunks, asset references, and Vite plugin behavior that
+      # only surface during production bundling.
+      - name: Build web bundle
+        run: pnpm --filter @werb/desktop build

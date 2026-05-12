@@ -175,7 +175,7 @@ function ProfileForm({
   };
 
   const commit = () => {
-    const { id, ...patch } = draft;
+    const { id: _id, ...patch } = draft;
     onSave(patch);
   };
 
@@ -194,7 +194,7 @@ function ProfileForm({
       transfer_loss_l: out.transfer_loss_l,
     };
     setDraft(next);
-    const { id, ...patch } = next;
+    const { id: _id, ...patch } = next;
     onSave(patch);
   };
 

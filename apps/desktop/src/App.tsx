@@ -1,10 +1,7 @@
-import { useState } from "react";
-import { DesignTokensShowcase } from "./design-tokens-showcase.tsx";
+import { lazy, Suspense, useState } from "react";
 import { LibraryScreen } from "./screens/Library.tsx";
 import { RecipeScreen } from "./screens/Recipe.tsx";
-import { RecipeEditor } from "./screens/RecipeEditor.tsx";
 import { BrewScreen } from "./screens/Brew.tsx";
-import { EquipmentScreen } from "./screens/Equipment.tsx";
 import { JournalScreen } from "./screens/Journal.tsx";
 import { SettingsScreen } from "./screens/Settings.tsx";
 import { useRecipes } from "./hooks/useRecipes.ts";
@@ -13,6 +10,32 @@ import { BUNDLED_SAMPLES, createBlankRecipe, importBeerJsonFromDisk, importBeerX
 import { exportSessionHtml, exportSessionJson } from "./data/recipe-export.ts";
 import { partitionForImport, skippedMessage } from "./data/import-dedup.ts";
 import { useUnits } from "./data/preferences.tsx";
+
+// Lazy-loaded screens — the editor is the biggest screen by far
+// (full form + autocomplete dropdowns + every BeerJSON field).
+// Off the cold path for the normal browse-and-brew flow, so it ships
+// as a separate bundle fetched on first navigation.
+const RecipeEditor = lazy(() =>
+  import("./screens/RecipeEditor.tsx").then((m) => ({ default: m.RecipeEditor })),
+);
+const EquipmentScreen = lazy(() =>
+  import("./screens/Equipment.tsx").then((m) => ({ default: m.EquipmentScreen })),
+);
+
+/**
+ * Dev-only design-tokens showcase. `import.meta.env.DEV` is statically
+ * `false` in production builds, so Vite tree-shakes both the lazy
+ * import and the route check out of the prod bundle.
+ */
+const IS_DEV = import.meta.env.DEV;
+
+const DesignTokensShowcase = IS_DEV
+  ? lazy(() =>
+      import("./design-tokens-showcase.tsx").then((m) => ({
+        default: m.DesignTokensShowcase,
+      })),
+    )
+  : null;
 
 type AppState =
   | { view: "library" }
@@ -115,7 +138,7 @@ export function App() {
     );
   } else if (state.view === "settings") {
     screen = <SettingsScreen />;
-  } else if (state.view === "tokens") {
+  } else if (state.view === "tokens" && DesignTokensShowcase) {
     screen = <DesignTokensShowcase />;
   } else {
     screen = (
@@ -196,8 +219,23 @@ export function App() {
         goSettings={goSettings}
         goTokens={goTokens}
       />
-      {screen}
+      <Suspense fallback={<ScreenLoading />}>{screen}</Suspense>
     </>
+  );
+}
+
+/**
+ * Tiny skeleton while a code-split screen's chunk is being fetched.
+ * Visible long enough to be noticed only on cold load over slow
+ * connections — once the chunk is cached, navigation is instant.
+ */
+function ScreenLoading() {
+  return (
+    <div className="min-h-dvh bg-bg text-text flex items-center justify-center">
+      <p className="text-caption uppercase tracking-widest text-text-muted animate-pulse">
+        Loading…
+      </p>
+    </div>
   );
 }
 
@@ -236,9 +274,11 @@ function DevNav({
       <NavButton active={state.view === "settings"} onClick={goSettings}>
         Settings
       </NavButton>
-      <NavButton active={state.view === "tokens"} onClick={goTokens} hideOnMobile>
-        Tokens
-      </NavButton>
+      {IS_DEV && (
+        <NavButton active={state.view === "tokens"} onClick={goTokens} hideOnMobile>
+          Tokens
+        </NavButton>
+      )}
     </nav>
   );
 }

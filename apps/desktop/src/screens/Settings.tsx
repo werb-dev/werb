@@ -85,6 +85,8 @@ export function SettingsScreen() {
         <Section title="Data">
           <DataCard backend={backend} />
         </Section>
+
+        <PrivacyNote />
       </main>
     </div>
   );
@@ -249,6 +251,57 @@ function UnitPicker<T extends string>({
         })}
       </div>
     </div>
+  );
+}
+
+// ─── Privacy footer ──────────────────────────────────────────────────────
+
+/**
+ * Plain-English explainer at the bottom of Settings. Establishes the
+ * data-locality contract for cloud-shy brewers: everything stays on
+ * this device, GitHub sync is opt-in, no telemetry.
+ */
+function PrivacyNote() {
+  return (
+    <section className="mb-8 sm:mb-10">
+      <h2 className="text-h3 font-semibold mb-1">Data &amp; privacy</h2>
+      <p className="text-body-sm text-text-muted mb-4">
+        How Werb handles your data.
+      </p>
+      <div className="rounded-xl bg-surface border border-border p-4 sm:p-6 space-y-3 text-body-sm text-text-muted leading-relaxed">
+        <p>
+          <span className="text-text font-medium">Local-first.</span>{" "}
+          Recipes, equipment profiles, brew sessions, and tastings are stored
+          in your browser's private file system (OPFS) on the web build, or in
+          the app-data directory on the desktop build. Nothing is uploaded
+          unless you explicitly turn on GitHub sync above.
+        </p>
+        <p>
+          <span className="text-text font-medium">GitHub sync is opt-in.</span>{" "}
+          Your Personal Access Token is stored on this device and never leaves
+          it for any purpose other than the Push / Pull requests you trigger.
+          Tokens are kept in a separate, non-synced slot so they're never
+          copied into the synced repo.
+        </p>
+        <p>
+          <span className="text-text font-medium">No telemetry, no analytics.</span>{" "}
+          Werb makes no network requests on its own. The web build is a static
+          PWA; the desktop build runs entirely offline.
+        </p>
+        <p className="text-caption">
+          Source code:{" "}
+          <a
+            href="https://github.com/werb-dev/werb"
+            target="_blank"
+            rel="noreferrer"
+            className="text-accent hover:underline"
+          >
+            github.com/werb-dev/werb
+          </a>
+          {" · "}MIT licensed.
+        </p>
+      </div>
+    </section>
   );
 }
 

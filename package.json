@@ -1,8 +1,11 @@
 {
   "name": "werb",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "File-driven homebrewing tool (BeerJSON in, brew sessions out).",
+  "license": "MIT",
+  "author": "Nicolas Dreno",
+  "homepage": "https://github.com/werb-dev/werb",
   "type": "module",
   "packageManager": "pnpm@9.0.0",
   "engines": {
@@ -10,16 +13,22 @@
   },
   "scripts": {
     "gen:types": "node scripts/gen-types.mjs",
+    "typecheck": "pnpm -r --if-present typecheck",
     "test": "pnpm -r --if-present test",
     "build": "pnpm -r --if-present build",
-    "lint": "pnpm -r --if-present lint"
+    "lint": "eslint ."
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.4",
     "@types/node": "^25.6.0",
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1",
+    "eslint": "9",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.6.0",
     "json-schema-to-typescript": "^15.0.0",
     "typescript": "^5.5.0",
+    "typescript-eslint": "^8.59.3",
     "vitest": "^2.0.0"
   }
 }

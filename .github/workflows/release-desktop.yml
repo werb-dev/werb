@@ -1,0 +1,111 @@
+name: Release desktop builds
+
+# Tag-driven release pipeline. Push a tag like `v0.1.0` and this job
+# builds Werb for macOS (Intel + Apple Silicon), Windows, and Linux,
+# then attaches the artifacts to a GitHub Release draft. We don't
+# auto-publish — review the draft before flipping it to public.
+#
+# Triggering manually via workflow_dispatch is also supported; the
+# resulting release will be named after the HEAD commit's tag if any,
+# otherwise the run will fail at the tauri-action step (which needs
+# a tag).
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Apple Silicon and Intel macOS need separate runners — Tauri
+          # bundles platform-native binaries, not universal2.
+          - platform: macos-14
+            target: aarch64-apple-darwin
+            bundle: dmg
+          - platform: macos-13
+            target: x86_64-apple-darwin
+            bundle: dmg
+          - platform: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            bundle: deb,appimage
+          - platform: windows-latest
+            target: x86_64-pc-windows-msvc
+            bundle: nsis,msi
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      # Linux needs the WebKitGTK + libssl + a few other system deps
+      # before Tauri can compile. macOS + Windows runners ship with
+      # everything bundled.
+      - name: Install Linux build deps
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libssl-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      # Cache Cargo deps per-target so subsequent releases compile in
+      # minutes instead of half an hour.
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            ./apps/desktop/src-tauri -> target
+            ./crates/werb-beerxml-wasm -> target
+
+      - uses: jetli/wasm-pack-action@v0.4.0
+        with:
+          version: latest
+
+      - name: Install workspace
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate types
+        run: pnpm gen:types
+
+      - name: Build WASM for the web bundle
+        run: pnpm --filter @werb/desktop build:wasm
+
+      # tauri-action runs `tauri build`, collects the resulting
+      # artifacts, and uploads them to a draft GitHub Release named
+      # after the tag (e.g. "Werb v0.1.0"). The first run on a fresh
+      # tag creates the release; subsequent runs (other matrix legs)
+      # append to it.
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: apps/desktop
+          args: --target ${{ matrix.target }}
+          tagName: ${{ github.ref_name }}
+          releaseName: "Werb ${{ github.ref_name }}"
+          releaseBody: |
+            See [CHANGELOG](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for the full list of changes.
+
+            Downloads below — pick the one that matches your OS. macOS users on Apple Silicon should grab the `aarch64` build.
+          releaseDraft: true
+          prerelease: false

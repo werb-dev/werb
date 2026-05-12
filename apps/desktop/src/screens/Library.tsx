@@ -405,15 +405,57 @@ function ProfileBadge({
 
 function EmptyState() {
   return (
-    <div className="rounded-xl bg-surface border border-border border-dashed p-8 sm:p-12 text-center">
-      <p className="text-body text-text">No recipes yet.</p>
+    <div className="rounded-xl bg-surface border border-border border-dashed p-6 sm:p-10 text-center">
+      <p className="text-h3 text-text font-semibold">Welcome to Werb</p>
       <p className="text-body-sm text-text-muted mt-2 max-w-md mx-auto">
-        Start a new recipe from scratch, import a{" "}
-        <code className="font-mono">.beerjson</code> or{" "}
-        <code className="font-mono">.beerxml</code> file from disk, or load the
-        bundled sample recipes.
+        File-driven homebrewing — recipes in, brew sessions out, everything
+        stored on this device.
       </p>
+      <ol className="mt-6 max-w-md mx-auto text-left space-y-3">
+        <OnboardingStep
+          n={1}
+          title="Add a recipe"
+          body="Tap + New recipe above to start from scratch, import a .beerjson or .beerxml file, or load the bundled samples to see how it all fits together."
+        />
+        <OnboardingStep
+          n={2}
+          title="Set up your equipment"
+          body="Equipment in the top nav. The Quick-start wizard sizes your vessels from a target batch in one tap."
+        />
+        <OnboardingStep
+          n={3}
+          title="Brew + reflect"
+          body="Tap Start brewing on a recipe for a live timeline with countdowns and measurement logging. Once complete, score the result on the radar so the next brew of the same recipe learns from it."
+        />
+      </ol>
     </div>
+  );
+}
+
+function OnboardingStep({
+  n,
+  title,
+  body,
+}: {
+  n: number;
+  title: string;
+  body: string;
+}) {
+  return (
+    <li className="flex gap-3">
+      <span
+        aria-hidden
+        className="shrink-0 w-6 h-6 mt-0.5 rounded-pill bg-accent text-bg text-caption font-semibold font-mono flex items-center justify-center"
+      >
+        {n}
+      </span>
+      <div>
+        <p className="text-body-sm font-medium text-text">{title}</p>
+        <p className="text-caption text-text-muted mt-0.5 leading-relaxed">
+          {body}
+        </p>
+      </div>
+    </li>
   );
 }
 
