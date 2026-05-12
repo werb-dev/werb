@@ -43,6 +43,13 @@ jobs:
       - name: Generate types from JSON Schemas
         run: pnpm gen:types
 
+      # Build the WASM pkg before typecheck/test — recipes.ts imports
+      # from `crates/werb-beerxml-wasm/pkg/` so the module resolves at
+      # type-check time. The web build script chains build:wasm too,
+      # but typecheck doesn't, so do it explicitly here.
+      - name: Build WASM (werb-beerxml-wasm)
+        run: pnpm --filter @werb/desktop build:wasm
+
       - name: Lint
         run: pnpm lint
 
