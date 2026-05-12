@@ -32,6 +32,8 @@ const IMPERIAL: UnitPreferences = {
   gravity: "plato",
   color: "SRM",
   currency: "USD",
+  cost_inflation_pct: 100,
+  locale: "en",
 };
 
 describe("formatTemperature", () => {

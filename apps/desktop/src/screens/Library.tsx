@@ -10,7 +10,7 @@ import { computeIbu, computeWater } from "@werb/calc";
 import type { StoredRecipe } from "../data/recipes.ts";
 import { filterAndSort, type SortKey } from "../data/library-sort.ts";
 import { profileToWaterOverrides, type ProfileWithId } from "../data/equipment.ts";
-import { useUnits } from "../data/preferences.tsx";
+import { useT, useUnits } from "../data/preferences.tsx";
 import {
   formatColor,
   formatLiters,
@@ -53,6 +53,7 @@ export function LibraryScreen({
   activeProfile,
   onGoEquipment,
 }: LibraryScreenProps) {
+  const t = useT();
   const [importError, setImportError] = useState<string | null>(null);
   const [importInfo, setImportInfo] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
@@ -93,10 +94,10 @@ export function LibraryScreen({
         <header className="mb-8 sm:mb-10 lg:mb-12">
           <p className="text-caption uppercase tracking-widest text-text-muted">
             {loading
-              ? "Werb · loading…"
-              : `Werb · ${recipes.length} recipe${recipes.length === 1 ? "" : "s"}`}
+              ? t("library.subtitle_loading")
+              : t("library.subtitle_count", { count: recipes.length })}
           </p>
-          <h1 className="text-h2 sm:text-h1 font-semibold mt-3">Library</h1>
+          <h1 className="text-h2 sm:text-h1 font-semibold mt-3">{t("library.title")}</h1>
           <ProfileBadge profile={activeProfile} onGoEquipment={onGoEquipment} />
 
           <div className="flex flex-wrap gap-2 mt-5">
@@ -104,27 +105,27 @@ export function LibraryScreen({
               onClick={onCreateBlank}
               className="px-4 py-2 rounded-lg bg-accent text-bg text-body-sm font-medium hover:opacity-90 transition-opacity"
             >
-              + New recipe
+              {t("library.new_recipe")}
             </button>
             <button
               onClick={handleImportFile}
               disabled={importing}
               className="px-4 py-2 rounded-lg bg-surface-raised border border-border text-body-sm font-medium hover:border-border-strong disabled:opacity-50 transition-colors"
             >
-              {importing ? "Importing…" : "Import .beerjson"}
+              {importing ? t("library.importing") : t("library.import_beerjson")}
             </button>
             <button
               onClick={handleImportXml}
               disabled={importing}
               className="px-4 py-2 rounded-lg bg-surface-raised border border-border text-body-sm font-medium hover:border-border-strong disabled:opacity-50 transition-colors"
             >
-              Import .beerxml
+              {t("library.import_beerxml")}
             </button>
             <button
               onClick={handleImportSamples}
               className="px-4 py-2 rounded-lg bg-surface-raised border border-border text-body-sm font-medium hover:border-border-strong transition-colors"
             >
-              Import samples
+              {t("library.import_samples")}
             </button>
           </div>
 
@@ -134,7 +135,7 @@ export function LibraryScreen({
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search recipes…"
+                placeholder={t("library.search_placeholder")}
                 className="flex-1 min-w-[12rem] bg-surface border border-border rounded-lg px-3 py-2 text-body-sm text-text placeholder:text-text-muted focus:outline-none focus:border-accent"
               />
               <select
@@ -142,9 +143,9 @@ export function LibraryScreen({
                 onChange={(e) => setSortKey(e.target.value as SortKey)}
                 className="bg-surface border border-border rounded-lg px-3 py-2 text-body-sm text-text focus:outline-none focus:border-accent"
               >
-                <option value="updated">Recently updated</option>
-                <option value="name">Name (A→Z)</option>
-                <option value="style">Style</option>
+                <option value="updated">{t("library.sort_updated")}</option>
+                <option value="name">{t("library.sort_name")}</option>
+                <option value="style">{t("library.sort_style")}</option>
               </select>
             </div>
           )}
@@ -152,7 +153,7 @@ export function LibraryScreen({
           {importError && (
             <div className="mt-5 rounded-lg border border-warning bg-surface p-4">
               <p className="text-caption uppercase tracking-widest text-warning font-medium">
-                Import failed
+                {t("library.import_failed")}
               </p>
               <p className="text-body-sm text-text mt-2 font-mono break-all">{importError}</p>
             </div>
@@ -161,7 +162,7 @@ export function LibraryScreen({
           {importInfo && (
             <div className="mt-5 rounded-lg border border-border bg-surface p-4">
               <p className="text-caption uppercase tracking-widest text-text-muted font-medium">
-                Import notice
+                {t("library.import_notice")}
               </p>
               <p className="text-body-sm text-text mt-2">{importInfo}</p>
             </div>
@@ -174,7 +175,7 @@ export function LibraryScreen({
           <EmptyState />
         ) : visible.length === 0 ? (
           <p className="text-body text-text-muted text-center py-12">
-            No recipes match "{query}".
+            {t("library.no_match", { query })}
           </p>
         ) : (
           <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -376,6 +377,7 @@ function ProfileBadge({
   profile?: ProfileWithId | undefined;
   onGoEquipment: () => void;
 }) {
+  const t = useT();
   if (profile) {
     return (
       <button
@@ -397,35 +399,35 @@ function ProfileBadge({
       className="mt-3 inline-flex items-center gap-2 rounded-pill bg-surface border border-border border-dashed px-3 py-1.5 text-caption text-text-muted hover:text-text hover:border-accent transition-colors"
     >
       <span aria-hidden className="block w-1.5 h-1.5 rounded-pill bg-text-muted" />
-      <span>No equipment profile — using defaults</span>
+      <span>{t("library.profile_default")}</span>
       <span aria-hidden className="text-accent">→</span>
     </button>
   );
 }
 
 function EmptyState() {
+  const t = useT();
   return (
     <div className="rounded-xl bg-surface border border-border border-dashed p-6 sm:p-10 text-center">
-      <p className="text-h3 text-text font-semibold">Welcome to Werb</p>
+      <p className="text-h3 text-text font-semibold">{t("library.onboarding.title")}</p>
       <p className="text-body-sm text-text-muted mt-2 max-w-md mx-auto">
-        File-driven homebrewing — recipes in, brew sessions out, everything
-        stored on this device.
+        {t("library.onboarding.subtitle")}
       </p>
       <ol className="mt-6 max-w-md mx-auto text-left space-y-3">
         <OnboardingStep
           n={1}
-          title="Add a recipe"
-          body="Tap + New recipe above to start from scratch, import a .beerjson or .beerxml file, or load the bundled samples to see how it all fits together."
+          title={t("library.onboarding.step1.title")}
+          body={t("library.onboarding.step1.body")}
         />
         <OnboardingStep
           n={2}
-          title="Set up your equipment"
-          body="Equipment in the top nav. The Quick-start wizard sizes your vessels from a target batch in one tap."
+          title={t("library.onboarding.step2.title")}
+          body={t("library.onboarding.step2.body")}
         />
         <OnboardingStep
           n={3}
-          title="Brew + reflect"
-          body="Tap Start brewing on a recipe for a live timeline with countdowns and measurement logging. Once complete, score the result on the radar so the next brew of the same recipe learns from it."
+          title={t("library.onboarding.step3.title")}
+          body={t("library.onboarding.step3.body")}
         />
       </ol>
     </div>

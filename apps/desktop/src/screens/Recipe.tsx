@@ -40,7 +40,7 @@ import { useRecipeTastings } from "../hooks/useBrewLog.ts";
 import { computeRecipeCost, type CostLine } from "../data/cost.ts";
 import { SensoryRadar } from "../components/SensoryRadar.tsx";
 import { usePersistedJson } from "../storage/index.ts";
-import { useUnits } from "../data/preferences.tsx";
+import { useT, useUnits } from "../data/preferences.tsx";
 import {
   formatColor,
   formatLiters,
@@ -74,6 +74,7 @@ interface RecipeScreenProps {
 export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartBrewing, onEdit, onApplyScaled }: RecipeScreenProps) {
   const hasActiveSession = useBrewSessionExists(recipeId);
   const prefs = useUnits();
+  const t = useT();
   const computed = useMemo(() => {
     const ibu = computeIbu(recipeToIbuInput(recipe));
     const water = computeWater(recipeToWaterInput(recipe, profileToWaterOverrides(activeProfile)));
@@ -163,7 +164,7 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
             onClick={onBack}
             className="mb-6 sm:mb-8 text-caption font-medium text-text-muted hover:text-text transition-colors flex items-center gap-2"
           >
-            <span aria-hidden>←</span> Library
+            <span aria-hidden>←</span> {t("recipe.back_library")}
           </button>
         )}
 
@@ -197,7 +198,7 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
                 onClick={onStartBrewing}
                 className="px-5 py-3 rounded-xl bg-accent text-bg text-body font-medium hover:opacity-90 transition-opacity"
               >
-                {hasActiveSession ? "Resume brewing →" : "Start brewing →"}
+                {hasActiveSession ? t("recipe.resume_brewing") : t("recipe.start_brewing")}
               </button>
             )}
             {onApplyScaled && activeProfile && (
@@ -213,7 +214,7 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
                 onClick={onEdit}
                 className="px-4 py-3 rounded-xl bg-surface-raised border border-border text-body-sm font-medium hover:border-accent hover:text-accent transition-colors"
               >
-                Edit recipe
+                {t("recipe.edit")}
               </button>
             )}
             <ExportMenu recipe={recipe} prefs={prefs} />
@@ -270,14 +271,7 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
         <TastingCard recipeId={recipeId} />
 
         {/* ─── Computed water strip ────────────────────────────────────── */}
-        <Section
-          title="Water volumes"
-          subtitle={
-            activeProfile
-              ? `Computed using equipment profile "${activeProfile.name}"`
-              : "Computed using generic defaults — set an equipment profile for accurate numbers"
-          }
-        >
+        <Section title={t("recipe.section.water")}>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-border rounded-xl overflow-hidden">
             <Tile label="Mash" value={formatLiters(computed.water.mash_water_l, prefs).display} />
             <Tile label="Sparge" value={formatLiters(computed.water.sparge_water_l, prefs).display} />
@@ -287,7 +281,7 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
         </Section>
 
         {/* ─── Fermentables ────────────────────────────────────────────── */}
-        <Section title="Fermentables">
+        <Section title={t("recipe.section.fermentables")}>
           <ul className="rounded-xl bg-surface border border-border divide-y divide-border">
             {recipe.ingredients.fermentable_additions.map((f, i) => {
               const massDisplay = isMass(f.amount)
@@ -318,7 +312,7 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
 
         {/* ─── Hop additions ───────────────────────────────────────────── */}
         <Section
-          title="Hop additions"
+          title={t("recipe.section.hops")}
           subtitle="Boil hops contribute IBU. Dry hops are listed for reference."
         >
           <ul className="rounded-xl bg-surface border border-border divide-y divide-border">
@@ -371,7 +365,7 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
         {/* ─── Miscellaneous additions ─────────────────────────────────── */}
         {recipe.ingredients.miscellaneous_additions &&
           recipe.ingredients.miscellaneous_additions.length > 0 && (
-            <Section title="Miscellaneous">
+            <Section title={t("recipe.section.miscs")}>
               <ul className="rounded-xl bg-surface border border-border divide-y divide-border">
                 {recipe.ingredients.miscellaneous_additions.map((m, i) => {
                   const useLabel = TIMING_LABEL[m.timing?.use ?? ""] ?? null;
@@ -403,7 +397,7 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
         {/* ─── Mash schedule ───────────────────────────────────────────── */}
         {recipe.mash && recipe.mash.mash_steps.length > 0 && (
           <Section
-            title="Mash schedule"
+            title={t("recipe.section.mash")}
             subtitle={recipe.mash.notes ?? undefined}
           >
             <ol className="rounded-xl bg-surface border border-border divide-y divide-border">
@@ -435,7 +429,7 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
         {/* ─── Cultures ────────────────────────────────────────────────── */}
         {recipe.ingredients.culture_additions &&
           recipe.ingredients.culture_additions.length > 0 && (
-            <Section title="Cultures">
+            <Section title={t("recipe.section.cultures")}>
               <ul className="rounded-xl bg-surface border border-border divide-y divide-border">
                 {recipe.ingredients.culture_additions.map((c, i) => (
                   <li key={i} className="px-4 py-4 sm:px-6 sm:py-5 flex items-baseline justify-between gap-3 sm:gap-6">

@@ -1,6 +1,7 @@
-import { createContext, useContext, type ReactNode } from "react";
+import { createContext, useCallback, useContext, type ReactNode } from "react";
 import { usePersistedJson } from "../storage/index.ts";
 import { DEFAULT_PREFS, type UnitPreferences } from "./units-format.ts";
+import { translate } from "./i18n.ts";
 
 /**
  * React context for user preferences. Currently just unit choices;
@@ -61,4 +62,18 @@ export function useUnits(): UnitPreferences {
  */
 export function useUnitsControl(): UnitsContextValue {
   return useContext(UnitsContext);
+}
+
+/**
+ * Translator bound to the active UI locale. Returns a `t(key, vars?)`
+ * function — the rest of the app stays oblivious to locale plumbing.
+ * The callback identity changes when the locale flips so React
+ * components that depend on it re-render appropriately.
+ */
+export function useT(): (key: string, vars?: Record<string, string | number>) => string {
+  const locale = useContext(UnitsContext).prefs.locale;
+  return useCallback(
+    (key, vars) => translate(locale, key, vars),
+    [locale],
+  );
 }

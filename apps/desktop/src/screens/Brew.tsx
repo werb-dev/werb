@@ -12,7 +12,7 @@ import { computeWater } from "@werb/calc";
 import { useBrewSession, useScreenWakeLock, useTick } from "../hooks/useBrewSession.ts";
 import { profileToWaterOverrides, type ProfileWithId } from "../data/equipment.ts";
 import { usePersistedJson } from "../storage/index.ts";
-import { useUnits } from "../data/preferences.tsx";
+import { useT, useUnits } from "../data/preferences.tsx";
 import {
   formatCelsius,
   formatLiters,
@@ -102,6 +102,7 @@ export function BrewScreen({ recipeId, recipe, sessionId, activeProfile, onBack 
   const tick = useTick(1000);
   const wakeLockHeld = useScreenWakeLock(brew.session?.status === "in_progress");
   const prefs = useUnits();
+  const t = useT();
 
   const ctx = useMemo<BrewContext>(() => {
     const water = computeWater(recipeToWaterInput(recipe, profileToWaterOverrides(activeProfile)));
@@ -169,7 +170,7 @@ export function BrewScreen({ recipeId, recipe, sessionId, activeProfile, onBack 
           <StartHint />
         )}
 
-        <Section title="Timeline">
+        <Section title={t("brew.timeline")}>
           <ol className="rounded-xl bg-surface border border-border divide-y divide-border">
             {session.steps.map((step) => (
               <TimelineRow
@@ -208,24 +209,22 @@ export function BrewScreen({ recipeId, recipe, sessionId, activeProfile, onBack 
               onClick={brew.completeSession}
               className="px-5 py-3 rounded-lg bg-success text-bg text-body-sm font-medium hover:opacity-90 transition-opacity min-h-[44px]"
             >
-              Complete session
+              {t("brew.complete_session")}
             </button>
           ) : (
             <span className="text-body-sm text-text-muted">
-              Brew session completed.
+              {t("brew.session_completed")}
             </span>
           )}
           <button
             onClick={() => {
-              if (
-                confirm("Discard this brew session? All progress and notes will be lost.")
-              ) {
+              if (confirm(t("brew.discard_confirm"))) {
                 brew.abandon();
               }
             }}
             className="px-5 py-3 rounded-lg bg-surface-raised border border-border text-text-muted text-body-sm font-medium hover:text-danger hover:border-danger transition-colors min-h-[44px]"
           >
-            Discard session
+            {t("brew.discard_session")}
           </button>
         </div>
       </main>
@@ -246,24 +245,27 @@ function Header({
   wakeLockHeld: boolean;
   onBack: () => void;
 }) {
+  const t = useT();
   return (
     <header className="mb-8 sm:mb-10">
       <button
         onClick={onBack}
         className="text-caption font-medium text-text-muted hover:text-text transition-colors flex items-center gap-2"
       >
-        <span aria-hidden>←</span> Recipe
+        <span aria-hidden>←</span> {t("recipe.back_library")}
       </button>
       <div className="mt-5 sm:mt-6 flex items-start justify-between gap-3 sm:gap-6">
         <div className="min-w-0">
           <p className="text-caption uppercase tracking-widest text-accent font-medium">
-            Brew session · <StatusLabel status={session.status} />
+            {t("brew.session_label", {
+              status: t(`brew.status.${session.status}`),
+            })}
           </p>
           <h1 className="text-h2 sm:text-h1 font-semibold mt-2 capitalize break-words">
             {recipe.name.toLowerCase()}
           </h1>
           <p className="text-body-sm text-text-muted mt-2 font-mono">
-            Started {new Date(session.started_at).toLocaleString()}
+            {t("brew.started_at", { time: new Date(session.started_at).toLocaleString() })}
           </p>
         </div>
         <WakeLockBadge held={wakeLockHeld} />
@@ -331,18 +333,10 @@ function KettleFitBanner({
   );
 }
 
-function StatusLabel({ status }: { status: string }) {
-  return <span className="capitalize">{status.replace("_", " ")}</span>;
-}
-
 function WakeLockBadge({ held }: { held: boolean }) {
+  const t = useT();
   return (
     <span
-      title={
-        held
-          ? "Screen wake lock held — display won't sleep"
-          : "Screen wake lock NOT held — display may sleep"
-      }
       className={`shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-pill text-caption font-mono border ${
         held ? "border-success text-success" : "border-border text-text-muted"
       }`}
@@ -351,7 +345,7 @@ function WakeLockBadge({ held }: { held: boolean }) {
         aria-hidden
         className={`block w-2 h-2 rounded-pill ${held ? "bg-success" : "bg-text-muted"}`}
       />
-      {held ? "WAKE" : "SLEEP"}
+      {held ? t("brew.wake") : t("brew.sleep")}
     </span>
   );
 }
@@ -371,6 +365,7 @@ function ActiveStepCard({
   onFinish: () => void;
   prefs: UnitPreferences;
 }) {
+  const t = useT();
   const elapsedSec = step.started_at
     ? Math.floor((now - new Date(step.started_at).getTime()) / 1000)
     : 0;
@@ -412,7 +407,7 @@ function ActiveStepCard({
         onClick={onFinish}
         className="mt-6 w-full px-5 py-4 rounded-xl bg-accent text-bg text-body-lg font-medium hover:opacity-90 transition-opacity"
       >
-        Mark done
+        {t("brew.mark_done")}
       </button>
     </section>
   );
@@ -784,6 +779,7 @@ function TimelineRow({
   disabled: boolean;
   prefs: UnitPreferences;
 }) {
+  const t = useT();
   const icon =
     step.status === "done"
       ? "✓"
@@ -855,7 +851,7 @@ function TimelineRow({
                 onClick={onStart}
                 className="px-3 py-2 sm:py-1.5 rounded-lg bg-surface-raised border border-border text-caption font-medium hover:border-accent hover:text-accent transition-colors min-h-[36px]"
               >
-                Start
+                {t("brew.start_step")}
               </button>
             )}
             {step.status === "active" && (
@@ -863,7 +859,7 @@ function TimelineRow({
                 onClick={onFinish}
                 className="px-3 py-2 sm:py-1.5 rounded-lg bg-accent text-bg text-caption font-medium hover:opacity-90 transition-opacity min-h-[36px]"
               >
-                Done
+                {t("brew.done_step")}
               </button>
             )}
           </div>
@@ -882,26 +878,24 @@ function NoSession({
   recipe: BeerJsonRecipe;
   onStart: () => void;
 }) {
+  const t = useT();
   return (
     <div className="min-h-dvh bg-bg text-text flex items-center justify-center">
       <div className="text-center max-w-md px-6">
         <h2 className="text-h2 font-semibold capitalize">{recipe.name.toLowerCase()}</h2>
-        <p className="text-body text-text-muted mt-3">
-          Ready to brew? A new session will start now and the screen will stay awake until
-          you finish.
-        </p>
+        <p className="text-body text-text-muted mt-3">{t("brew.no_session.body")}</p>
         <div className="mt-8 flex flex-col gap-3">
           <button
             onClick={onStart}
             className="px-5 py-4 rounded-xl bg-accent text-bg text-body-lg font-medium hover:opacity-90 transition-opacity"
           >
-            Start brewing
+            {t("brew.no_session.start")}
           </button>
           <button
             onClick={onBack}
             className="px-5 py-2 text-caption text-text-muted hover:text-text transition-colors"
           >
-            Back to recipe
+            {t("brew.no_session.back")}
           </button>
         </div>
       </div>
@@ -914,6 +908,7 @@ function CompletedCard({
 }: {
   session: { completed_at?: string; started_at: string };
 }) {
+  const t = useT();
   const total = session.completed_at
     ? Math.floor(
         (new Date(session.completed_at).getTime() - new Date(session.started_at).getTime()) / 1000,
@@ -922,19 +917,20 @@ function CompletedCard({
   return (
     <section className="mb-10 rounded-2xl bg-surface border border-success p-8 text-center">
       <p className="text-caption uppercase tracking-widest text-success font-medium">
-        Brew completed
+        {t("brew.completed_label")}
       </p>
       <p className="font-mono text-display text-success mt-3">{formatDuration(total)}</p>
-      <p className="font-mono text-caption text-text-muted mt-1">total brew time</p>
+      <p className="font-mono text-caption text-text-muted mt-1">{t("brew.total_brew_time")}</p>
     </section>
   );
 }
 
 function StartHint() {
+  const t = useT();
   return (
     <section className="mb-10 rounded-2xl bg-surface border border-border border-dashed p-8 text-center">
       <p className="text-body text-text-muted">
-        Tap <span className="text-text font-medium">Start</span> on a step to begin.
+        {t("brew.start_hint", { start: t("brew.start_step") })}
       </p>
     </section>
   );
@@ -999,6 +995,7 @@ function MeasurementsSection({
     const step = session.steps.find((s) => s.id === stepId);
     return step?.label ?? null;
   };
+  const t = useT();
 
   const submit = () => {
     if (!Number.isFinite(value)) return;
@@ -1008,7 +1005,7 @@ function MeasurementsSection({
   };
 
   return (
-    <Section title="Measurements">
+    <Section title={t("brew.measurements")}>
       {!disabled && (
         <div className="rounded-xl bg-surface border border-border p-4 mb-4">
           <div className="grid grid-cols-2 sm:flex sm:flex-wrap sm:items-end gap-3">
@@ -1156,9 +1153,10 @@ function TastingSection({
   // open the form. "Edit" toggles back to the form preloaded with the
   // saved values.
   const [editing, setEditing] = useState(!tasting);
+  const tr = useT();
 
   return (
-    <Section title="Tasting">
+    <Section title={tr("brew.tasting")}>
       {tasting && !editing ? (
         <TastingSummary
           tasting={tasting}

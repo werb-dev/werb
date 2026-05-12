@@ -11,6 +11,7 @@ import {
   type TempType,
   type VolumeType,
 } from "@werb/adapters";
+import { detectLocale, type Locale } from "./i18n.ts";
 
 /**
  * User unit preferences. Drives how raw BeerJSON values are presented
@@ -42,6 +43,11 @@ export interface UnitPreferences {
    * batch cost".
    */
   cost_inflation_pct: number;
+  /**
+   * UI language. Seeded from the browser locale on first launch
+   * (see `detectLocale`); changeable from Settings.
+   */
+  locale: Locale;
 }
 
 export const DEFAULT_PREFS: UnitPreferences = {
@@ -52,6 +58,7 @@ export const DEFAULT_PREFS: UnitPreferences = {
   color: "EBC",
   currency: "EUR",
   cost_inflation_pct: 100,
+  locale: detectLocale(),
 };
 
 const CURRENCY_SYMBOL: Record<UnitPreferences["currency"], string> = {

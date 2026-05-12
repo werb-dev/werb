@@ -12,8 +12,9 @@ import {
   type GitHubBackendConfig,
   type StorageBackend,
 } from "../storage/index.ts";
-import { useUnitsControl } from "../data/preferences.tsx";
+import { useT, useUnitsControl } from "../data/preferences.tsx";
 import type { UnitPreferences } from "../data/units-format.ts";
+import { SUPPORTED_LOCALES } from "../data/i18n.ts";
 import { downloadTextFile, pickAndReadTextFile } from "../data/browser-fs.ts";
 
 /**
@@ -46,6 +47,7 @@ interface ProgressState {
 
 export function SettingsScreen() {
   const backend = useStorage();
+  const t = useT();
   // The sync config lives under a key OUTSIDE the werb.* namespace,
   // so it never round-trips through the GitHub backend (which would
   // be a recursive sync of the token, both pointless and a small
@@ -60,21 +62,19 @@ export function SettingsScreen() {
       <main className="mx-auto max-w-2xl px-4 pt-12 pb-8 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
         <header className="mb-8 sm:mb-10">
           <p className="text-caption uppercase tracking-widest text-text-muted">
-            Werb · settings
+            {t("settings.subtitle")}
           </p>
-          <h1 className="text-h2 sm:text-h1 font-semibold mt-3">Sync &amp; storage</h1>
+          <h1 className="text-h2 sm:text-h1 font-semibold mt-3">{t("settings.title")}</h1>
           <p className="text-body text-text-muted mt-2 max-w-2xl">
-            Keep recipes, equipment profiles, and brew sessions in sync
-            across devices via a private GitHub repo. Manual push / pull
-            in v1 — no background sync.
+            {t("settings.intro")}
           </p>
         </header>
 
-        <Section title="Units">
+        <Section title={t("settings.section.units")}>
           <UnitsCard />
         </Section>
 
-        <Section title="GitHub sync">
+        <Section title={t("settings.section.github")}>
           {sync ? (
             <Connected backend={backend} sync={sync} onDisconnect={() => setSync(null)} />
           ) : (
@@ -82,7 +82,7 @@ export function SettingsScreen() {
           )}
         </Section>
 
-        <Section title="Data">
+        <Section title={t("settings.section.data")}>
           <DataCard backend={backend} />
         </Section>
 
@@ -96,6 +96,7 @@ export function SettingsScreen() {
 
 function UnitsCard() {
   const { prefs, setPrefs } = useUnitsControl();
+  const t = useT();
 
   const update = <K extends keyof UnitPreferences>(key: K, value: UnitPreferences[K]) =>
     setPrefs((prev) => ({ ...prev, [key]: value }));
@@ -103,14 +104,18 @@ function UnitsCard() {
   return (
     <div className="rounded-xl bg-surface border border-border p-4 sm:p-6">
       <p className="text-body-sm text-text-muted mb-5 max-w-prose">
-        Display-only. The editor and stored data are unchanged — these
-        preferences just change how recipes and brew screens render
-        numbers.
+        {t("settings.units.intro")}
       </p>
 
       <div className="space-y-4">
         <UnitPicker
-          label="Temperature"
+          label={t("settings.units.language")}
+          value={prefs.locale}
+          onChange={(v) => update("locale", v)}
+          options={SUPPORTED_LOCALES.map((l) => ({ value: l.value, label: l.label }))}
+        />
+        <UnitPicker
+          label={t("settings.units.temperature")}
           value={prefs.temperature}
           onChange={(v) => update("temperature", v)}
           options={[
@@ -119,7 +124,7 @@ function UnitsCard() {
           ]}
         />
         <UnitPicker
-          label="Volume"
+          label={t("settings.units.volume")}
           value={prefs.volume}
           onChange={(v) => update("volume", v)}
           options={[
@@ -128,7 +133,7 @@ function UnitsCard() {
           ]}
         />
         <UnitPicker
-          label="Mass"
+          label={t("settings.units.mass")}
           value={prefs.mass}
           onChange={(v) => update("mass", v)}
           options={[
@@ -137,7 +142,7 @@ function UnitsCard() {
           ]}
         />
         <UnitPicker
-          label="Gravity"
+          label={t("settings.units.gravity")}
           value={prefs.gravity}
           onChange={(v) => update("gravity", v)}
           options={[
@@ -146,7 +151,7 @@ function UnitsCard() {
           ]}
         />
         <UnitPicker
-          label="Color"
+          label={t("settings.units.color")}
           value={prefs.color}
           onChange={(v) => update("color", v)}
           options={[
@@ -155,7 +160,7 @@ function UnitsCard() {
           ]}
         />
         <UnitPicker
-          label="Currency"
+          label={t("settings.units.currency")}
           value={prefs.currency}
           onChange={(v) => update("currency", v)}
           options={[
@@ -262,34 +267,19 @@ function UnitPicker<T extends string>({
  * this device, GitHub sync is opt-in, no telemetry.
  */
 function PrivacyNote() {
+  const t = useT();
   return (
     <section className="mb-8 sm:mb-10">
-      <h2 className="text-h3 font-semibold mb-1">Data &amp; privacy</h2>
+      <h2 className="text-h3 font-semibold mb-1">{t("settings.privacy.title")}</h2>
       <p className="text-body-sm text-text-muted mb-4">
-        How Werb handles your data.
+        {t("settings.privacy.subtitle")}
       </p>
       <div className="rounded-xl bg-surface border border-border p-4 sm:p-6 space-y-3 text-body-sm text-text-muted leading-relaxed">
-        <p>
-          <span className="text-text font-medium">Local-first.</span>{" "}
-          Recipes, equipment profiles, brew sessions, and tastings are stored
-          in your browser's private file system (OPFS) on the web build, or in
-          the app-data directory on the desktop build. Nothing is uploaded
-          unless you explicitly turn on GitHub sync above.
-        </p>
-        <p>
-          <span className="text-text font-medium">GitHub sync is opt-in.</span>{" "}
-          Your Personal Access Token is stored on this device and never leaves
-          it for any purpose other than the Push / Pull requests you trigger.
-          Tokens are kept in a separate, non-synced slot so they're never
-          copied into the synced repo.
-        </p>
-        <p>
-          <span className="text-text font-medium">No telemetry, no analytics.</span>{" "}
-          Werb makes no network requests on its own. The web build is a static
-          PWA; the desktop build runs entirely offline.
-        </p>
+        <p>{t("settings.privacy.local")}</p>
+        <p>{t("settings.privacy.optin")}</p>
+        <p>{t("settings.privacy.telemetry")}</p>
         <p className="text-caption">
-          Source code:{" "}
+          {t("settings.privacy.source")}:{" "}
           <a
             href="https://github.com/werb-dev/werb"
             target="_blank"
@@ -298,7 +288,7 @@ function PrivacyNote() {
           >
             github.com/werb-dev/werb
           </a>
-          {" · "}MIT licensed.
+          {" · "}MIT.
         </p>
       </div>
     </section>

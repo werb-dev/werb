@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { WerbSession } from "@werb/types";
 import { useBrewLog } from "../hooks/useBrewLog.ts";
+import { useT } from "../data/preferences.tsx";
 
 interface JournalScreenProps {
   /** Open a specific session in the brew screen. */
@@ -28,6 +29,7 @@ export function JournalScreen({
 }: JournalScreenProps) {
   const { sessions, loading, error } = useBrewLog();
   const counts = countByStatus(sessions);
+  const t = useT();
 
   return (
     <div className="min-h-dvh bg-bg text-text">
@@ -35,18 +37,19 @@ export function JournalScreen({
         <header className="mb-8 sm:mb-10">
           <p className="text-caption uppercase tracking-widest text-text-muted">
             {loading
-              ? "Werb · loading…"
-              : `Werb · ${sessions.length} brew${sessions.length === 1 ? "" : "s"}`}
+              ? t("journal.subtitle_loading")
+              : t("journal.subtitle_count", { count: sessions.length })}
           </p>
-          <h1 className="text-h2 sm:text-h1 font-semibold mt-3">Journal</h1>
+          <h1 className="text-h2 sm:text-h1 font-semibold mt-3">{t("journal.title")}</h1>
           <p className="text-body text-text-muted mt-2 max-w-2xl">
-            Every brew session you've started. Tap one to revisit its
-            timeline, measurements and notes.
+            {t("journal.body")}
           </p>
           {!loading && sessions.length > 0 && (
             <p className="text-caption font-mono text-text-muted mt-4">
-              {counts.in_progress} in progress · {counts.completed} completed
-              {counts.draft > 0 && ` · ${counts.draft} draft`}
+              {t("journal.counts", {
+                in_progress: counts.in_progress,
+                completed: counts.completed,
+              })}
             </p>
           )}
         </header>
@@ -54,7 +57,7 @@ export function JournalScreen({
         {error && (
           <div className="mb-6 rounded-xl border border-warning bg-warning/10 px-4 sm:px-5 py-3 sm:py-4">
             <p className="text-caption uppercase tracking-widest text-warning font-medium">
-              Could not load brew log
+              {t("journal.could_not_load")}
             </p>
             <p className="text-body-sm text-text mt-1 font-mono break-all">{error}</p>
           </div>

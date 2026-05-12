@@ -9,7 +9,7 @@ import { useEquipment } from "./hooks/useEquipment.ts";
 import { BUNDLED_SAMPLES, createBlankRecipe, importBeerJsonFromDisk, importBeerXmlFromDisk } from "./data/recipes.ts";
 import { exportSessionHtml, exportSessionJson } from "./data/recipe-export.ts";
 import { partitionForImport, skippedMessage } from "./data/import-dedup.ts";
-import { useUnits } from "./data/preferences.tsx";
+import { useT, useUnits } from "./data/preferences.tsx";
 
 // Lazy-loaded screens — the editor is the biggest screen by far
 // (full form + autocomplete dropdowns + every BeerJSON field).
@@ -257,26 +257,50 @@ function DevNav({
   // Hide nav on the brew screen — fewer distractions during a brew.
   if (state.view === "brew") return null;
 
+  return <NavPill state={state} goLibrary={goLibrary} goJournal={goJournal} goEquipment={goEquipment} goSettings={goSettings} goTokens={goTokens} />;
+}
+
+/**
+ * Inner component so we can call useT — DevNav is conditionally
+ * returned before hooks would otherwise be reached, which React's
+ * rules-of-hooks doesn't like.
+ */
+function NavPill({
+  state,
+  goLibrary,
+  goJournal,
+  goEquipment,
+  goSettings,
+  goTokens,
+}: {
+  state: AppState;
+  goLibrary: () => void;
+  goJournal: () => void;
+  goEquipment: () => void;
+  goSettings: () => void;
+  goTokens: () => void;
+}) {
+  const t = useT();
   return (
     <nav className="fixed top-2 right-2 sm:top-3 sm:right-3 z-50 flex gap-0.5 sm:gap-1 rounded-pill bg-surface-raised border border-border p-0.5 sm:p-1 shadow-lg">
       <NavButton
         active={state.view === "library" || state.view === "recipe"}
         onClick={goLibrary}
       >
-        Library
+        {t("nav.library")}
       </NavButton>
       <NavButton active={state.view === "journal"} onClick={goJournal}>
-        Journal
+        {t("nav.journal")}
       </NavButton>
       <NavButton active={state.view === "equipment"} onClick={goEquipment}>
-        Equipment
+        {t("nav.equipment")}
       </NavButton>
       <NavButton active={state.view === "settings"} onClick={goSettings}>
-        Settings
+        {t("nav.settings")}
       </NavButton>
       {IS_DEV && (
         <NavButton active={state.view === "tokens"} onClick={goTokens} hideOnMobile>
-          Tokens
+          {t("nav.tokens")}
         </NavButton>
       )}
     </nav>
