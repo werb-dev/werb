@@ -212,26 +212,63 @@ function makeLine(
 
 // ─── Public API ──────────────────────────────────────────────────────────
 
+/**
+ * Combine raw per-addition lines into one entry per unique
+ * (category, lower-cased name) pair, summing quantities and line
+ * costs. The same hop at 60 min + 0 min should show once for cost
+ * purposes — the brewer cares about the total spend, not how the
+ * addition is split across the brew day. Display name is the first
+ * capitalization encountered.
+ */
+function groupLines(lines: CostLine[]): CostLine[] {
+  const map = new Map<string, CostLine>();
+  for (const line of lines) {
+    const key = `${line.category}:${line.name.trim().toLowerCase()}`;
+    const existing = map.get(key);
+    if (!existing) {
+      map.set(key, { ...line });
+      continue;
+    }
+    // Both lines refer to the same ingredient — they share the price
+    // and natural unit by construction (same catalog dispatch).
+    if (
+      existing.amount_in_natural_unit !== null &&
+      line.amount_in_natural_unit !== null
+    ) {
+      existing.amount_in_natural_unit += line.amount_in_natural_unit;
+    } else if (line.amount_in_natural_unit !== null) {
+      existing.amount_in_natural_unit = line.amount_in_natural_unit;
+    }
+    if (existing.line_cost !== null && line.line_cost !== null) {
+      existing.line_cost += line.line_cost;
+    } else if (line.line_cost !== null) {
+      existing.line_cost = line.line_cost;
+    }
+  }
+  return Array.from(map.values());
+}
+
 export function computeRecipeCost(
   recipe: BeerJsonRecipe,
   cost_inflation_pct: number,
 ): CostBreakdown {
   const factor = cost_inflation_pct / 100;
-  const lines: CostLine[] = [];
+  const raw: CostLine[] = [];
 
   for (const f of recipe.ingredients.fermentable_additions ?? []) {
-    lines.push(makeLine("fermentable", f.name, f.amount, { type: f.type }, factor));
+    raw.push(makeLine("fermentable", f.name, f.amount, { type: f.type }, factor));
   }
   for (const h of recipe.ingredients.hop_additions ?? []) {
-    lines.push(makeLine("hop", h.name, h.amount, {}, factor));
+    raw.push(makeLine("hop", h.name, h.amount, {}, factor));
   }
   for (const c of recipe.ingredients.culture_additions ?? []) {
-    lines.push(makeLine("culture", c.name, c.amount, { form: c.form }, factor));
+    raw.push(makeLine("culture", c.name, c.amount, { form: c.form }, factor));
   }
   for (const m of recipe.ingredients.miscellaneous_additions ?? []) {
-    lines.push(makeLine("misc", m.name, m.amount, { type: m.type }, factor));
+    raw.push(makeLine("misc", m.name, m.amount, { type: m.type }, factor));
   }
 
+  const lines = groupLines(raw);
   const priced = lines.filter((l) => l.line_cost !== null);
   const total = priced.reduce((sum, l) => sum + (l.line_cost ?? 0), 0);
   const batch_l = toLiters(recipe.batch_size);

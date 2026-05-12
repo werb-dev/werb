@@ -154,4 +154,129 @@ describe("computeRecipeCost", () => {
     expect(breakdown.total_count).toBe(0);
     expect(breakdown.total).toBe(0);
   });
+
+  it("groups identical ingredients into one line with summed amount + cost", () => {
+    // Same hop, three additions (bittering, flameout, dry hop). The
+    // cost section should show one Mosaic line, not three — brewers
+    // care about total spend, not addition timing for cost purposes.
+    const r: BeerJsonRecipe = {
+      ...recipe(),
+      ingredients: {
+        fermentable_additions: [],
+        hop_additions: [
+          {
+            name: "Mosaic",
+            alpha_acid: { value: 12, unit: "%" },
+            amount: { value: 0.03, unit: "kg" },
+            form: "pellet",
+            timing: { use: "add_to_boil", time: { value: 60, unit: "min" } },
+          },
+          {
+            name: "Mosaic",
+            alpha_acid: { value: 12, unit: "%" },
+            amount: { value: 0.04, unit: "kg" },
+            form: "pellet",
+            timing: { use: "add_to_boil", time: { value: 0, unit: "min" } },
+          },
+          {
+            name: "Mosaic",
+            alpha_acid: { value: 12, unit: "%" },
+            amount: { value: 0.05, unit: "kg" },
+            form: "pellet",
+            timing: { use: "add_to_fermentation", time: { value: 3, unit: "day" } },
+          },
+        ],
+      },
+    };
+    const breakdown = computeRecipeCost(r, 100);
+    const hopLines = breakdown.lines.filter((l) => l.category === "hop");
+    expect(hopLines).toHaveLength(1);
+    // 30 + 40 + 50 = 120 g at €0.07/g = €8.40
+    expect(hopLines[0]!.amount_in_natural_unit).toBeCloseTo(120, 2);
+    expect(hopLines[0]!.line_cost).toBeCloseTo(8.4, 2);
+  });
+
+  it("treats different capitalizations of the same name as one ingredient", () => {
+    const r: BeerJsonRecipe = {
+      ...recipe(),
+      ingredients: {
+        fermentable_additions: [],
+        hop_additions: [
+          {
+            name: "Mosaic",
+            alpha_acid: { value: 12, unit: "%" },
+            amount: { value: 0.03, unit: "kg" },
+            form: "pellet",
+            timing: { use: "add_to_boil", time: { value: 60, unit: "min" } },
+          },
+          {
+            name: "MOSAIC",
+            alpha_acid: { value: 12, unit: "%" },
+            amount: { value: 0.02, unit: "kg" },
+            form: "pellet",
+            timing: { use: "add_to_boil", time: { value: 0, unit: "min" } },
+          },
+        ],
+      },
+    };
+    const breakdown = computeRecipeCost(r, 100);
+    const hopLines = breakdown.lines.filter((l) => l.category === "hop");
+    expect(hopLines).toHaveLength(1);
+    expect(hopLines[0]!.amount_in_natural_unit).toBeCloseTo(50, 2);
+  });
+
+  it("keeps different ingredients of the same category as separate lines", () => {
+    const r: BeerJsonRecipe = {
+      ...recipe(),
+      ingredients: {
+        fermentable_additions: [],
+        hop_additions: [
+          {
+            name: "Mosaic",
+            alpha_acid: { value: 12, unit: "%" },
+            amount: { value: 0.03, unit: "kg" },
+            form: "pellet",
+            timing: { use: "add_to_boil", time: { value: 60, unit: "min" } },
+          },
+          {
+            name: "Citra",
+            alpha_acid: { value: 12, unit: "%" },
+            amount: { value: 0.03, unit: "kg" },
+            form: "pellet",
+            timing: { use: "add_to_boil", time: { value: 60, unit: "min" } },
+          },
+        ],
+      },
+    };
+    const breakdown = computeRecipeCost(r, 100);
+    const hopLines = breakdown.lines.filter((l) => l.category === "hop");
+    expect(hopLines).toHaveLength(2);
+  });
+
+  it("preserves the first capitalization encountered as the display name", () => {
+    const r: BeerJsonRecipe = {
+      ...recipe(),
+      ingredients: {
+        fermentable_additions: [],
+        hop_additions: [
+          {
+            name: "Mosaic",
+            alpha_acid: { value: 12, unit: "%" },
+            amount: { value: 0.03, unit: "kg" },
+            form: "pellet",
+            timing: { use: "add_to_boil", time: { value: 60, unit: "min" } },
+          },
+          {
+            name: "mosaic",
+            alpha_acid: { value: 12, unit: "%" },
+            amount: { value: 0.02, unit: "kg" },
+            form: "pellet",
+            timing: { use: "add_to_boil", time: { value: 0, unit: "min" } },
+          },
+        ],
+      },
+    };
+    const breakdown = computeRecipeCost(r, 100);
+    expect(breakdown.lines.find((l) => l.category === "hop")?.name).toBe("Mosaic");
+  });
 });

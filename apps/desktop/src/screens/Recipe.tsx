@@ -1341,6 +1341,30 @@ function CostSection({ recipe }: { recipe: BeerJsonRecipe }) {
   );
 }
 
+/**
+ * Render the (summed) quantity of a cost line in the user's preferred
+ * units. Returns null when the line couldn't be priced (no convertible
+ * amount) so the UI can omit it cleanly.
+ */
+function formatCostAmount(line: CostLine, prefs: UnitPreferences): string | null {
+  if (line.amount_in_natural_unit === null || line.natural_unit === null) {
+    return null;
+  }
+  const v = line.amount_in_natural_unit;
+  switch (line.natural_unit) {
+    case "g":
+      return formatMassSmall({ value: v, unit: "g" }, prefs).display;
+    case "kg":
+      return formatMassLarge({ value: v, unit: "kg" }, prefs).display;
+    case "L":
+      return formatVolume({ value: v, unit: "l" }, prefs).display;
+    case "pack": {
+      const rounded = Math.round(v * 100) / 100;
+      return `${rounded} pack${rounded === 1 ? "" : "s"}`;
+    }
+  }
+}
+
 function CostLineRow({
   line,
   prefs,
@@ -1348,10 +1372,18 @@ function CostLineRow({
   line: CostLine;
   prefs: UnitPreferences;
 }) {
+  const amountDisplay = formatCostAmount(line, prefs);
   return (
     <li className="px-4 py-3 sm:px-6 sm:py-4 flex items-baseline justify-between gap-3 sm:gap-4">
       <div className="min-w-0">
-        <p className="text-body-sm font-medium truncate">{line.name}</p>
+        <p className="text-body-sm font-medium truncate">
+          {line.name}
+          {amountDisplay && (
+            <span className="text-text-muted font-mono ml-2">
+              {amountDisplay}
+            </span>
+          )}
+        </p>
         <p className="text-caption text-text-muted mt-0.5">
           {CATEGORY_LABEL[line.category]}
           {line.default_unit_price !== null && line.natural_unit && (
