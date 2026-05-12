@@ -23,7 +23,7 @@ import {
   type MiscEntry,
   type StyleEntry,
 } from "../data/catalog/index.ts";
-import { useUnits } from "../data/preferences.tsx";
+import { useT, useUnits } from "../data/preferences.tsx";
 import {
   celsiusToUserTemp,
   colorUnitLabel,
@@ -58,6 +58,7 @@ interface RecipeEditorProps {
 
 export function RecipeEditor({ recipe, onClose, onSave }: RecipeEditorProps) {
   const [draft, setDraft] = useState<BeerJsonRecipe>(recipe);
+  const t = useT();
 
   const update = <K extends keyof BeerJsonRecipe>(key: K, value: BeerJsonRecipe[K]) =>
     setDraft((d) => ({ ...d, [key]: value }));
@@ -78,19 +79,19 @@ export function RecipeEditor({ recipe, onClose, onSave }: RecipeEditorProps) {
             onClick={onClose}
             className="text-caption font-medium text-text-muted hover:text-text transition-colors flex items-center gap-2"
           >
-            <span aria-hidden>←</span> Cancel
+            <span aria-hidden>←</span> {t("editor.cancel")}
           </button>
           <button
             onClick={handleSave}
             className="px-5 py-2 rounded-lg bg-accent text-bg text-body-sm font-medium hover:opacity-90 transition-opacity min-h-[40px]"
           >
-            Save changes
+            {t("editor.save")}
           </button>
         </header>
 
-        <h1 className="text-h2 sm:text-h1 font-semibold mb-2">Edit recipe</h1>
+        <h1 className="text-h2 sm:text-h1 font-semibold mb-2">{t("editor.title")}</h1>
         <p className="text-body text-text-muted mb-8 sm:mb-10">
-          Changes are kept locally until you press <span className="text-text">Save changes</span>.
+          {t("editor.intro")}
         </p>
 
         <MetadataSection draft={draft} update={update} />
@@ -116,9 +117,10 @@ function MetadataSection({
   draft: BeerJsonRecipe;
   update: <K extends keyof BeerJsonRecipe>(key: K, value: BeerJsonRecipe[K]) => void;
 }) {
+  const t = useT();
   return (
-    <Section title="Recipe">
-      <Field label="Name" value={draft.name} onChange={(v) => update("name", v)} required />
+    <Section title={t("editor.section.recipe")}>
+      <Field label={t("editor.field.name")} value={draft.name} onChange={(v) => update("name", v)} required />
       <StylePicker
         className="mt-6"
         style={draft.style}
@@ -126,25 +128,25 @@ function MetadataSection({
       />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mt-6">
         <SelectField
-          label="Type"
+          label={t("editor.field.type")}
           value={draft.type}
           onChange={(v) => update("type", v as BeerJsonRecipe["type"])}
           options={RECIPE_TYPES}
         />
         <Field
-          label="Author"
+          label={t("editor.field.author")}
           value={draft.author}
           onChange={(v) => update("author", v)}
         />
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mt-6">
         <VolumeField
-          label="Batch size"
+          label={t("editor.field.batch_size")}
           valueL={toLiters(draft.batch_size)}
           onChangeL={(l) => update("batch_size", { value: l, unit: "l" })}
         />
         <NumberField
-          label="Brewhouse efficiency"
+          label={t("editor.field.brewhouse_eff")}
           unit="%"
           value={draft.efficiency?.brewhouse?.value ?? 75}
           onChange={(v) =>
@@ -156,7 +158,7 @@ function MetadataSection({
         />
       </div>
       <Field
-        label="Notes"
+        label={t("editor.field.notes")}
         value={draft.notes ?? ""}
         onChange={(v) => update("notes", v || undefined)}
         textarea
@@ -198,6 +200,7 @@ function FermentablesSection({
   draft: BeerJsonRecipe;
   updateIngredients: (patch: Partial<BeerJsonRecipe["ingredients"]>) => void;
 }) {
+  const t = useT();
   const items = draft.ingredients.fermentable_additions;
 
   const addRow = () => {
@@ -224,15 +227,15 @@ function FermentablesSection({
   };
 
   return (
-    <Section title="Fermentables">
+    <Section title={t("editor.section.fermentables")}>
       <div className="rounded-xl bg-surface border border-border overflow-x-auto md:overflow-x-visible">
         <RowHeader
           cols={[
-            { label: "Name", span: "col-span-4" },
-            { label: "Type", span: "col-span-2" },
-            { label: "Amount", span: "col-span-2" },
-            { label: "Color", span: "col-span-2" },
-            { label: "Yield", span: "col-span-1" },
+            { label: t("editor.col.name"), span: "col-span-4" },
+            { label: t("editor.col.type"), span: "col-span-2" },
+            { label: t("editor.col.amount"), span: "col-span-2" },
+            { label: t("editor.col.color"), span: "col-span-2" },
+            { label: t("editor.col.yield"), span: "col-span-1" },
             { label: "", span: "col-span-1" },
           ]}
         />
@@ -304,7 +307,7 @@ function FermentablesSection({
           </div>
         ))}
       </div>
-      <AddRowButton label="+ Add fermentable" onClick={addRow} />
+      <AddRowButton label={t("editor.add.fermentable")} onClick={addRow} />
     </Section>
   );
 }
@@ -313,11 +316,11 @@ function FermentablesSection({
 
 const HOP_FORMS = ["pellet", "leaf", "leaf (wet)", "plug", "extract", "powder"] as const;
 const HOP_USES = ["add_to_boil", "add_to_fermentation", "add_to_mash", "add_to_package"] as const;
-const HOP_USE_LABELS: Record<(typeof HOP_USES)[number], string> = {
-  add_to_boil: "Boil",
-  add_to_fermentation: "Dry hop",
-  add_to_mash: "Mash",
-  add_to_package: "Package",
+const HOP_USE_KEYS: Record<(typeof HOP_USES)[number], string> = {
+  add_to_boil: "editor.hop.use.boil",
+  add_to_fermentation: "editor.hop.use.dry_hop",
+  add_to_mash: "editor.hop.use.mash",
+  add_to_package: "editor.hop.use.package",
 };
 
 function HopsSection({
@@ -327,6 +330,7 @@ function HopsSection({
   draft: BeerJsonRecipe;
   updateIngredients: (patch: Partial<BeerJsonRecipe["ingredients"]>) => void;
 }) {
+  const t = useT();
   const items = draft.ingredients.hop_additions ?? [];
 
   const addRow = () => {
@@ -351,16 +355,16 @@ function HopsSection({
   };
 
   return (
-    <Section title="Hops">
+    <Section title={t("editor.section.hops")}>
       <div className="rounded-xl bg-surface border border-border overflow-x-auto md:overflow-x-visible">
         <RowHeader
           cols={[
-            { label: "Name", span: "col-span-3" },
-            { label: "Use", span: "col-span-2" },
-            { label: "Time", span: "col-span-1" },
-            { label: "Alpha", span: "col-span-1" },
-            { label: "Amount", span: "col-span-2" },
-            { label: "Form", span: "col-span-2" },
+            { label: t("editor.col.name"), span: "col-span-3" },
+            { label: t("editor.col.use"), span: "col-span-2" },
+            { label: t("editor.col.time"), span: "col-span-1" },
+            { label: t("editor.col.alpha"), span: "col-span-1" },
+            { label: t("editor.col.amount"), span: "col-span-2" },
+            { label: t("editor.col.form"), span: "col-span-2" },
             { label: "", span: "col-span-1" },
           ]}
         />
@@ -405,7 +409,9 @@ function HopsSection({
                 updateRow(i, { ...h, timing: { ...h.timing, use: next, time } });
               }}
               options={[...HOP_USES]}
-              labels={HOP_USE_LABELS}
+              labels={Object.fromEntries(
+                HOP_USES.map((u) => [u, t(HOP_USE_KEYS[u])]),
+              )}
             />
             <HopTimeInlineInput
               className="col-span-1"
@@ -445,7 +451,7 @@ function HopsSection({
           </div>
         ))}
       </div>
-      <AddRowButton label="+ Add hop" onClick={addRow} />
+      <AddRowButton label={t("editor.add.hop")} onClick={addRow} />
     </Section>
   );
 }
@@ -479,6 +485,7 @@ function CulturesSection({
   draft: BeerJsonRecipe;
   updateIngredients: (patch: Partial<BeerJsonRecipe["ingredients"]>) => void;
 }) {
+  const t = useT();
   const items = draft.ingredients.culture_additions ?? [];
 
   const addRow = () => {
@@ -503,15 +510,15 @@ function CulturesSection({
   };
 
   return (
-    <Section title="Cultures">
+    <Section title={t("editor.section.cultures")}>
       <div className="rounded-xl bg-surface border border-border overflow-x-auto md:overflow-x-visible">
         <RowHeader
           cols={[
-            { label: "Name", span: "col-span-4" },
-            { label: "Type", span: "col-span-2" },
-            { label: "Form", span: "col-span-2" },
-            { label: "Amount", span: "col-span-2" },
-            { label: "Attenuation", span: "col-span-1" },
+            { label: t("editor.col.name"), span: "col-span-4" },
+            { label: t("editor.col.type"), span: "col-span-2" },
+            { label: t("editor.col.form"), span: "col-span-2" },
+            { label: t("editor.col.amount"), span: "col-span-2" },
+            { label: t("editor.col.attenuation"), span: "col-span-1" },
             { label: "", span: "col-span-1" },
           ]}
         />
@@ -593,7 +600,7 @@ function CulturesSection({
           </div>
         ))}
       </div>
-      <AddRowButton label="+ Add culture" onClick={addRow} />
+      <AddRowButton label={t("editor.add.culture")} onClick={addRow} />
     </Section>
   );
 }
@@ -619,6 +626,7 @@ function MashSection({
   draft: BeerJsonRecipe;
   update: <K extends keyof BeerJsonRecipe>(key: K, value: BeerJsonRecipe[K]) => void;
 }) {
+  const t = useT();
   const ensureMash = (): MashProcedure =>
     draft.mash ?? {
       name: "Mash",
@@ -679,21 +687,21 @@ function MashSection({
   const steps = draft.mash?.mash_steps ?? [];
 
   return (
-    <Section title="Mash schedule">
+    <Section title={t("editor.section.mash")}>
       <div className="rounded-xl bg-surface border border-border overflow-x-auto md:overflow-x-visible">
         <RowHeader
           cols={[
-            { label: "Name", span: "col-span-3" },
-            { label: "Type", span: "col-span-2" },
-            { label: "Temp", span: "col-span-2" },
-            { label: "Time", span: "col-span-1" },
-            { label: "Infusion", span: "col-span-3" },
+            { label: t("editor.col.name"), span: "col-span-3" },
+            { label: t("editor.col.type"), span: "col-span-2" },
+            { label: t("editor.col.temp"), span: "col-span-2" },
+            { label: t("editor.col.time"), span: "col-span-1" },
+            { label: t("editor.col.infusion"), span: "col-span-3" },
             { label: "", span: "col-span-1" },
           ]}
         />
         {steps.length === 0 && (
           <div className="px-4 py-6 text-body-sm text-text-muted text-center">
-            No mash steps. Add one below.
+            {t("editor.mash.empty")}
           </div>
         )}
         {steps.map((step, i) => (
@@ -745,7 +753,7 @@ function MashSection({
           </div>
         ))}
       </div>
-      <AddRowButton label="+ Add mash step" onClick={addStep} />
+      <AddRowButton label={t("editor.add.mash_step")} onClick={addStep} />
     </Section>
   );
 }
@@ -899,11 +907,11 @@ const MISC_TYPES: MiscEntry["type"][] = [
 ];
 
 const MISC_USES = ["add_to_boil", "add_to_mash", "add_to_fermentation", "add_to_package"] as const;
-const MISC_USE_LABELS: Record<(typeof MISC_USES)[number], string> = {
-  add_to_boil: "Boil",
-  add_to_mash: "Mash",
-  add_to_fermentation: "Ferment",
-  add_to_package: "Package",
+const MISC_USE_KEYS: Record<(typeof MISC_USES)[number], string> = {
+  add_to_boil: "editor.misc.use.boil",
+  add_to_mash: "editor.misc.use.mash",
+  add_to_fermentation: "editor.misc.use.ferment",
+  add_to_package: "editor.misc.use.package",
 };
 
 function MiscsSection({
@@ -913,7 +921,11 @@ function MiscsSection({
   draft: BeerJsonRecipe;
   updateIngredients: (patch: Partial<BeerJsonRecipe["ingredients"]>) => void;
 }) {
+  const t = useT();
   const items = draft.ingredients.miscellaneous_additions ?? [];
+  const miscUseLabels = Object.fromEntries(
+    MISC_USES.map((u) => [u, t(MISC_USE_KEYS[u])]),
+  ) as Record<(typeof MISC_USES)[number], string>;
 
   const addRow = () => {
     const fresh: MiscAddition = {
@@ -936,15 +948,15 @@ function MiscsSection({
   };
 
   return (
-    <Section title="Miscellaneous">
+    <Section title={t("editor.section.miscs")}>
       <div className="rounded-xl bg-surface border border-border overflow-x-auto md:overflow-x-visible">
         <RowHeader
           cols={[
-            { label: "Name", span: "col-span-3" },
-            { label: "Type", span: "col-span-2" },
-            { label: "Use", span: "col-span-2" },
-            { label: "Time", span: "col-span-1" },
-            { label: "Amount", span: "col-span-3" },
+            { label: t("editor.col.name"), span: "col-span-3" },
+            { label: t("editor.col.type"), span: "col-span-2" },
+            { label: t("editor.col.use"), span: "col-span-2" },
+            { label: t("editor.col.time"), span: "col-span-1" },
+            { label: t("editor.col.amount"), span: "col-span-3" },
             { label: "", span: "col-span-1" },
           ]}
         />
@@ -965,7 +977,7 @@ function MiscsSection({
                   <p className="font-mono text-caption text-text-muted mt-0.5">
                     {entry.type.replace("_", " ")}
                     {" · "}
-                    {MISC_USE_LABELS[entry.default_use]}
+                    {miscUseLabels[entry.default_use]}
                     {entry.default_time_min !== undefined && ` · ${entry.default_time_min} min`}
                     {" · "}
                     {entry.default_amount} {entry.default_amount_unit}
@@ -989,7 +1001,7 @@ function MiscsSection({
                 })
               }
               options={[...MISC_USES]}
-              labels={MISC_USE_LABELS}
+              labels={miscUseLabels}
             />
             <InlineNumber
               className="col-span-1"
@@ -1016,7 +1028,7 @@ function MiscsSection({
           </div>
         ))}
       </div>
-      <AddRowButton label="+ Add miscellaneous" onClick={addRow} />
+      <AddRowButton label={t("editor.add.misc")} onClick={addRow} />
     </Section>
   );
 }
@@ -1184,6 +1196,7 @@ function StylePicker({
   onChange: (next: NonNullable<BeerJsonRecipe["style"]> | undefined) => void;
   className?: string;
 }) {
+  const t = useT();
   const display = style?.name ?? "";
   const tag =
     style?.category_number !== undefined && style?.style_letter
@@ -1193,7 +1206,7 @@ function StylePicker({
   return (
     <label className={`block ${className ?? ""}`}>
       <span className="block text-caption uppercase tracking-widest text-text-muted mb-2">
-        Style
+        {t("editor.field.style")}
         {tag && (
           <span className="ml-2 text-text-muted font-mono normal-case tracking-normal">
             BJCP {tag}
@@ -1240,9 +1253,9 @@ function StylePicker({
             type="button"
             onClick={() => onChange(undefined)}
             className="shrink-0 px-3 py-2 rounded-lg bg-surface-raised border border-border text-caption text-text-muted hover:text-text transition-colors"
-            title="Clear style"
+            title={t("editor.style.clear_title")}
           >
-            Clear
+            {t("editor.style.clear")}
           </button>
         )}
       </div>
@@ -1603,11 +1616,12 @@ function InlineSelect({
 }
 
 function InlineDeleteButton({ onClick }: { onClick: () => void }) {
+  const t = useT();
   return (
     <button
       type="button"
       onClick={onClick}
-      title="Delete"
+      title={t("editor.row.delete")}
       className="w-7 h-7 rounded-pill flex items-center justify-center text-text-muted hover:text-danger hover:bg-danger/10 transition-colors"
     >
       ×

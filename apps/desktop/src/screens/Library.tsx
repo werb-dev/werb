@@ -214,6 +214,7 @@ function RecipeCard({
   onDelete: () => void;
 }) {
   const prefs = useUnits();
+  const t = useT();
   const beerColor = recipe.color_estimate ? srmToHex(toSrm(recipe.color_estimate)) : null;
   const colorLabel = recipe.color_estimate
     ? formatColor(recipe.color_estimate, prefs).display
@@ -240,16 +241,16 @@ function RecipeCard({
       <div className="absolute top-3 right-3 z-10 flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100 transition-opacity">
         <button
           onClick={onDuplicate}
-          aria-label={`Duplicate ${recipe.name}`}
-          title="Duplicate recipe"
+          aria-label={t("library.card.duplicate_aria", { name: recipe.name })}
+          title={t("library.card.duplicate_title")}
           className="w-7 h-7 rounded-pill flex items-center justify-center text-text-muted bg-surface-raised border border-border hover:text-accent hover:border-accent transition-colors focus:outline-none focus:ring-2 focus:ring-accent"
         >
           <span aria-hidden className="text-caption font-mono leading-none">+</span>
         </button>
         <button
           onClick={onDelete}
-          aria-label={`Delete ${recipe.name}`}
-          title="Delete recipe"
+          aria-label={t("library.card.delete_aria", { name: recipe.name })}
+          title={t("library.card.delete_title")}
           className="w-7 h-7 rounded-pill flex items-center justify-center text-text-muted bg-surface-raised border border-border hover:text-danger hover:border-danger transition-colors focus:outline-none focus:ring-2 focus:ring-danger"
         >
           <span aria-hidden className="text-body-sm font-mono leading-none">×</span>
@@ -285,14 +286,14 @@ function RecipeCard({
 
       <dl className="grid grid-cols-3 gap-x-2 gap-y-3 mt-auto pt-4 border-t border-border font-mono">
         <Stat
-          label="Vol"
+          label={t("library.card.stat.vol")}
           value={(() => {
             const v = formatVolume(recipe.batch_size, prefs);
             return `${v.value.toFixed(0)} ${v.unit}`;
           })()}
         />
         <Stat
-          label="OG"
+          label={t("library.card.stat.og")}
           value={
             recipe.original_gravity
               ? formatSpecificGravity(recipe.original_gravity.value, prefs).display
@@ -300,7 +301,7 @@ function RecipeCard({
           }
         />
         <Stat
-          label="ABV"
+          label={t("library.card.stat.abv")}
           value={
             recipe.alcohol_by_volume
               ? `${recipe.alcohol_by_volume.value.toFixed(1)}%`
@@ -308,7 +309,7 @@ function RecipeCard({
           }
         />
         <Stat
-          label="IBU"
+          label={t("library.card.stat.ibu")}
           value={claimedIbu !== null ? claimedIbu.toString() : "—"}
           sub={
             computedIbu !== null && claimedIbu !== null
@@ -324,7 +325,7 @@ function RecipeCard({
           }
         />
         <Stat
-          label="FG"
+          label={t("library.card.stat.fg")}
           value={
             recipe.final_gravity
               ? formatSpecificGravity(recipe.final_gravity.value, prefs).display
@@ -332,7 +333,7 @@ function RecipeCard({
           }
         />
         <Stat
-          label="Water"
+          label={t("library.card.stat.water")}
           value={
             totalWaterL !== null
               ? (() => {
@@ -341,7 +342,7 @@ function RecipeCard({
                 })()
               : "—"
           }
-          sub={activeProfile ? "rig" : "default"}
+          sub={activeProfile ? t("library.card.water.rig") : t("library.card.water.default")}
         />
       </dl>
     </button>
@@ -384,12 +385,13 @@ function ProfileBadge({
       <button
         onClick={onGoEquipment}
         className="mt-3 inline-flex items-center gap-2 rounded-pill bg-surface border border-border px-3 py-1.5 text-caption text-text-muted hover:text-text hover:border-border-strong transition-colors"
-        title="Equipment profile in use — click to edit"
+        title={t("library.profile_in_use_title")}
       >
         <span aria-hidden className="block w-1.5 h-1.5 rounded-pill bg-success" />
         <span className="font-mono">
-          Brewing on <span className="text-text">{profile.name}</span> ·{" "}
-          {profile.efficiency_pct}% eff
+          {t("library.profile_brewing_on")}{" "}
+          <span className="text-text">{profile.name}</span> ·{" "}
+          {t("library.profile_eff_suffix", { eff: profile.efficiency_pct })}
         </span>
       </button>
     );

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   clearWerbData,
   copyKeysToBackend,
@@ -193,6 +193,17 @@ function CostAdjustmentField({
   onChange: (v: number) => void;
 }) {
   const t = useT();
+  // Same controlled-text pattern as RecipeEditor's InlineNumber: keep
+  // a local string buffer so the user can type "120" or "120,5" without
+  // React stripping in-flight characters; commit / clamp on blur.
+  const clamp = (n: number) => Math.max(10, Math.min(300, n));
+  const display = (n: number) =>
+    Number.isFinite(n) ? String(Math.round(n)) : "100";
+  const [text, setText] = useState(() => display(value));
+  const focusedRef = useRef(false);
+  useEffect(() => {
+    if (!focusedRef.current) setText(display(value));
+  }, [value]);
   return (
     <div>
       <p className="text-caption uppercase tracking-widest text-text-muted mb-2">
@@ -200,16 +211,25 @@ function CostAdjustmentField({
       </p>
       <div className="flex items-baseline gap-2 bg-bg border border-border rounded-lg px-3 py-2 focus-within:border-accent max-w-[12rem]">
         <input
-          type="number"
-          value={Number.isFinite(value) ? value : 100}
-          step={5}
-          min={10}
-          max={300}
-          onChange={(e) => {
-            const n = Number(e.target.value);
-            onChange(Number.isFinite(n) ? Math.max(10, Math.min(300, n)) : 100);
+          type="text"
+          inputMode="numeric"
+          value={text}
+          onFocus={() => {
+            focusedRef.current = true;
           }}
-          className="w-full bg-transparent text-body font-mono tabular-nums text-text focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
+          onBlur={() => {
+            focusedRef.current = false;
+            const parsed = Number(text.replace(",", "."));
+            const next = Number.isFinite(parsed) ? clamp(parsed) : 100;
+            setText(display(next));
+            onChange(next);
+          }}
+          onChange={(e) => {
+            setText(e.target.value);
+            const parsed = Number(e.target.value.replace(",", "."));
+            if (Number.isFinite(parsed)) onChange(clamp(parsed));
+          }}
+          className="w-full bg-transparent text-body font-mono tabular-nums text-text focus:outline-none"
         />
         <span className="text-caption font-mono text-text-muted shrink-0">%</span>
       </div>

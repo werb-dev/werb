@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, type ReactNode } from "react";
 import { usePersistedJson } from "../storage/index.ts";
 import { DEFAULT_PREFS, type UnitPreferences } from "./units-format.ts";
-import { translate } from "./i18n.ts";
+import { bcp47, translate, type Locale } from "./i18n.ts";
 
 /**
  * React context for user preferences. Currently just unit choices;
@@ -76,4 +76,21 @@ export function useT(): (key: string, vars?: Record<string, string | number>) =>
     (key, vars) => translate(locale, key, vars),
     [locale],
   );
+}
+
+/**
+ * Active locale (internal Werb code). Use for code that needs to
+ * branch on locale — date / number formatters mostly.
+ */
+export function useLocale(): Locale {
+  return useContext(UnitsContext).prefs.locale;
+}
+
+/**
+ * Active locale as a BCP-47 tag (e.g. "fr-FR"). Pair with `Intl` or
+ * `toLocaleString` so dates and numbers respect Settings → Language
+ * rather than the OS locale.
+ */
+export function useBcp47(): string {
+  return bcp47(useContext(UnitsContext).prefs.locale);
 }

@@ -32,6 +32,15 @@ export function detectLocale(): Locale {
   return "en";
 }
 
+/**
+ * Map an internal locale to a BCP-47 tag for `Intl` / `toLocaleString`.
+ * Used by every date / time formatter so output respects the user's
+ * Settings choice rather than the OS locale.
+ */
+export function bcp47(locale: Locale): string {
+  return locale === "fr" ? "fr-FR" : "en-US";
+}
+
 interface Entry {
   en: string;
   fr: string;
@@ -77,6 +86,21 @@ const STRINGS: Record<string, Entry> = {
   "library.import_failed": { en: "Import failed", fr: "Échec de l'import" },
   "library.import_notice": { en: "Import notice", fr: "Information d'import" },
   "library.profile_default": { en: "No equipment profile — using defaults", fr: "Pas de profil de matériel — valeurs par défaut" },
+  "library.card.duplicate_title": { en: "Duplicate recipe", fr: "Dupliquer la recette" },
+  "library.card.delete_title": { en: "Delete recipe", fr: "Supprimer la recette" },
+  "library.card.duplicate_aria": { en: "Duplicate {name}", fr: "Dupliquer {name}" },
+  "library.card.delete_aria": { en: "Delete {name}", fr: "Supprimer {name}" },
+  "library.card.stat.vol": { en: "Vol", fr: "Vol" },
+  "library.card.stat.og": { en: "OG", fr: "OG" },
+  "library.card.stat.abv": { en: "ABV", fr: "ABV" },
+  "library.card.stat.ibu": { en: "IBU", fr: "IBU" },
+  "library.card.stat.fg": { en: "FG", fr: "FG" },
+  "library.card.stat.water": { en: "Water", fr: "Eau" },
+  "library.card.water.rig": { en: "rig", fr: "matériel" },
+  "library.card.water.default": { en: "default", fr: "défaut" },
+  "library.profile_in_use_title": { en: "Equipment profile in use — click to edit", fr: "Profil de matériel actif — cliquez pour modifier" },
+  "library.profile_brewing_on": { en: "Brewing on", fr: "Brassage sur" },
+  "library.profile_eff_suffix": { en: "{eff}% eff", fr: "{eff} % eff" },
 
   // ─── Library onboarding ───────────────────────────────────────
   "library.onboarding.title": { en: "Welcome to Werb", fr: "Bienvenue dans Werb" },
@@ -103,6 +127,10 @@ const STRINGS: Record<string, Entry> = {
   // ─── Brew ──────────────────────────────────────────────────────
   "brew.session_label": { en: "Brew session · {status}", fr: "Session de brassage · {status}" },
   "brew.started_at": { en: "Started {time}", fr: "Démarré le {time}" },
+  "brew.step_elapsed": { en: "{duration} elapsed", fr: "{duration} écoulées" },
+  "brew.step_finished": { en: "{duration} · finished {time}", fr: "{duration} · terminé à {time}" },
+  "brew.thickness_unit": { en: "L/kg", fr: "L/kg" },
+  "brew.tasting.aria_rating": { en: "Overall rating", fr: "Note globale" },
   "brew.status.draft": { en: "Draft", fr: "Brouillon" },
   "brew.status.in_progress": { en: "In progress", fr: "En cours" },
   "brew.status.completed": { en: "Completed", fr: "Terminé" },
@@ -170,6 +198,22 @@ const STRINGS: Record<string, Entry> = {
     fr: "{in_progress} en cours · {completed} terminée(s)",
   },
   "journal.could_not_load": { en: "Could not load brew log", fr: "Impossible de charger le journal de brassage" },
+  "journal.row.steps": { en: "{count} step{s}", fr: "{count} étape{s}" },
+  "journal.row.steps_progress": { en: "{done}/{total} steps", fr: "{done}/{total} étapes" },
+  "journal.row.readings": { en: "{count} reading{s}", fr: "{count} relevé{s}" },
+  "journal.row.untitled_recipe": { en: "Untitled recipe", fr: "Recette sans nom" },
+  "journal.status.draft": { en: "Draft", fr: "Brouillon" },
+  "journal.status.active": { en: "Active", fr: "Actif" },
+  "journal.status.done": { en: "Done", fr: "Terminé" },
+  "journal.status.abandoned": { en: "Abandoned", fr: "Abandonné" },
+  "journal.export.aria": { en: "Export this brew log", fr: "Exporter ce journal" },
+  "journal.export.html_label": { en: "Printable HTML / PDF", fr: "HTML / PDF imprimable" },
+  "journal.export.html_sub": { en: "Open in any browser, print to PDF", fr: "À ouvrir dans n'importe quel navigateur, imprimable en PDF" },
+  "journal.export.json_label": { en: "JSON", fr: "JSON" },
+  "journal.export.json_sub": { en: "Full session data — steps, measurements, notes", fr: "Données complètes — étapes, mesures, notes" },
+  "journal.duration.minutes": { en: "{n} min", fr: "{n} min" },
+  "journal.duration.hours": { en: "{h} h", fr: "{h} h" },
+  "journal.duration.hours_minutes": { en: "{h} h {m} min", fr: "{h} h {m} min" },
 
   // ─── Settings ─────────────────────────────────────────────────
   "settings.title": { en: "Sync & storage", fr: "Synchronisation et stockage" },
@@ -634,6 +678,57 @@ const STRINGS: Record<string, Entry> = {
     en: "If this keeps happening, file an issue and include the message above.",
     fr: "Si le problème persiste, ouvrez une issue en incluant le message ci-dessus.",
   },
+
+  // ─── Recipe editor ────────────────────────────────────────────
+  "editor.title": { en: "Edit recipe", fr: "Modifier la recette" },
+  "editor.intro": {
+    en: "Changes are kept locally until you press Save changes.",
+    fr: "Les modifications sont gardées localement jusqu'à ce que vous appuyiez sur Enregistrer.",
+  },
+  "editor.cancel": { en: "Cancel", fr: "Annuler" },
+  "editor.save": { en: "Save changes", fr: "Enregistrer" },
+  "editor.section.recipe": { en: "Recipe", fr: "Recette" },
+  "editor.section.fermentables": { en: "Fermentables", fr: "Fermentescibles" },
+  "editor.section.hops": { en: "Hops", fr: "Houblons" },
+  "editor.section.cultures": { en: "Cultures", fr: "Levures" },
+  "editor.section.mash": { en: "Mash schedule", fr: "Schéma d'empâtage" },
+  "editor.section.miscs": { en: "Miscellaneous", fr: "Divers" },
+  "editor.field.name": { en: "Name", fr: "Nom" },
+  "editor.field.type": { en: "Type", fr: "Type" },
+  "editor.field.author": { en: "Author", fr: "Auteur" },
+  "editor.field.batch_size": { en: "Batch size", fr: "Volume" },
+  "editor.field.brewhouse_eff": { en: "Brewhouse efficiency", fr: "Efficacité de brassage" },
+  "editor.field.notes": { en: "Notes", fr: "Notes" },
+  "editor.field.style": { en: "Style", fr: "Style" },
+  "editor.col.name": { en: "Name", fr: "Nom" },
+  "editor.col.type": { en: "Type", fr: "Type" },
+  "editor.col.amount": { en: "Amount", fr: "Quantité" },
+  "editor.col.color": { en: "Color", fr: "Couleur" },
+  "editor.col.yield": { en: "Yield", fr: "Rdt" },
+  "editor.col.use": { en: "Use", fr: "Usage" },
+  "editor.col.time": { en: "Time", fr: "Temps" },
+  "editor.col.alpha": { en: "Alpha", fr: "Alpha" },
+  "editor.col.form": { en: "Form", fr: "Forme" },
+  "editor.col.attenuation": { en: "Attenuation", fr: "Atténuation" },
+  "editor.col.temp": { en: "Temp", fr: "Temp." },
+  "editor.col.infusion": { en: "Infusion", fr: "Infusion" },
+  "editor.add.fermentable": { en: "+ Add fermentable", fr: "+ Ajouter un fermentescible" },
+  "editor.add.hop": { en: "+ Add hop", fr: "+ Ajouter un houblon" },
+  "editor.add.culture": { en: "+ Add culture", fr: "+ Ajouter une levure" },
+  "editor.add.mash_step": { en: "+ Add mash step", fr: "+ Ajouter une étape d'empâtage" },
+  "editor.add.misc": { en: "+ Add miscellaneous", fr: "+ Ajouter un ingrédient divers" },
+  "editor.row.delete": { en: "Delete", fr: "Supprimer" },
+  "editor.mash.empty": { en: "No mash steps. Add one below.", fr: "Aucune étape d'empâtage. Ajoutez-en une ci-dessous." },
+  "editor.style.clear_title": { en: "Clear style", fr: "Effacer le style" },
+  "editor.style.clear": { en: "Clear", fr: "Effacer" },
+  "editor.hop.use.boil": { en: "Boil", fr: "Ébullition" },
+  "editor.hop.use.dry_hop": { en: "Dry hop", fr: "Dry-hop" },
+  "editor.hop.use.mash": { en: "Mash", fr: "Empâtage" },
+  "editor.hop.use.package": { en: "Package", fr: "Conditionnement" },
+  "editor.misc.use.boil": { en: "Boil", fr: "Ébullition" },
+  "editor.misc.use.mash": { en: "Mash", fr: "Empâtage" },
+  "editor.misc.use.ferment": { en: "Ferment", fr: "Fermentation" },
+  "editor.misc.use.package": { en: "Package", fr: "Conditionnement" },
 
   // ─── Structured errors (WerbError codes) ─────────────────────
   // Import (BeerJSON / BeerXML)

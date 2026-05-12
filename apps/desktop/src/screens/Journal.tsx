@@ -1,8 +1,10 @@
 import { useState } from "react";
 import type { WerbSession } from "@werb/types";
 import { useBrewLog } from "../hooks/useBrewLog.ts";
-import { useT } from "../data/preferences.tsx";
+import { useBcp47, useT } from "../data/preferences.tsx";
 import { translateError, type WerbError } from "../data/errors.ts";
+
+type Translator = (key: string, vars?: Record<string, string | number>) => string;
 
 interface JournalScreenProps {
   /** Open a specific session in the brew screen. */
@@ -98,10 +100,12 @@ function SessionRow({
   onExportJson: () => Promise<{ error?: WerbError | undefined }>;
   onExportHtml: () => Promise<{ error?: WerbError | undefined }>;
 }) {
+  const t = useT();
+  const localeTag = useBcp47();
   const stepsDone = session.steps.filter((s) => s.status === "done").length;
   const totalSteps = session.steps.length;
   const measurementsCount = session.measurements?.length ?? 0;
-  const duration = sessionDuration(session);
+  const duration = sessionDuration(session, t);
 
   return (
     <div className="px-4 py-4 sm:px-6 sm:py-5 hover:bg-surface-raised/40 transition-colors">
@@ -112,17 +116,18 @@ function SessionRow({
           className="min-w-0 flex-1 text-left"
         >
           <p className="text-body font-medium truncate capitalize">
-            {(session.recipe_name ?? "Untitled recipe").toLowerCase()}
+            {(session.recipe_name ?? t("journal.row.untitled_recipe")).toLowerCase()}
           </p>
           <p className="text-body-sm text-text-muted mt-1 font-mono tabular-nums">
-            {formatDate(session.started_at)}
+            {formatDate(session.started_at, localeTag)}
             {duration && ` · ${duration}`}
             {stepsDone < totalSteps
-              ? ` · ${stepsDone}/${totalSteps} steps`
+              ? ` · ${t("journal.row.steps_progress", { done: stepsDone, total: totalSteps })}`
               : totalSteps > 0
-              ? ` · ${totalSteps} steps`
+              ? ` · ${t("journal.row.steps", { count: totalSteps })}`
               : ""}
-            {measurementsCount > 0 && ` · ${measurementsCount} reading${measurementsCount === 1 ? "" : "s"}`}
+            {measurementsCount > 0 &&
+              ` · ${t("journal.row.readings", { count: measurementsCount })}`}
           </p>
           {firstNote(session) && (
             <p className="text-caption text-text-muted mt-2 line-clamp-2">
@@ -160,8 +165,8 @@ function ExportMenu({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        title="Export this brew log"
-        aria-label="Export this brew log"
+        title={t("journal.export.aria")}
+        aria-label={t("journal.export.aria")}
         className="w-8 h-8 rounded-pill flex items-center justify-center text-text-muted hover:text-text hover:bg-surface transition-colors text-body-sm"
       >
         ⋯
@@ -180,10 +185,10 @@ function ExportMenu({
               className="block w-full text-left px-4 py-3 hover:bg-surface focus:bg-surface border-b border-border transition-colors"
             >
               <p className="text-body-sm font-medium text-text">
-                Printable HTML / PDF
+                {t("journal.export.html_label")}
               </p>
               <p className="text-caption text-text-muted mt-0.5">
-                Open in any browser, print to PDF
+                {t("journal.export.html_sub")}
               </p>
             </button>
             <button
@@ -191,9 +196,9 @@ function ExportMenu({
               onClick={() => run(onExportJson)}
               className="block w-full text-left px-4 py-3 hover:bg-surface focus:bg-surface transition-colors"
             >
-              <p className="text-body-sm font-medium text-text">JSON</p>
+              <p className="text-body-sm font-medium text-text">{t("journal.export.json_label")}</p>
               <p className="text-caption text-text-muted mt-0.5">
-                Full session data — steps, measurements, notes
+                {t("journal.export.json_sub")}
               </p>
             </button>
           </div>
@@ -204,34 +209,35 @@ function ExportMenu({
 }
 
 function StatusBadge({ status }: { status: WerbSession["status"] }) {
+  const t = useT();
   const styles: Record<WerbSession["status"], string> = {
     draft: "bg-surface-raised text-text-muted",
     in_progress: "bg-accent/20 text-accent",
     completed: "bg-success/20 text-success",
     abandoned: "bg-surface-raised text-text-muted line-through",
   };
-  const labels: Record<WerbSession["status"], string> = {
-    draft: "Draft",
-    in_progress: "Active",
-    completed: "Done",
-    abandoned: "Abandoned",
+  const keys: Record<WerbSession["status"], string> = {
+    draft: "journal.status.draft",
+    in_progress: "journal.status.active",
+    completed: "journal.status.done",
+    abandoned: "journal.status.abandoned",
   };
   return (
     <span
       className={`shrink-0 px-3 py-1 rounded-pill text-caption font-medium ${styles[status]}`}
     >
-      {labels[status]}
+      {t(keys[status])}
     </span>
   );
 }
 
 function EmptyState() {
+  const t = useT();
   return (
     <div className="rounded-xl bg-surface border border-border border-dashed p-8 sm:p-12 text-center">
-      <p className="text-body text-text">No brews yet.</p>
+      <p className="text-body text-text">{t("journal.empty")}</p>
       <p className="text-body-sm text-text-muted mt-2 max-w-md mx-auto">
-        Open a recipe and tap <span className="text-text">Start brewing</span> to
-        log your first session. It'll show up here once you do.
+        {t("journal.empty_hint")}
       </p>
     </div>
   );
@@ -267,21 +273,23 @@ function countByStatus(sessions: WerbSession[]) {
   return counts;
 }
 
-function sessionDuration(session: WerbSession): string | null {
+function sessionDuration(session: WerbSession, t: Translator): string | null {
   if (session.status !== "completed" || !session.completed_at) return null;
   const ms = new Date(session.completed_at).getTime() - new Date(session.started_at).getTime();
   if (!Number.isFinite(ms) || ms <= 0) return null;
   const minutes = Math.round(ms / 60_000);
-  if (minutes < 60) return `${minutes} min`;
+  if (minutes < 60) return t("journal.duration.minutes", { n: minutes });
   const hours = Math.floor(minutes / 60);
   const rem = minutes - hours * 60;
-  return rem > 0 ? `${hours} h ${rem} min` : `${hours} h`;
+  return rem > 0
+    ? t("journal.duration.hours_minutes", { h: hours, m: rem })
+    : t("journal.duration.hours", { h: hours });
 }
 
-function formatDate(iso: string): string {
+function formatDate(iso: string, localeTag: string): string {
   try {
     const d = new Date(iso);
-    return d.toLocaleDateString(undefined, {
+    return d.toLocaleDateString(localeTag, {
       year: "numeric",
       month: "short",
       day: "numeric",

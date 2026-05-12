@@ -12,7 +12,7 @@ import { computeWater } from "@werb/calc";
 import { useBrewSession, useScreenWakeLock, useTick } from "../hooks/useBrewSession.ts";
 import { profileToWaterOverrides, type ProfileWithId } from "../data/equipment.ts";
 import { usePersistedJson } from "../storage/index.ts";
-import { useT, useUnits } from "../data/preferences.tsx";
+import { useBcp47, useT, useUnits } from "../data/preferences.tsx";
 import {
   formatCelsius,
   formatLiters,
@@ -246,6 +246,7 @@ function Header({
   onBack: () => void;
 }) {
   const t = useT();
+  const localeTag = useBcp47();
   return (
     <header className="mb-8 sm:mb-10">
       <button
@@ -265,7 +266,7 @@ function Header({
             {recipe.name.toLowerCase()}
           </h1>
           <p className="text-body-sm text-text-muted mt-2 font-mono">
-            {t("brew.started_at", { time: new Date(session.started_at).toLocaleString() })}
+            {t("brew.started_at", { time: new Date(session.started_at).toLocaleString(localeTag) })}
           </p>
         </div>
         <WakeLockBadge held={wakeLockHeld} />
@@ -530,7 +531,7 @@ function stepStats(
       return [
         { value: vol(ctx.water.mash_water_l), label: t("brew.stat.strike_volume") },
         {
-          value: `${(ctx.water.mash_water_l / ctx.totalMashedKg).toFixed(2)} L/kg`,
+          value: `${(ctx.water.mash_water_l / ctx.totalMashedKg).toFixed(2)} ${t("brew.thickness_unit")}`,
           label: t("brew.stat.thickness"),
         },
       ];
@@ -546,7 +547,7 @@ function stepStats(
         { value: vol(ctx.water.mash_water_l), label: t("brew.stat.strike_water") },
         { value: mass(ctx.totalMashedKg), label: t("brew.stat.grain") },
         {
-          value: `${(ctx.water.mash_water_l / ctx.totalMashedKg).toFixed(2)} L/kg`,
+          value: `${(ctx.water.mash_water_l / ctx.totalMashedKg).toFixed(2)} ${t("brew.thickness_unit")}`,
           label: t("brew.stat.thickness"),
         },
       ];
@@ -797,6 +798,7 @@ function TimelineRow({
   prefs: UnitPreferences;
 }) {
   const t = useT();
+  const localeTag = useBcp47();
   const icon =
     step.status === "done"
       ? "✓"
@@ -832,18 +834,21 @@ function TimelineRow({
           <StepInfo step={step} ctx={ctx} elapsedSec={elapsedSec} variant="row" prefs={prefs} />
           {step.status === "active" && elapsedSec > 0 && (
             <p className="font-mono text-caption text-accent mt-1 tabular-nums">
-              {formatDuration(elapsedSec)} elapsed
+              {t("brew.step_elapsed", { duration: formatDuration(elapsedSec) })}
             </p>
           )}
           {step.completed_at && step.started_at && (
             <p className="font-mono text-caption text-text-muted mt-1">
-              {formatDuration(
-                Math.floor(
-                  (new Date(step.completed_at).getTime() - new Date(step.started_at).getTime()) /
-                    1000,
+              {t("brew.step_finished", {
+                duration: formatDuration(
+                  Math.floor(
+                    (new Date(step.completed_at).getTime() -
+                      new Date(step.started_at).getTime()) /
+                      1000,
+                  ),
                 ),
-              )}{" "}
-              · finished {new Date(step.completed_at).toLocaleTimeString()}
+                time: new Date(step.completed_at).toLocaleTimeString(localeTag),
+              })}
             </p>
           )}
           {isActive && (
@@ -996,6 +1001,7 @@ function MeasurementsSection({
   const spec = MEASUREMENT_KINDS.find((k) => k.kind === kind)!;
   const [value, setValue] = useState<number>(spec.defaultValue);
   const [notes, setNotes] = useState("");
+  const localeTag = useBcp47();
 
   // Re-seed value when kind changes so the input is sensible for the new
   // unit (e.g. switching gravity → temperature shouldn't leave 1.050 in a °C
@@ -1122,7 +1128,7 @@ function MeasurementsSection({
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
                   <span className="text-caption text-text-muted font-mono tabular-nums">
-                    {formatTimeOfDay(m.at)}
+                    {formatTimeOfDay(m.at, localeTag)}
                   </span>
                   {!disabled && (
                     <button
@@ -1356,6 +1362,7 @@ function TastingSummary({
   onClear: () => void;
 }) {
   const t = useT();
+  const localeTag = useBcp47();
   return (
     <div className="rounded-xl bg-surface border border-border p-5 sm:p-6">
       <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-6 items-start">
@@ -1363,7 +1370,7 @@ function TastingSummary({
           <div className="flex items-baseline justify-between gap-3 flex-wrap">
             <StarRating value={tasting.overall_rating} readOnly />
             <p className="font-mono text-caption text-text-muted">
-              {new Date(tasting.tasted_at).toLocaleDateString(undefined, {
+              {new Date(tasting.tasted_at).toLocaleDateString(localeTag, {
                 year: "numeric",
                 month: "short",
                 day: "numeric",
@@ -1455,9 +1462,10 @@ function StarRating({
   onChange?: (v: number) => void;
   readOnly?: boolean;
 }) {
+  const t = useT();
   const stars = [1, 2, 3, 4, 5];
   return (
-    <div className="flex gap-1" role="radiogroup" aria-label="Overall rating">
+    <div className="flex gap-1" role="radiogroup" aria-label={t("brew.tasting.aria_rating")}>
       {stars.map((n) => {
         const filled = n <= value;
         const className = `text-h3 leading-none transition-colors ${
@@ -1487,9 +1495,9 @@ function StarRating({
   );
 }
 
-function formatTimeOfDay(iso: string): string {
+function formatTimeOfDay(iso: string, localeTag: string): string {
   const d = new Date(iso);
-  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleTimeString(localeTag, { hour: "2-digit", minute: "2-digit" });
 }
 
 
