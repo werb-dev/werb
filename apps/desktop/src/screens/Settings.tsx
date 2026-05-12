@@ -116,6 +116,16 @@ function UnitsCard() {
           options={SUPPORTED_LOCALES.map((l) => ({ value: l.value, label: l.label }))}
         />
         <UnitPicker
+          label={t("settings.units.theme")}
+          value={prefs.theme}
+          onChange={(v) => update("theme", v)}
+          options={[
+            { value: "auto", label: t("settings.units.opt.theme_auto") },
+            { value: "dark", label: t("settings.units.opt.theme_dark") },
+            { value: "light", label: t("settings.units.opt.theme_light") },
+          ]}
+        />
+        <UnitPicker
           label={t("settings.units.temperature")}
           value={prefs.temperature}
           onChange={(v) => update("temperature", v)}

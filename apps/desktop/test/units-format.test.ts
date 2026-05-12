@@ -34,6 +34,7 @@ const IMPERIAL: UnitPreferences = {
   currency: "USD",
   cost_inflation_pct: 100,
   locale: "en",
+  theme: "auto",
 };
 
 describe("formatTemperature", () => {

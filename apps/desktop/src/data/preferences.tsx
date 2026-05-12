@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, type ReactNode } from "react";
 import { usePersistedJson } from "../storage/index.ts";
 import { DEFAULT_PREFS, type UnitPreferences } from "./units-format.ts";
 import { bcp47, translate, type Locale } from "./i18n.ts";
@@ -41,6 +41,18 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
   // don't render `undefined` through the formatters. New fields take
   // their default value; existing fields are left alone.
   const prefs: UnitPreferences = { ...DEFAULT_PREFS, ...storedPrefs };
+
+  // Reflect the active theme on <html>. "auto" leaves the attribute
+  // off so CSS @media (prefers-color-scheme) wins; "light" / "dark"
+  // override that with an explicit data-theme. Tailwind utilities
+  // pick up the new --color-* var values automatically — no class
+  // rewrites needed.
+  useEffect(() => {
+    const root = document.documentElement;
+    if (prefs.theme === "auto") root.removeAttribute("data-theme");
+    else root.setAttribute("data-theme", prefs.theme);
+  }, [prefs.theme]);
+
   return (
     <UnitsContext.Provider value={{ prefs, setPrefs }}>
       {children}

@@ -2,10 +2,25 @@
 
 /* ─── Design tokens ────────────────────────────────────────────────────────
    Mapped from design/moodboard discussion. Pinterest 2026 palette as
-   semantic accents, layered on a dark Cassis-derived neutral scale.
+   semantic accents, layered on a dark Cassis-derived neutral scale —
+   that's the signature look.
+
+   A light variant exists for outdoor brewing on sunny days where the
+   dark wash gets unreadable. Two override paths:
+
+   1. System auto: `@media (prefers-color-scheme: light)` overrides
+      the dark defaults only when the user hasn't picked a manual
+      override (`html:not([data-theme])`).
+   2. Manual: `<html data-theme="light">` is set by the React layer
+      when the brewer picks Theme = Light in Settings. The same
+      attribute with "dark" forces dark regardless of OS preference.
+
+   Tailwind 4's @theme generates utilities that resolve the CSS
+   variables at runtime, so overriding the vars below carries through
+   to every `bg-bg`, `text-text`, `bg-accent`, etc. across the app.
    ─────────────────────────────────────────────────────────────────────── */
 @theme {
-  /* Colors */
+  /* Colors (dark — default) */
   --color-bg: #1a0e13;
   --color-surface: #351e28;
   --color-surface-raised: #4a2c36;
@@ -61,13 +76,68 @@
   --radius-pill: 9999px;
 }
 
+/* ─── Light theme overrides ───────────────────────────────────────────────
+   Warm cream base (not pure white — keeps the editorial Pinterest feel),
+   Cassis dark used as ink for text. Saturated semantic colors are deepened
+   on the light side so contrast against a cream background stays ≥ 4.5:1
+   for body text and ≥ 3:1 for large UI; the dark-side accent #ff5c34
+   deepens to #e84a1f, the closest hue that still reads as the same
+   orange while clearing AA on cream. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    --color-bg: #faf6f0;
+    --color-surface: #f1ebe2;
+    --color-surface-raised: #e6ddd0;
+    --color-border: rgb(26 14 19 / 0.10);
+    --color-border-strong: rgb(26 14 19 / 0.18);
+    --color-text: #1a0e13;
+    --color-text-muted: #6e5c52;
+
+    --color-accent: #e84a1f;
+    --color-success: #5e7148;
+    --color-info: #3a6b87;
+    --color-data: #8c7c1a;
+    --color-warning: #9a6f20;
+    --color-danger: #8a2a1f;
+  }
+}
+
+:root[data-theme="light"] {
+  --color-bg: #faf6f0;
+  --color-surface: #f1ebe2;
+  --color-surface-raised: #e6ddd0;
+  --color-border: rgb(26 14 19 / 0.10);
+  --color-border-strong: rgb(26 14 19 / 0.18);
+  --color-text: #1a0e13;
+  --color-text-muted: #6e5c52;
+
+  --color-accent: #e84a1f;
+  --color-success: #5e7148;
+  --color-info: #3a6b87;
+  --color-data: #8c7c1a;
+  --color-warning: #9a6f20;
+  --color-danger: #8a2a1f;
+}
+
 /* Always-on Inter OpenType features. tnum is non-negotiable for brewing
    numeric tables (volumes, gravities, IBU). cv11/ss03 are Inter stylistic
-   alternates that add character without hurting legibility. */
+   alternates that add character without hurting legibility.
+
+   `color-scheme` follows the theme so native form controls (scrollbars,
+   text-input carets, date pickers) match. The base value is "dark";
+   data-theme="light" and the prefers-color-scheme:light branch flip it. */
 @layer base {
   html {
     color-scheme: dark;
     font-feature-settings: "tnum", "cv11", "ss03";
+  }
+  html[data-theme="light"] {
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: light) {
+    html:not([data-theme]) {
+      color-scheme: light;
+    }
   }
   body {
     font-feature-settings: "tnum", "cv11", "ss03";

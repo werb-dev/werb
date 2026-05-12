@@ -48,6 +48,13 @@ export interface UnitPreferences {
    * (see `detectLocale`); changeable from Settings.
    */
   locale: Locale;
+  /**
+   * Visual theme. "auto" follows `prefers-color-scheme`; "dark" /
+   * "light" force the choice regardless of OS preference. The dark
+   * Cassis palette is the signature look; light is meant for
+   * outdoor brewing on sunny days where dark mode washes out.
+   */
+  theme: "auto" | "dark" | "light";
 }
 
 export const DEFAULT_PREFS: UnitPreferences = {
@@ -59,6 +66,7 @@ export const DEFAULT_PREFS: UnitPreferences = {
   currency: "EUR",
   cost_inflation_pct: 100,
   locale: detectLocale(),
+  theme: "auto",
 };
 
 const CURRENCY_SYMBOL: Record<UnitPreferences["currency"], string> = {

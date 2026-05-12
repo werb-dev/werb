@@ -241,6 +241,10 @@ const STRINGS: Record<string, Entry> = {
     fr: "Ajuste les prix d'ingrédients groupés utilisés dans la section Coût. 100 % = référence EUR. Montez à 110-130 si votre fournisseur est plus cher localement, baissez pour des prix en gros / coopérative.",
   },
   "settings.units.language": { en: "Language", fr: "Langue" },
+  "settings.units.theme": { en: "Theme", fr: "Thème" },
+  "settings.units.opt.theme_auto": { en: "Auto", fr: "Auto" },
+  "settings.units.opt.theme_dark": { en: "Dark", fr: "Sombre" },
+  "settings.units.opt.theme_light": { en: "Light", fr: "Clair" },
   "settings.privacy.title": { en: "Data & privacy", fr: "Données et confidentialité" },
   "settings.privacy.subtitle": { en: "How Werb handles your data.", fr: "Comment Werb traite vos données." },
   "settings.privacy.local": {
