@@ -6,6 +6,13 @@ Werb sits at the intersection of [BeerSmith](https://beersmith.com/) (calculatio
 
 Runs as a [Tauri](https://tauri.app/) desktop app on macOS / Windows / Linux, and as a Progressive Web App in any modern browser.
 
+| | |
+|-|-|
+| ![Library](./docs/screenshots/library.png) | ![Recipe](./docs/screenshots/recipe.png) |
+| Library — every recipe at a glance. | Recipe — targets, water, hops, tasting profile. |
+| ![Brew](./docs/screenshots/brew.png) | ![Journal](./docs/screenshots/journal.png) |
+| Brew — live timeline, hop schedule, measurements. | Journal — every past brew, exportable. |
+
 ## Why
 
 Most brewing apps lock your recipes inside a proprietary cloud silo. Werb takes the opposite stance: your recipes are plain BeerJSON files on your disk, your brew sessions are plain JSON next to them, and the calc engine is a typed open library you can audit. If Werb disappears tomorrow, your data is still BeerJSON — readable in every other brewing tool.
@@ -102,4 +109,6 @@ Issues and PRs welcome. The contract-first workflow makes contributions easy to 
 2. If your change touches a calculation, write the JSON Schema first.
 3. Regenerate types (`pnpm gen:types`).
 4. Implement + add tests.
-5. `pnpm test` should stay green.
+5. `pnpm lint && pnpm typecheck && pnpm test && pnpm build` should stay green.
+
+Before tagging a release, walk through [docs/SMOKE_TEST.md](./docs/SMOKE_TEST.md) on a clean profile.
