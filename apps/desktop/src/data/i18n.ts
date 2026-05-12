@@ -213,6 +213,94 @@ const STRINGS: Record<string, Entry> = {
   },
   "settings.privacy.source": { en: "Source code", fr: "Code source" },
 
+  // ─── Settings — unit option labels ───────────────────────────
+  "settings.units.opt.liters": { en: "Liters", fr: "Litres" },
+  "settings.units.opt.us_gallons": { en: "US gallons", fr: "Gallons US" },
+  "settings.units.opt.kg_g": { en: "kg / g", fr: "kg / g" },
+  "settings.units.opt.lb_oz": { en: "lb / oz", fr: "lb / oz" },
+  "settings.units.opt.sg": { en: "Specific gravity (1.052)", fr: "Densité (1,052)" },
+  "settings.units.opt.plato": { en: "Plato (12.9 °P)", fr: "Plato (12,9 °P)" },
+  "settings.units.opt.eur": { en: "€ Euro", fr: "€ Euro" },
+  "settings.units.opt.usd": { en: "$ US dollar", fr: "$ Dollar US" },
+  "settings.units.opt.gbp": { en: "£ Pound sterling", fr: "£ Livre sterling" },
+
+  // ─── Settings — Data card ────────────────────────────────────
+  "settings.data.intro": {
+    en: "Export a JSON backup of your recipes, equipment, and brew sessions — or wipe everything for a fresh start. Unit preferences and sync settings are stored separately and aren't touched by these actions.",
+    fr: "Exportez une sauvegarde JSON de vos recettes, équipements et sessions — ou effacez tout pour repartir à zéro. Les préférences d'unités et de synchronisation sont stockées à part et ne sont pas affectées.",
+  },
+  "settings.data.stats.recipes": { en: "{count} recipe{s}", fr: "{count} recette{s}" },
+  "settings.data.stats.equipment": { en: "{count} equipment profile{s}", fr: "{count} profil{s} de matériel" },
+  "settings.data.stats.sessions": { en: "{count} brew session{s}", fr: "{count} session{s} de brassage" },
+  "settings.data.stats.other": { en: "{count} other", fr: "{count} autres" },
+  "settings.data.working": { en: "Working…", fr: "En cours…" },
+  "settings.data.export": { en: "Export backup", fr: "Exporter la sauvegarde" },
+  "settings.data.restore": { en: "Restore from file", fr: "Restaurer depuis un fichier" },
+  "settings.data.clear": { en: "Clear all data", fr: "Effacer toutes les données" },
+  "settings.data.confirm_clear": {
+    en: "Delete every recipe, equipment profile, and brew session?\n\nUnit preferences and your GitHub sync settings are NOT affected. Export a backup first if you might want to undo this.",
+    fr: "Supprimer toutes les recettes, profils de matériel et sessions de brassage ?\n\nLes préférences d'unités et la synchronisation GitHub NE sont PAS affectées. Exportez d'abord une sauvegarde si vous voulez pouvoir annuler.",
+  },
+  "settings.data.error.bad_json": { en: "That file isn't valid JSON.", fr: "Ce fichier n'est pas un JSON valide." },
+  "settings.data.error.not_werb": { en: "That file isn't a Werb backup.", fr: "Ce fichier n'est pas une sauvegarde Werb." },
+  "settings.data.exported": { en: "Exported {count} item{s} to {filename}.", fr: "{count} élément{s} exporté{s} vers {filename}." },
+  "settings.data.restored": { en: "Restored {count} item{s} from backup. Reload the app to see the changes.", fr: "{count} élément{s} restauré{s} depuis la sauvegarde. Rechargez l'app pour voir les changements." },
+  "settings.data.cleared": { en: "Cleared {count} item{s}. Reload the app to see an empty state.", fr: "{count} élément{s} effacé{s}. Rechargez l'app pour voir un état vide." },
+
+  // ─── Settings — Connect / Connected (GitHub sync) ────────────
+  "settings.connect.intro_lead": { en: "Paste a Personal Access Token with", fr: "Collez un Personal Access Token avec" },
+  "settings.connect.intro_scope_a": { en: "on the target repo (fine-grained) or the classic", fr: "sur le dépôt cible (fine-grained) ou le scope classique" },
+  "settings.connect.intro_scope_b": { en: "scope.", fr: "." },
+  "settings.connect.error.required": { en: "Token and repo are required.", fr: "Le token et le dépôt sont obligatoires." },
+  "settings.connect.field.token": { en: "Token", fr: "Token" },
+  "settings.connect.field.repo": { en: "Repository", fr: "Dépôt" },
+  "settings.connect.field.branch": { en: "Branch", fr: "Branche" },
+  "settings.connect.verifying": { en: "Verifying…", fr: "Vérification…" },
+  "settings.connect.verify": { en: "Verify & connect", fr: "Vérifier et connecter" },
+  "settings.connect.footer": {
+    en: "The token sits in this browser's local storage. Use a fine-grained token scoped to one repo — that's the smallest blast radius if anything ever leaks.",
+    fr: "Le token reste dans le stockage local de ce navigateur. Utilisez un token fine-grained restreint à un seul dépôt — c'est le rayon d'impact le plus petit en cas de fuite.",
+  },
+  "settings.connected.status_lead": { en: "Connected as", fr: "Connecté en tant que" },
+  "settings.connected.status_syncing": { en: "syncing", fr: "synchronisation de" },
+  "settings.connected.footer": {
+    en: "Push overwrites the remote with your local data. Pull overwrites local with the remote. Neither deletes — keys on one side that are missing on the other are left alone.",
+    fr: "Push écrase le distant avec vos données locales. Pull écrase le local avec le distant. Aucun ne supprime — les clés présentes d'un côté seulement sont laissées intactes.",
+  },
+  "settings.connected.push": { en: "Push to GitHub", fr: "Pousser vers GitHub" },
+  "settings.connected.pull": { en: "Pull from GitHub", fr: "Tirer depuis GitHub" },
+  "settings.connected.working": { en: "Working…", fr: "En cours…" },
+  "settings.connected.disconnect": { en: "Disconnect", fr: "Se déconnecter" },
+  "settings.connected.progress": { en: "{done}/{total} items…", fr: "{done}/{total} éléments…" },
+  "settings.connected.nothing": { en: "Nothing to copy.", fr: "Rien à copier." },
+  "settings.connected.pushed": { en: "Pushed {count} item{s} to GitHub.", fr: "{count} élément{s} poussé{s} vers GitHub." },
+  "settings.connected.pulled": { en: "Pulled {count} item{s} from GitHub.", fr: "{count} élément{s} tiré{s} depuis GitHub." },
+  "settings.connected.failed": { en: "Sync failed: {detail}", fr: "Échec de synchronisation : {detail}" },
+
+  // ─── Recipe — export menu ────────────────────────────────────
+  "recipe.export.button": { en: "Export", fr: "Exporter" },
+  "recipe.export.beerjson_label": { en: "BeerJSON (.beerjson)", fr: "BeerJSON (.beerjson)" },
+  "recipe.export.beerjson_sub": { en: "Modern JSON format — round-trips cleanly with most tools.", fr: "Format JSON moderne — compatible avec la plupart des outils." },
+  "recipe.export.beerxml_label": { en: "BeerXML (.xml)", fr: "BeerXML (.xml)" },
+  "recipe.export.beerxml_sub": { en: "Legacy XML — works with BeerSmith and older imports.", fr: "XML hérité — compatible BeerSmith et anciens imports." },
+  "recipe.export.html_label": { en: "Printable HTML / PDF", fr: "HTML / PDF imprimable" },
+  "recipe.export.html_sub": { en: "Self-contained .html — open in any browser, print to PDF.", fr: ".html autonome — à ouvrir dans n'importe quel navigateur, imprimable en PDF." },
+
+  // ─── Recipe — scale to rig button ────────────────────────────
+  "recipe.scale.button": { en: "Adapt to my rig", fr: "Adapter à mon matériel" },
+  "recipe.scale.noop_tooltip": { en: "Recipe already matches your rig — nothing to scale.", fr: "La recette correspond déjà à votre matériel — rien à mettre à l'échelle." },
+  "recipe.scale.active_tooltip": { en: "Rescale to {name} ({batch} · {eff}% efficiency). Caps strike water to your mash tun if needed.", fr: "Mise à l'échelle vers {name} ({batch} · {eff} % d'efficacité). Plafonne l'eau d'empâtage selon votre cuve si besoin." },
+  "recipe.scale.confirm": { en: "Adapt this recipe to \"{name}\"?\n\n{lines}\n\nIngredient amounts will be rescaled in place.", fr: "Adapter cette recette à « {name} » ?\n\n{lines}\n\nLes quantités d'ingrédients seront recalculées sur place." },
+  "recipe.scale.line_batch": { en: "Batch: {from} → {to}", fr: "Volume : {from} → {to}" },
+  "recipe.scale.line_efficiency": { en: "Efficiency: {from}% → {to}%", fr: "Efficacité : {from} % → {to} %" },
+  "recipe.scale.line_capped": { en: "Strike water capped: {from} → {to} (won't fit {capacity} mash tun otherwise — sparge picks up the rest)", fr: "Eau d'empâtage plafonnée : {from} → {to} (sinon elle déborderait de votre cuve {capacity} — le rinçage compense)" },
+
+  // ─── Recipe — BJCP style range badges ────────────────────────
+  "recipe.style.under": { en: "↓ under style", fr: "↓ sous le style" },
+  "recipe.style.over": { en: "↑ over style", fr: "↑ au-dessus du style" },
+  "recipe.style.in": { en: "✓ in style", fr: "✓ dans le style" },
+  "recipe.style.range_tooltip": { en: "BJCP range: {range}", fr: "Plage BJCP : {range}" },
+
   // ─── Brew — step kinds (used in headers + step labels) ───────
   "brew.kind.prepare_water": { en: "Prepare water", fr: "Préparer l'eau" },
   "brew.kind.mash_in": { en: "Mash in", fr: "Empâtage" },
@@ -431,7 +519,7 @@ const STRINGS: Record<string, Entry> = {
     en: "Liquid yeast drops ~21%/month from production",
     fr: "La levure liquide perd ~21 %/mois depuis la production",
   },
-  "recipe.yeast.packs_hint.dry": { en: "~11.5 g sachets, ~115 B cells fresh", fr: "~11,5 g/sachet, ~115 G cellules frais" },
+  "recipe.yeast.packs_hint.dry": { en: "~11.5 g sachets, ~200 B cells fresh", fr: "~11,5 g/sachet, ~200 G cellules frais" },
   "recipe.yeast.packs_hint.liquid": { en: "Wyeast / White Labs smack-pack, ~100 B at production", fr: "Wyeast / White Labs smack-pack, ~100 G à la production" },
   "recipe.yeast.target": { en: "Target", fr: "Cible" },
   "recipe.yeast.target_sub": { en: "{rate} M/mL/°P at {og}", fr: "{rate} M/mL/°P à {og}" },

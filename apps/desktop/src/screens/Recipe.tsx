@@ -500,6 +500,7 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
 // ─── Subcomponents ─────────────────────────────────────────────────────
 
 function ExportMenu({ recipe, prefs }: { recipe: BeerJsonRecipe; prefs: UnitPreferences }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
 
   const run = async (fn: () => Promise<{ error?: string | undefined }>) => {
@@ -514,18 +515,18 @@ function ExportMenu({ recipe, prefs }: { recipe: BeerJsonRecipe; prefs: UnitPref
     fn: () => Promise<{ error?: string | undefined }>;
   }[] = [
     {
-      label: "BeerJSON (.beerjson)",
-      sublabel: "Modern JSON format — round-trips cleanly with most tools.",
+      label: t("recipe.export.beerjson_label"),
+      sublabel: t("recipe.export.beerjson_sub"),
       fn: () => exportBeerJson(recipe),
     },
     {
-      label: "BeerXML (.xml)",
-      sublabel: "Legacy XML — works with BeerSmith and older imports.",
+      label: t("recipe.export.beerxml_label"),
+      sublabel: t("recipe.export.beerxml_sub"),
       fn: () => exportBeerXml(recipe),
     },
     {
-      label: "Printable HTML / PDF",
-      sublabel: "Self-contained .html — open in any browser, print to PDF.",
+      label: t("recipe.export.html_label"),
+      sublabel: t("recipe.export.html_sub"),
       fn: () => exportRecipeHtml(recipe, prefs),
     },
   ];
@@ -536,7 +537,7 @@ function ExportMenu({ recipe, prefs }: { recipe: BeerJsonRecipe; prefs: UnitPref
         onClick={() => setOpen((v) => !v)}
         className="px-4 py-3 rounded-xl bg-surface-raised border border-border text-body-sm font-medium hover:border-accent hover:text-accent transition-colors flex items-center gap-2"
       >
-        Export
+        {t("recipe.export.button")}
         <span aria-hidden className="text-caption">▾</span>
       </button>
       {open && (
@@ -1533,6 +1534,7 @@ function ScaleButton({
   profile: ProfileWithId;
   prefs: UnitPreferences;
 }) {
+  const t = useT();
   // toLiters here is metric internal: profile.batch_size_l and the
   // dead-space / cap math are all in liters by contract. Display
   // strings go through the formatter so the user's pref is honored.
@@ -1554,14 +1556,26 @@ function ScaleButton({
     const fromBatchDisplay = formatLiters(fromBatchL, prefs).display;
     const targetBatchDisplay = formatLiters(profile.batch_size_l, prefs).display;
     const lines = [
-      `Batch: ${fromBatchDisplay} → ${targetBatchDisplay}`,
-      fromEff !== null ? `Efficiency: ${fromEff}% → ${profile.efficiency_pct}%` : null,
+      t("recipe.scale.line_batch", { from: fromBatchDisplay, to: targetBatchDisplay }),
+      fromEff !== null
+        ? t("recipe.scale.line_efficiency", { from: fromEff, to: profile.efficiency_pct })
+        : null,
       fit.capped
-        ? `Strike water capped: ${formatLiters(fit.capped.from_l, prefs).display} → ${formatLiters(fit.capped.to_l, prefs).display} (won't fit ${profile.mash_tun ? formatLiters(profile.mash_tun.capacity_l, prefs).display : ""} mash tun otherwise — sparge picks up the rest)`
+        ? t("recipe.scale.line_capped", {
+            from: formatLiters(fit.capped.from_l, prefs).display,
+            to: formatLiters(fit.capped.to_l, prefs).display,
+            capacity: profile.mash_tun
+              ? formatLiters(profile.mash_tun.capacity_l, prefs).display
+              : "",
+          })
         : null,
     ].filter(Boolean);
 
-    if (confirm(`Adapt this recipe to "${profile.name}"?\n\n${lines.join("\n")}\n\nIngredient amounts will be rescaled in place.`)) {
+    if (
+      confirm(
+        t("recipe.scale.confirm", { name: profile.name, lines: lines.join("\n") }),
+      )
+    ) {
       onApply(fit.recipe);
     }
   };
@@ -1573,12 +1587,16 @@ function ScaleButton({
       disabled={isNoOp}
       title={
         isNoOp
-          ? "Recipe already matches your rig — nothing to scale."
-          : `Rescale to ${profile.name} (${targetBatchDisplay} · ${profile.efficiency_pct}% efficiency). Caps strike water to your mash tun if needed.`
+          ? t("recipe.scale.noop_tooltip")
+          : t("recipe.scale.active_tooltip", {
+              name: profile.name,
+              batch: targetBatchDisplay,
+              eff: profile.efficiency_pct,
+            })
       }
       className="px-4 py-3 rounded-xl bg-surface-raised border border-border text-body-sm font-medium hover:border-accent hover:text-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
     >
-      Adapt to my rig
+      {t("recipe.scale.button")}
     </button>
   );
 }
@@ -1695,6 +1713,7 @@ function Tile({
   warn?: boolean | undefined;
   styleHint?: RangeHint | null | undefined;
 }) {
+  const t = useT();
   return (
     <div className="bg-surface px-3 py-3 sm:px-5 sm:py-4">
       <p className="text-[10px] sm:text-caption uppercase tracking-widest text-text-muted">{label}</p>
@@ -1715,9 +1734,13 @@ function Tile({
           className={`font-mono text-caption mt-1 ${
             styleHint.status === "in" ? "text-success" : "text-warning"
           }`}
-          title={styleHint.tooltip}
+          title={t("recipe.style.range_tooltip", { range: styleHint.range })}
         >
-          {styleHint.label}
+          {styleHint.status === "low"
+            ? t("recipe.style.under")
+            : styleHint.status === "high"
+            ? t("recipe.style.over")
+            : t("recipe.style.in")}
         </p>
       )}
     </div>
@@ -1726,8 +1749,8 @@ function Tile({
 
 interface RangeHint {
   status: "in" | "low" | "high";
-  label: string;
-  tooltip: string;
+  /** Pre-formatted BJCP range, e.g. "1.046–1.054" or "≥ 4.5%". */
+  range: string;
 }
 
 function rangeHint({
@@ -1743,17 +1766,13 @@ function rangeHint({
 }): RangeHint | null {
   if (current === null || current === undefined) return null;
   if (min === undefined && max === undefined) return null;
-  const rangeStr =
+  const range =
     min !== undefined && max !== undefined
       ? `${format(min)}–${format(max)}`
       : min !== undefined
       ? `≥ ${format(min)}`
       : `≤ ${format(max!)}`;
-  if (min !== undefined && current < min) {
-    return { status: "low", label: `↓ under style`, tooltip: `BJCP range: ${rangeStr}` };
-  }
-  if (max !== undefined && current > max) {
-    return { status: "high", label: `↑ over style`, tooltip: `BJCP range: ${rangeStr}` };
-  }
-  return { status: "in", label: `✓ in style`, tooltip: `BJCP range: ${rangeStr}` };
+  if (min !== undefined && current < min) return { status: "low", range };
+  if (max !== undefined && current > max) return { status: "high", range };
+  return { status: "in", range };
 }

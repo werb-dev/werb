@@ -128,8 +128,8 @@ function UnitsCard() {
           value={prefs.volume}
           onChange={(v) => update("volume", v)}
           options={[
-            { value: "l", label: "Liters" },
-            { value: "gal", label: "US gallons" },
+            { value: "l", label: t("settings.units.opt.liters") },
+            { value: "gal", label: t("settings.units.opt.us_gallons") },
           ]}
         />
         <UnitPicker
@@ -137,8 +137,8 @@ function UnitsCard() {
           value={prefs.mass}
           onChange={(v) => update("mass", v)}
           options={[
-            { value: "kg", label: "kg / g" },
-            { value: "lb", label: "lb / oz" },
+            { value: "kg", label: t("settings.units.opt.kg_g") },
+            { value: "lb", label: t("settings.units.opt.lb_oz") },
           ]}
         />
         <UnitPicker
@@ -146,8 +146,8 @@ function UnitsCard() {
           value={prefs.gravity}
           onChange={(v) => update("gravity", v)}
           options={[
-            { value: "sg", label: "Specific gravity (1.052)" },
-            { value: "plato", label: "Plato (12.9 °P)" },
+            { value: "sg", label: t("settings.units.opt.sg") },
+            { value: "plato", label: t("settings.units.opt.plato") },
           ]}
         />
         <UnitPicker
@@ -164,9 +164,9 @@ function UnitsCard() {
           value={prefs.currency}
           onChange={(v) => update("currency", v)}
           options={[
-            { value: "EUR", label: "€ Euro" },
-            { value: "USD", label: "$ US dollar" },
-            { value: "GBP", label: "£ Pound sterling" },
+            { value: "EUR", label: t("settings.units.opt.eur") },
+            { value: "USD", label: t("settings.units.opt.usd") },
+            { value: "GBP", label: t("settings.units.opt.gbp") },
           ]}
         />
         <CostAdjustmentField
@@ -191,10 +191,11 @@ function CostAdjustmentField({
   value: number;
   onChange: (v: number) => void;
 }) {
+  const t = useT();
   return (
     <div>
       <p className="text-caption uppercase tracking-widest text-text-muted mb-2">
-        Cost adjustment
+        {t("settings.units.cost_adjustment")}
       </p>
       <div className="flex items-baseline gap-2 bg-bg border border-border rounded-lg px-3 py-2 focus-within:border-accent max-w-[12rem]">
         <input
@@ -212,9 +213,7 @@ function CostAdjustmentField({
         <span className="text-caption font-mono text-text-muted shrink-0">%</span>
       </div>
       <p className="text-caption text-text-muted mt-1 max-w-prose">
-        Scales the bundled ingredient prices used on the recipe Cost
-        section. 100% = the EUR baseline. Bump to 110-130 if your local
-        supplier is pricier; dial down for bulk / co-op pricing.
+        {t("settings.units.cost_adjustment_hint")}
       </p>
     </div>
   );
@@ -298,6 +297,7 @@ function PrivacyNote() {
 // ─── Data management ─────────────────────────────────────────────────────
 
 function DataCard({ backend }: { backend: StorageBackend }) {
+  const t = useT();
   const [stats, setStats] = useState<{ recipes: number; sessions: number; equipment: number; other: number; total: number } | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -352,7 +352,7 @@ function DataCard({ backend }: { backend: StorageBackend }) {
       const filename = `werb-backup-${snapshot.exported_at.slice(0, 10)}.json`;
       downloadTextFile(filename, JSON.stringify(snapshot, null, 2), "application/json");
       const count = Object.keys(snapshot.data).length;
-      return `Exported ${count} ${count === 1 ? "item" : "items"} to ${filename}.`;
+      return t("settings.data.exported", { count, filename });
     });
 
   const onRestore = () =>
@@ -363,41 +363,35 @@ function DataCard({ backend }: { backend: StorageBackend }) {
       try {
         parsed = JSON.parse(picked.text) as DataSnapshot;
       } catch {
-        throw new Error("That file isn't valid JSON.");
+        throw new Error(t("settings.data.error.bad_json"));
       }
       if (typeof parsed !== "object" || parsed === null || !("schema_version" in parsed)) {
-        throw new Error("That file isn't a Werb backup.");
+        throw new Error(t("settings.data.error.not_werb"));
       }
       const count = await restoreSnapshot(backend, parsed);
-      return `Restored ${count} ${count === 1 ? "item" : "items"} from backup. Reload the app to see the changes.`;
+      return t("settings.data.restored", { count });
     });
 
   const onClear = () =>
     run(async () => {
-      const confirmed = confirm(
-        "Delete every recipe, equipment profile, and brew session?\n\n" +
-          "Unit preferences and your GitHub sync settings are NOT affected. " +
-          "Export a backup first if you might want to undo this.",
-      );
+      const confirmed = confirm(t("settings.data.confirm_clear"));
       if (!confirmed) return null;
       const count = await clearWerbData(backend);
-      return `Cleared ${count} ${count === 1 ? "item" : "items"}. Reload the app to see an empty state.`;
+      return t("settings.data.cleared", { count });
     });
 
   return (
     <div className="rounded-xl bg-surface border border-border p-4 sm:p-6">
       <p className="text-body-sm text-text-muted mb-5 max-w-prose">
-        Export a JSON backup of your recipes, equipment, and brew sessions —
-        or wipe everything for a fresh start. Unit preferences and sync
-        settings are stored separately and aren't touched by these actions.
+        {t("settings.data.intro")}
       </p>
 
       {stats && (
         <p className="text-caption font-mono text-text-muted mb-5">
-          {stats.recipes} recipe{stats.recipes === 1 ? "" : "s"} ·{" "}
-          {stats.equipment} equipment profile{stats.equipment === 1 ? "" : "s"} ·{" "}
-          {stats.sessions} brew session{stats.sessions === 1 ? "" : "s"}
-          {stats.other > 0 && ` · ${stats.other} other`}
+          {t("settings.data.stats.recipes", { count: stats.recipes })} ·{" "}
+          {t("settings.data.stats.equipment", { count: stats.equipment })} ·{" "}
+          {t("settings.data.stats.sessions", { count: stats.sessions })}
+          {stats.other > 0 && ` · ${t("settings.data.stats.other", { count: stats.other })}`}
         </p>
       )}
 
@@ -408,7 +402,7 @@ function DataCard({ backend }: { backend: StorageBackend }) {
           disabled={busy}
           className="px-5 py-2 rounded-lg bg-accent text-bg text-body-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
         >
-          {busy ? "Working…" : "Export backup"}
+          {busy ? t("settings.data.working") : t("settings.data.export")}
         </button>
         <button
           type="button"
@@ -416,7 +410,7 @@ function DataCard({ backend }: { backend: StorageBackend }) {
           disabled={busy}
           className="px-5 py-2 rounded-lg bg-surface-raised border border-border text-body-sm font-medium hover:border-accent hover:text-accent disabled:opacity-50 transition-colors"
         >
-          {busy ? "Working…" : "Restore from file"}
+          {busy ? t("settings.data.working") : t("settings.data.restore")}
         </button>
         <button
           type="button"
@@ -424,7 +418,7 @@ function DataCard({ backend }: { backend: StorageBackend }) {
           disabled={busy}
           className="ml-auto px-4 py-2 rounded-lg text-body-sm text-text-muted hover:text-danger disabled:opacity-50 transition-colors"
         >
-          Clear all data
+          {t("settings.data.clear")}
         </button>
       </div>
 
@@ -463,6 +457,7 @@ async function countItems(
 // ─── Connection form ──────────────────────────────────────────────────────
 
 function Connect({ onConnected }: { onConnected: (s: SyncConfig) => void }) {
+  const t = useT();
   const [token, setToken] = useState("");
   const [repo, setRepo] = useState("");
   const [branch, setBranch] = useState("main");
@@ -470,7 +465,7 @@ function Connect({ onConnected }: { onConnected: (s: SyncConfig) => void }) {
 
   const onVerify = async () => {
     if (!token || !repo) {
-      setStatus({ kind: "idle", error: "Token and repo are required." });
+      setStatus({ kind: "idle", error: t("settings.connect.error.required") });
       return;
     }
     setStatus({ kind: "verifying" });
@@ -491,15 +486,16 @@ function Connect({ onConnected }: { onConnected: (s: SyncConfig) => void }) {
   return (
     <div className="rounded-xl bg-surface border border-border p-4 sm:p-6">
       <p className="text-body text-text-muted mb-5 max-w-prose">
-        Paste a Personal Access Token with{" "}
+        {t("settings.connect.intro_lead")}{" "}
         <code className="font-mono text-mono text-text">Contents: read+write</code>{" "}
-        on the target repo (fine-grained) or the classic{" "}
-        <code className="font-mono text-mono text-text">repo</code> scope.
+        {t("settings.connect.intro_scope_a")}{" "}
+        <code className="font-mono text-mono text-text">repo</code>
+        {t("settings.connect.intro_scope_b")}
       </p>
 
       <div className="space-y-4">
         <Field
-          label="Token"
+          label={t("settings.connect.field.token")}
           type="password"
           autoComplete="off"
           spellCheck={false}
@@ -508,7 +504,7 @@ function Connect({ onConnected }: { onConnected: (s: SyncConfig) => void }) {
           placeholder="github_pat_…"
         />
         <Field
-          label="Repository"
+          label={t("settings.connect.field.repo")}
           autoComplete="off"
           spellCheck={false}
           value={repo}
@@ -516,7 +512,7 @@ function Connect({ onConnected }: { onConnected: (s: SyncConfig) => void }) {
           placeholder="owner/recipes"
         />
         <Field
-          label="Branch"
+          label={t("settings.connect.field.branch")}
           autoComplete="off"
           spellCheck={false}
           value={branch}
@@ -535,13 +531,11 @@ function Connect({ onConnected }: { onConnected: (s: SyncConfig) => void }) {
         disabled={status.kind === "verifying"}
         className="mt-5 px-5 py-2 rounded-lg bg-accent text-bg text-body-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
       >
-        {status.kind === "verifying" ? "Verifying…" : "Verify & connect"}
+        {status.kind === "verifying" ? t("settings.connect.verifying") : t("settings.connect.verify")}
       </button>
 
       <p className="text-caption text-text-muted mt-4 max-w-prose">
-        The token sits in this browser's local storage. Use a
-        fine-grained token scoped to one repo — that's the smallest
-        blast radius if anything ever leaks.
+        {t("settings.connect.footer")}
       </p>
     </div>
   );
@@ -558,6 +552,7 @@ function Connected({
   sync: SyncConfig;
   onDisconnect: () => void;
 }) {
+  const t = useT();
   const [status, setStatus] = useState<SyncStatus>({ kind: "idle" });
   const [progress, setProgress] = useState<ProgressState | null>(null);
 
@@ -577,14 +572,14 @@ function Connected({
         kind: "idle",
         message:
           count === 0
-            ? "Nothing to copy."
+            ? t("settings.connected.nothing")
             : direction === "push"
-            ? `Pushed ${count} ${count === 1 ? "item" : "items"} to GitHub.`
-            : `Pulled ${count} ${count === 1 ? "item" : "items"} from GitHub.`,
+            ? t("settings.connected.pushed", { count })
+            : t("settings.connected.pulled", { count }),
       });
     } catch (err) {
       const detail = err instanceof Error ? err.message : String(err);
-      setStatus({ kind: "idle", error: `Sync failed: ${detail}` });
+      setStatus({ kind: "idle", error: t("settings.connected.failed", { detail }) });
     } finally {
       setProgress(null);
     }
@@ -593,8 +588,8 @@ function Connected({
   return (
     <div className="rounded-xl bg-surface border border-border p-4 sm:p-6">
       <p className="text-body-sm text-text">
-        Connected as{" "}
-        <span className="font-mono text-mono">{sync.login}</span> · syncing{" "}
+        {t("settings.connected.status_lead")}{" "}
+        <span className="font-mono text-mono">{sync.login}</span> · {t("settings.connected.status_syncing")}{" "}
         <span className="font-mono text-mono">{sync.repoName}</span>
         {sync.config.branch && sync.config.branch !== "main" && (
           <>
@@ -603,9 +598,7 @@ function Connected({
         )}
       </p>
       <p className="text-caption text-text-muted mt-2 max-w-prose">
-        Push overwrites the remote with your local data. Pull overwrites
-        local with the remote. Neither deletes — keys on one side that
-        are missing on the other are left alone.
+        {t("settings.connected.footer")}
       </p>
 
       <div className="mt-6 flex flex-wrap gap-3">
@@ -615,7 +608,7 @@ function Connected({
           disabled={status.kind === "syncing"}
           className="px-5 py-2 rounded-lg bg-accent text-bg text-body-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
         >
-          {status.kind === "syncing" ? "Working…" : "Push to GitHub"}
+          {status.kind === "syncing" ? t("settings.connected.working") : t("settings.connected.push")}
         </button>
         <button
           type="button"
@@ -623,7 +616,7 @@ function Connected({
           disabled={status.kind === "syncing"}
           className="px-5 py-2 rounded-lg bg-surface-raised border border-border text-body-sm font-medium hover:border-accent hover:text-accent disabled:opacity-50 transition-colors"
         >
-          {status.kind === "syncing" ? "Working…" : "Pull from GitHub"}
+          {status.kind === "syncing" ? t("settings.connected.working") : t("settings.connected.pull")}
         </button>
         <button
           type="button"
@@ -631,13 +624,13 @@ function Connected({
           disabled={status.kind === "syncing"}
           className="ml-auto px-4 py-2 rounded-lg text-caption text-text-muted hover:text-danger disabled:opacity-50 transition-colors"
         >
-          Disconnect
+          {t("settings.connected.disconnect")}
         </button>
       </div>
 
       {progress && progress.total > 0 && (
         <p className="mt-4 text-caption font-mono tabular-nums text-text-muted">
-          {progress.done}/{progress.total} items…
+          {t("settings.connected.progress", { done: progress.done, total: progress.total })}
         </p>
       )}
       {status.message && !progress && (
