@@ -24,13 +24,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Apple Silicon and Intel macOS need separate runners — Tauri
-          # bundles platform-native binaries, not universal2.
+          # Apple Silicon — covers every Mac sold since 2020. Intel
+          # macOS (x86_64) was dropped from v0.1.0 because the GitHub
+          # Actions macos-13 runner pool is queue-starved (jobs sit
+          # 30-60+ min waiting for a runner). Intel Mac users can run
+          # the web PWA in the meantime; a separate on-demand workflow
+          # can revive x86_64 builds if anyone asks.
           - platform: macos-14
             target: aarch64-apple-darwin
-            bundle: dmg
-          - platform: macos-13
-            target: x86_64-apple-darwin
             bundle: dmg
           - platform: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
@@ -106,6 +107,6 @@ jobs:
           releaseBody: |
             See [CHANGELOG](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for the full list of changes.
 
-            Downloads below — pick the one that matches your OS. macOS users on Apple Silicon should grab the `aarch64` build.
+            Downloads below — pick the one that matches your OS. macOS builds are Apple Silicon only (aarch64); Intel Mac users can run the [web PWA](https://werb-dev.github.io/werb/) for now.
           releaseDraft: true
           prerelease: false
