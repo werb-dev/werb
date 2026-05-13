@@ -73,3 +73,15 @@ jobs:
       # only surface during production bundling.
       - name: Build web bundle
         run: pnpm --filter @werb/desktop build
+
+      # UI smoke test: drive a real Chromium through Library → Recipe →
+      # Brew → Journal, the same path a brewer walks. Catches things
+      # the unit suite can't: label/destination drift on navigation
+      # buttons, broken click handlers after refactors, missing
+      # routes, generated bundles that don't render at all. Runs in
+      # ~30s after the build is already done.
+      - name: Install Playwright Chromium
+        run: pnpm --filter @werb/desktop exec playwright install --with-deps chromium
+
+      - name: UI smoke (screenshot capture)
+        run: pnpm screenshots
