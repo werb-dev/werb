@@ -11,6 +11,8 @@ A homebrewing tool **driven by versionable JSON files**, sitting at the intersec
 3. **Offline-first** — Tauri 2, works without network (kitchen, garage, cellar, mobile brewery).
 4. **Standards-aligned** — BeerJSON in/out, interoperable with Brewfather, BeerSmith, etc.
 5. **i18n native** — EN + FR, structure ready for additional languages.
+6. **Git is the timeline** — Werb does not implement in-app trash, archive, or version history. Recipes are files; "I deleted it by mistake" is `git checkout`, "what did this look like before" is `git log`. If you find yourself building a soft-delete UI, you've drifted from this principle.
+7. **Curated catalog, community-extended** — Werb ships a vetted ingredient catalog (malts, hops, cultures, miscs, styles). New entries land via PR to this repo, not via per-user in-app overrides. The catalog stays small, accurate, and shared by every install. A user is welcome to override a name in the recipe itself; the *catalog* is canonical and immutable from the app.
 
 ## Architecture
 
@@ -160,38 +162,52 @@ A single command (`pnpm gen:types`) regenerates every type. CI checks they're up
 - Commercial names (malts, hops, yeasts): **kept verbatim** in BeerJSON files (e.g. "Cascade", "Maris Otter", "WLP001").
 - Established translations: dictionary `packages/i18n/glossary.{en,fr}.json`, applied only to generic terms (e.g. "two-row" → "deux rangs" if we deem it established). Case-by-case, conservative by default.
 
-## Scope: v1 vs roadmap
+## Scope
 
-### v1 (MVP)
-- Schemas + type generation
-- Ajv validation for recipes/sessions/equipment
-- Calculations: IBU (Tinseth), color (Morey), ABV, basic water volumes, gravity/efficiency
-- Library + schema-driven recipe view
-- Brew mode with wake lock + timeline + entry + auto-save
-- Session persistence on disk
-- EN + FR
+### Shipped (v0.2 / v0.3)
 
-### v1.x — nice-to-have
-- PDF export / printable brew sheet
-- Inventory module (malt/hop/yeast stock, dates, expiry alerts)
-- Alternative methods: IBU Rager, color Daniels
-- Water profile (Ca, Mg, SO4, Cl, HCO3) + brewing water calc
-- Yeast starter calculator, predictive attenuation
-- BeerXML import/export (legacy)
-- Optional Git sync (auto-commit sessions)
-- Live temperature chart in brew mode
+- Schemas + type generation (both TS and Rust via typify)
+- Ajv validation for recipes/sessions/equipment in the PWA + boon validation in Rust tests + a `werb validate` CLI binary
+- Calc engine: IBU (Tinseth), color (Morey), ABV, water volumes, gravity/efficiency, mash strike, carbonation (priming + force), yeast pitch rate, water-salt additions
+- Library + schema-driven recipe view + recipe editor
+- Brew mode with wake lock + timeline + per-step measurement logging + sensory tasting form
+- Cost tracking with a bundled price table
+- Single **Import recipes** entry point that auto-detects BeerJSON 2.x, BeerXML 1.0, and joliebulle v4 exports
+- BeerXML 1.0 import + BeerXML / BeerJSON / printable-HTML export
+- Optional GitHub recipe sync (one `<slug>.beerjson` per recipe, manual Push / Pull)
+- `werb` CLI for batch conversion + validation, distributed as prebuilt binaries
+- EN + FR, light + Cassis-dark themes
+- iPad PWA path validated against iOS 15 Safari
 
-### Out of scope (revisit later)
-- Multi-user / cloud sync
-- Recipe marketplace
-- Ingredient ordering integration
-- Hardware sensors (Bluetooth temp probes, smart hydrometers like Tilt/iSpindel)
+### Next — joliebulle parity
+
+Pickup features for ex-joliebulle users. None of these are about *catching up* on output quality (Werb's brew + journal side already goes further than joliebulle did); they're about making the recipe-management side feel familiar.
+
+- **Mash profile library** — reusable mash schedules picked from a list; not redefined per recipe.
+- **BIAB mode in the mash math** — separate water calc path; joliebulle exposed this as `mode: "classic" | "biab"`. Werb today is classic-only.
+- **Water profile presets** — Burton, Pilsen, Munich, … as named profiles (Ca/Mg/SO4/Cl/HCO3) a recipe can attach to; existing salt-addition calc consumes the profile.
+- **Recipe history notes** — free-text timestamped notes field on each recipe ("scaled OG up 2 pts after the cold mash"). For longer-form change tracking, Git remains the timeline (principle #6).
+
+### Next — universal brewing polish
+
+Features useful to every brewer, not joliebulle-specific.
+
+- **PDF brew sheet** — a real, paginated PDF export. The existing printable HTML works through the browser's Print dialog, but a one-click PDF is friendlier.
+- **Inventory module** — malt/hop/yeast/misc stock list with expiry alerts. Recipe screen calls out missing or short ingredients.
+- **Yeast starter calculator** — pitch-rate target + starter size + step-up math, fed from the recipe's OG and batch size.
+- **Alternative IBU/color methods** — IBU Rager, color Daniels. Switchable in Settings; per-recipe override possible.
+
+### Out of scope (revisit only on a strong specific signal)
+
+- **In-app trash / archive / soft-delete** — principle #6: Git is the timeline.
+- **In-app user-editable ingredient catalog** — principle #7: catalog additions land via PR.
+- Multi-user / cloud sync (GitHub sync covers the personal-multi-device case; full cloud is a separate product).
+- Recipe marketplace, ingredient ordering integration.
+- Hardware sensors (Bluetooth temp probes, smart hydrometers like Tilt/iSpindel).
+- Live temperature chart in brew mode — measurement log is enough; a chart is dashboard creep.
 
 ## Open questions
 
-1. **UI framework**: React (safe, large ecosystem) vs Svelte (lighter, nicer for desktop)?
-2. ~~**BeerJSON official schema**: vendored in `schemas/beerjson/` or pulled as an npm dependency?~~ — Resolved: pinned as a git submodule under `vendor/beerjson/` (currently tracking the `werb-dev/beerjson` fork branch with upstream PR pending; switch to `beerjson/beerjson` once merged).
-3. **Working directory**: single user-chosen folder (`~/Werb/`) or multi-library support?
-4. **Recipe versioning**: support variants (`saison-v1.beerjson`, `saison-v2.beerjson`) or rely on Git for history?
-5. **Wake lock on iPad via Tauri 2**: needs an early POC — main technical risk.
-6. **Tests**: a reference set of recipes with known IBU/SRM/ABV values to build as fixtures (BJCP styles, public BeerJSON recipes).
+The MVP-era open questions resolved themselves through delivery (React shipped; BeerJSON vendored as a submodule; wake lock works on iPad Safari; Git answers the recipe-versioning question per principle #6). One real one remains:
+
+1. **Working directory** (desktop only): single user-chosen folder (`~/Werb/`) or multi-library support? Today the desktop app uses the platform's app-data dir + opt-in GitHub sync. A "this folder is my recipe library" experience would land before any multi-library design.
