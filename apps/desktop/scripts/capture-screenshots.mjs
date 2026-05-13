@@ -32,7 +32,7 @@ const VIEWPORT = { width: 1024, height: 1280 };
 async function waitForServerReady(child, timeoutMs = 30_000) {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
-      reject(new Error(`vite preview didn't print "Local:" within ${timeoutMs} ms`));
+      reject(new Error(`vite preview didn't print its localhost banner within ${timeoutMs} ms`));
     }, timeoutMs);
     let settled = false;
     const onMatch = () => {
@@ -44,19 +44,22 @@ async function waitForServerReady(child, timeoutMs = 30_000) {
       // small grace period for the server to actually accept connections
       setTimeout(resolve, 250);
     };
-    // vite preview prints the `Local:` banner to stdout on dev
-    // machines and to stderr in some CI environments (the exact
-    // stream pnpm picks depends on whether it's piped through a
-    // tty). Watch both.
+    // vite preview prints its readiness banner to stdout on dev
+    // machines and to stderr in some CI environments — watch both.
+    // The banner also embeds ANSI bold/reset escapes inside the word
+    // `Local`, which breaks a naive `/Local:/` match. Match on the
+    // bare hostname instead — the URL part has no escapes, and
+    // `localhost:<port>` appears unambiguously once.
+    const isBanner = (s) => s.includes("localhost:");
     const onStdout = (chunk) => {
       const s = chunk.toString();
       process.stdout.write(`[preview] ${s}`);
-      if (/Local:/i.test(s)) onMatch();
+      if (isBanner(s)) onMatch();
     };
     const onStderr = (chunk) => {
       const s = chunk.toString();
       process.stderr.write(`[preview] ${s}`);
-      if (/Local:/i.test(s)) onMatch();
+      if (isBanner(s)) onMatch();
     };
     child.stdout.on("data", onStdout);
     child.stderr.on("data", onStderr);
