@@ -34,18 +34,32 @@ async function waitForServerReady(child, timeoutMs = 30_000) {
     const timer = setTimeout(() => {
       reject(new Error(`vite preview didn't print "Local:" within ${timeoutMs} ms`));
     }, timeoutMs);
-    const onData = (chunk) => {
+    let settled = false;
+    const onMatch = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      child.stdout.off("data", onStdout);
+      child.stderr.off("data", onStderr);
+      // small grace period for the server to actually accept connections
+      setTimeout(resolve, 250);
+    };
+    // vite preview prints the `Local:` banner to stdout on dev
+    // machines and to stderr in some CI environments (the exact
+    // stream pnpm picks depends on whether it's piped through a
+    // tty). Watch both.
+    const onStdout = (chunk) => {
       const s = chunk.toString();
       process.stdout.write(`[preview] ${s}`);
-      if (/Local:/i.test(s)) {
-        clearTimeout(timer);
-        child.stdout.off("data", onData);
-        // small grace period for the server to actually accept connections
-        setTimeout(resolve, 250);
-      }
+      if (/Local:/i.test(s)) onMatch();
     };
-    child.stdout.on("data", onData);
-    child.stderr.on("data", (c) => process.stderr.write(`[preview] ${c}`));
+    const onStderr = (chunk) => {
+      const s = chunk.toString();
+      process.stderr.write(`[preview] ${s}`);
+      if (/Local:/i.test(s)) onMatch();
+    };
+    child.stdout.on("data", onStdout);
+    child.stderr.on("data", onStderr);
     child.on("exit", (code) => {
       clearTimeout(timer);
       reject(new Error(`vite preview exited early with code ${code}`));
