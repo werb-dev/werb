@@ -44,6 +44,10 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          # vendor/beerjson submodule — @werb/validate, the desktop
+          # bundle, and the Rust schema tests all need it.
+          submodules: recursive
 
       - uses: pnpm/action-setup@v4
 

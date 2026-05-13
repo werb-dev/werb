@@ -18,6 +18,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        # vendor/beerjson is a git submodule the validator + Rust
+        # schema tests + type generator all read from. Without
+        # `submodules: recursive` the runner gets an empty directory
+        # and `@werb/validate` throws at module-load time.
+        with:
+          submodules: recursive
 
       # Version comes from `packageManager` in root package.json.
       - uses: pnpm/action-setup@v4

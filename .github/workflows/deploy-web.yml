@@ -22,6 +22,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # vendor/beerjson submodule — @werb/validate fails to load
+          # the BeerJSON schemas without it.
+          submodules: recursive
 
       # Version comes from the "packageManager" field in root package.json.
       - uses: pnpm/action-setup@v4
