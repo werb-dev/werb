@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RECIPES>
+  <RECIPE>
+    <NAME>Cascade IPA</NAME>
+    <VERSION>1</VERSION>
+    <TYPE>All Grain</TYPE>
+    <BREWER>Test Brewer</BREWER>
+    <BATCH_SIZE>20.0</BATCH_SIZE>
+    <BOIL_SIZE>26.0</BOIL_SIZE>
+    <BOIL_TIME>60.0</BOIL_TIME>
+    <EFFICIENCY>75.0</EFFICIENCY>
+    <STYLE>
+      <NAME>American IPA</NAME>
+      <VERSION>1</VERSION>
+      <CATEGORY>India Pale Ale</CATEGORY>
+      <CATEGORY_NUMBER>21</CATEGORY_NUMBER>
+      <STYLE_LETTER>A</STYLE_LETTER>
+      <STYLE_GUIDE>BJCP 2015</STYLE_GUIDE>
+      <TYPE>Ale</TYPE>
+      <OG_MIN>1.056</OG_MIN>
+      <OG_MAX>1.070</OG_MAX>
+      <FG_MIN>1.008</FG_MIN>
+      <FG_MAX>1.014</FG_MAX>
+      <IBU_MIN>40.0</IBU_MIN>
+      <IBU_MAX>70.0</IBU_MAX>
+      <COLOR_MIN>6.0</COLOR_MIN>
+      <COLOR_MAX>14.0</COLOR_MAX>
+    </STYLE>
+    <FERMENTABLES>
+      <FERMENTABLE>
+        <NAME>Pale 2-Row</NAME>
+        <VERSION>1</VERSION>
+        <TYPE>Grain</TYPE>
+        <AMOUNT>4.5</AMOUNT>
+        <YIELD>80.0</YIELD>
+        <COLOR>2.0</COLOR>
+        <ORIGIN>US</ORIGIN>
+      </FERMENTABLE>
+      <FERMENTABLE>
+        <NAME>Crystal 60L</NAME>
+        <VERSION>1</VERSION>
+        <TYPE>Grain</TYPE>
+        <AMOUNT>0.5</AMOUNT>
+        <YIELD>74.0</YIELD>
+        <COLOR>60.0</COLOR>
+      </FERMENTABLE>
+    </FERMENTABLES>
+    <HOPS>
+      <HOP>
+        <NAME>Cascade</NAME>
+        <VERSION>1</VERSION>
+        <ALPHA>5.5</ALPHA>
+        <AMOUNT>0.028</AMOUNT>
+        <USE>Boil</USE>
+        <TIME>60.0</TIME>
+        <FORM>Pellet</FORM>
+        <TYPE>Bittering</TYPE>
+      </HOP>
+      <HOP>
+        <NAME>Centennial</NAME>
+        <VERSION>1</VERSION>
+        <ALPHA>9.0</ALPHA>
+        <AMOUNT>0.028</AMOUNT>
+        <USE>Dry Hop</USE>
+        <TIME>4320.0</TIME>
+        <FORM>Pellet</FORM>
+        <TYPE>Aroma</TYPE>
+      </HOP>
+    </HOPS>
+    <YEASTS>
+      <YEAST>
+        <NAME>Safale US-05</NAME>
+        <VERSION>1</VERSION>
+        <TYPE>Ale</TYPE>
+        <FORM>Dry</FORM>
+        <AMOUNT>0.011</AMOUNT>
+        <AMOUNT_IS_WEIGHT>true</AMOUNT_IS_WEIGHT>
+        <LABORATORY>Fermentis</LABORATORY>
+        <PRODUCT_ID>US-05</PRODUCT_ID>
+        <ATTENUATION>78.0</ATTENUATION>
+        <MIN_TEMPERATURE>15.0</MIN_TEMPERATURE>
+        <MAX_TEMPERATURE>22.0</MAX_TEMPERATURE>
+      </YEAST>
+    </YEASTS>
+    <MASH>
+      <NAME>Single Infusion</NAME>
+      <VERSION>1</VERSION>
+      <GRAIN_TEMP>20.0</GRAIN_TEMP>
+      <MASH_STEPS>
+        <MASH_STEP>
+          <NAME>Saccharification</NAME>
+          <VERSION>1</VERSION>
+          <TYPE>Infusion</TYPE>
+          <INFUSE_AMOUNT>15.0</INFUSE_AMOUNT>
+          <STEP_TEMP>67.0</STEP_TEMP>
+          <STEP_TIME>60.0</STEP_TIME>
+        </MASH_STEP>
+      </MASH_STEPS>
+    </MASH>
+    <EST_OG>1.062 SG</EST_OG>
+    <EST_FG>1.012 SG</EST_FG>
+    <EST_COLOR>9.5 SRM</EST_COLOR>
+    <IBU>52.5</IBU>
+    <NOTES>A balanced American IPA showcasing classic C-hops.</NOTES>
+  </RECIPE>
+</RECIPES>

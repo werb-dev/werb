@@ -8,6 +8,7 @@ members = [
   "crates/werb-beerjson",
   "crates/werb-beerxml",
   "crates/werb-beerxml-wasm",
+  "crates/werb-cli",
 ]
 # `crates/werb-beerjson/tools/` is a self-contained generator workspace
 # (it pulls in the path-pinned `typify` fork) — exclude it so day-to-day
