@@ -22,6 +22,7 @@ use std::sync::OnceLock;
 use werb_beerxml::parse_one;
 
 const SAMPLE: &str = include_str!("fixtures/sample_ipa.beerxml");
+const JOLIEBULLE: &str = include_str!("fixtures/joliebulle_blanche.xml");
 
 // ─── Schema validator harness ─────────────────────────────────────────────
 
@@ -131,6 +132,44 @@ fn validates_full_sample_recipe() {
 fn validates_full_sample_as_document() {
     let doc = convert_to_document(SAMPLE);
     assert_document_validates(&doc, "sample_ipa document");
+}
+
+#[test]
+fn validates_joliebulle_export() {
+    // joliebulle (a French homebrew app) ships its BeerXML exports
+    // with a few quirks that historically broke our import:
+    //  - empty self-closing enum elements (`<TYPE />`) on Recipe,
+    //    Style, Yeast — quick-xml hands those to serde as `$text`,
+    //    which doesn't match any enum variant.
+    //  - `<YEAST>` blocks with no `<AMOUNT>` element at all (one pack
+    //    = one item, so the value is implicit).
+    //  - `<OG>` and `<FG>` instead of `<EST_OG>` / `<EST_FG>` for
+    //    recipe-level gravity estimates.
+    //
+    // This test guards every one of those against future regressions.
+    let recipe = parse_one(JOLIEBULLE).expect("joliebulle file must parse");
+    // OG/FG fallback works.
+    assert!(
+        (recipe.est_og_value().unwrap() - 1.0494719043).abs() < 1e-9,
+        "OG fallback should yield the value from <OG>",
+    );
+    assert!(
+        (recipe.est_fg_value().unwrap() - 1.011873257032).abs() < 1e-9,
+        "FG fallback should yield the value from <FG>",
+    );
+    // Empty `<TYPE />` on Recipe is None (not a parse error).
+    assert!(recipe.recipe_type.is_none());
+    // Empty `<TYPE />` on Yeast is None.
+    let yeast = &recipe.yeasts.as_ref().unwrap().items[0];
+    assert!(yeast.yeast_type.is_none());
+
+    let doc = convert_to_document(JOLIEBULLE);
+    assert_document_validates(&doc, "joliebulle Blanche");
+
+    // The converted recipe should also carry the OG/FG forward.
+    let r = &doc["beerjson"]["recipes"][0];
+    assert_eq!(r["original_gravity"]["value"], 1.0494719043);
+    assert_eq!(r["final_gravity"]["value"], 1.011873257032);
 }
 
 #[test]

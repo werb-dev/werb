@@ -38,6 +38,32 @@ where
     }
 }
 
+/// Serde helper for `Option<T>` fields where `T` is normally a
+/// string-tagged enum. joliebulle (and probably others) export empty
+/// self-closing elements (`<TYPE />`) instead of omitting the tag
+/// entirely — quick-xml hands those to serde as the literal token
+/// `$text`, which fails enum deserialization with `unknown variant`.
+///
+/// This helper intercepts that case: deserialize to `Option<String>`
+/// first, treat empty / whitespace / `$text` as `None`, and only on
+/// a real value drive the inner deserializer via the captured string.
+fn empty_str_to_none_enum<'de, T, D>(de: D) -> Result<Option<T>, D::Error>
+where
+    D: Deserializer<'de>,
+    T: serde::de::DeserializeOwned,
+{
+    let raw: Option<String> = Option::deserialize(de)?;
+    let Some(s) = raw else { return Ok(None) };
+    let trimmed = s.trim();
+    if trimmed.is_empty() || trimmed == "$text" {
+        return Ok(None);
+    }
+    T::deserialize(serde::de::value::StringDeserializer::<D::Error>::new(
+        trimmed.to_string(),
+    ))
+    .map(Some)
+}
+
 /// A single brewing recipe — the top-level `<RECIPE>` element.
 ///
 /// Field semantics follow the [BeerXML 1.0 spec](https://beerxml.com/).
@@ -54,8 +80,9 @@ pub struct Recipe {
     pub version: u32,
     /// Recipe construction style — extract, partial mash, or all-grain.
     /// Optional in practice: many exporters omit this even though the
-    /// spec lists it as required.
-    #[serde(default, rename = "TYPE")]
+    /// spec lists it as required. joliebulle writes `<TYPE />` when
+    /// unset, which the empty-str helper folds back to `None`.
+    #[serde(default, rename = "TYPE", deserialize_with = "empty_str_to_none_enum")]
     pub recipe_type: Option<RecipeType>,
     /// Optional brewer name.
     #[serde(default)]
@@ -103,6 +130,21 @@ pub struct Recipe {
     /// Estimated color, raw BeerXML text (e.g. `"12.5 SRM"`).
     #[serde(default)]
     pub est_color: Option<String>,
+    /// Measured original gravity (post-brew). BeerXML 1.0 separates
+    /// the recipe-time estimate ([`est_og`](Self::est_og)) from the
+    /// actual value at the end of the brew, but joliebulle and a few
+    /// other tools collapse the two — they emit `<OG>` even for an
+    /// unbrewed template. [`Recipe::est_og_value`] falls back to this
+    /// field when [`est_og`](Self::est_og) is empty.
+    #[serde(default)]
+    pub og: Option<String>,
+    /// Measured final gravity; see [`og`](Self::og).
+    #[serde(default)]
+    pub fg: Option<String>,
+    /// Measured color; same template-vs-actual story as gravity.
+    /// [`Recipe::est_color_value`] falls back to this field.
+    #[serde(default)]
+    pub color: Option<String>,
     /// Estimated bitterness, in IBU.
     #[serde(default, deserialize_with = "empty_str_to_none_f64")]
     pub ibu: Option<f64>,
@@ -135,20 +177,35 @@ impl Recipe {
         self.boil_time.unwrap_or(60.0)
     }
 
-    /// Parses [`est_og`](Self::est_og) as a float, dropping any unit suffix.
+    /// Parses [`est_og`](Self::est_og) as a float, dropping any unit
+    /// suffix. Falls back to the [`og`](Self::og) field when the
+    /// estimate is missing (joliebulle and similar tools collapse
+    /// "estimate" and "actual" into a single `<OG>` element).
     pub fn est_og_value(&self) -> Option<f64> {
-        parse_leading_f64(self.est_og.as_deref()?)
+        self.est_og
+            .as_deref()
+            .and_then(parse_leading_f64)
+            .or_else(|| self.og.as_deref().and_then(parse_leading_f64))
     }
 
-    /// Parses [`est_fg`](Self::est_fg) as a float, dropping any unit suffix.
+    /// Parses [`est_fg`](Self::est_fg) as a float, dropping any unit
+    /// suffix. Falls back to [`fg`](Self::fg) — see [`est_og_value`].
     pub fn est_fg_value(&self) -> Option<f64> {
-        parse_leading_f64(self.est_fg.as_deref()?)
+        self.est_fg
+            .as_deref()
+            .and_then(parse_leading_f64)
+            .or_else(|| self.fg.as_deref().and_then(parse_leading_f64))
     }
 
-    /// Parses [`est_color`](Self::est_color) as a float (SRM or whichever
-    /// unit the source emitted), dropping any unit suffix.
+    /// Parses [`est_color`](Self::est_color) as a float (SRM or
+    /// whichever unit the source emitted), dropping any unit suffix.
+    /// Falls back to [`color`](Self::color) when the estimate is
+    /// missing — see [`est_og_value`].
     pub fn est_color_value(&self) -> Option<f64> {
-        parse_leading_f64(self.est_color.as_deref()?)
+        self.est_color
+            .as_deref()
+            .and_then(parse_leading_f64)
+            .or_else(|| self.color.as_deref().and_then(parse_leading_f64))
     }
 
     /// Best-effort guess at the color unit the source tool used,
@@ -164,7 +221,7 @@ impl Recipe {
     /// but most tools store EBC there in practice. Using the same
     /// signal everywhere produces a coherent file.
     pub fn effective_color_unit(&self) -> &'static str {
-        let Some(s) = self.est_color.as_deref() else {
+        let Some(s) = self.est_color.as_deref().or(self.color.as_deref()) else {
             return "EBC";
         };
         let upper = s.to_uppercase();
@@ -279,13 +336,13 @@ pub struct Hop {
     #[serde(deserialize_with = "empty_str_to_zero_f64")]
     pub amount: f64,
     /// Where in the brew the hop is added.
-    #[serde(default, rename = "USE")]
+    #[serde(default, rename = "USE", deserialize_with = "empty_str_to_none_enum")]
     pub hop_use: Option<HopUse>,
     /// Boil time (or dry-hop duration), in minutes.
     #[serde(default, deserialize_with = "empty_str_to_none_f64")]
     pub time: Option<f64>,
     /// Pellet / leaf / plug.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "empty_str_to_none_enum")]
     pub form: Option<HopForm>,
     /// Bittering / aroma / both.
     #[serde(default, rename = "TYPE")]
@@ -345,7 +402,7 @@ pub struct Fermentable {
     /// Grain / sugar / extract / dry extract / adjunct. Optional in
     /// practice — falls back to [`FermentableType::Adjunct`] via
     /// [`Fermentable::effective_type`] when missing.
-    #[serde(default, rename = "TYPE")]
+    #[serde(default, rename = "TYPE", deserialize_with = "empty_str_to_none_enum")]
     pub fermentable_type: Option<FermentableType>,
     /// Amount, in kilograms.
     #[serde(deserialize_with = "empty_str_to_zero_f64")]
@@ -412,15 +469,17 @@ pub struct Yeast {
     pub version: u32,
     /// Yeast family — Ale, Lager, Wheat, Wine, Champagne. Optional —
     /// falls back to [`YeastType::Ale`] via [`Yeast::effective_type`].
-    #[serde(default, rename = "TYPE")]
+    #[serde(default, rename = "TYPE", deserialize_with = "empty_str_to_none_enum")]
     pub yeast_type: Option<YeastType>,
     /// Liquid, dry, slant, or culture. Optional — falls back to
     /// [`YeastForm::Dry`] via [`Yeast::effective_form`].
-    #[serde(default)]
+    #[serde(default, deserialize_with = "empty_str_to_none_enum")]
     pub form: Option<YeastForm>,
     /// Amount in liters (for liquid) or kilograms (for dry, when
-    /// `amount_is_weight` is true).
-    #[serde(deserialize_with = "empty_str_to_zero_f64")]
+    /// `amount_is_weight` is true). joliebulle omits the element
+    /// entirely on yeast (one pack = one item), so we default to 0.0
+    /// when missing rather than fail the import.
+    #[serde(default, deserialize_with = "empty_str_to_zero_f64")]
     pub amount: f64,
     /// `true` when [`amount`](Self::amount) is in kg rather than L.
     #[serde(default)]
@@ -507,7 +566,7 @@ pub struct Misc {
     #[serde(rename = "TYPE")]
     pub misc_type: Option<String>,
     /// Where it is added — boil, mash, primary, secondary, bottling.
-    #[serde(default, rename = "USE")]
+    #[serde(default, rename = "USE", deserialize_with = "empty_str_to_none_enum")]
     pub misc_use: Option<MiscUse>,
     /// Time at addition, in minutes.
     #[serde(default, deserialize_with = "empty_str_to_none_f64")]
@@ -573,7 +632,7 @@ pub struct MashStep {
     pub version: u32,
     /// Infusion / temperature / decoction. Optional — falls back to
     /// [`MashStepType::Infusion`] via [`MashStep::effective_type`].
-    #[serde(default, rename = "TYPE")]
+    #[serde(default, rename = "TYPE", deserialize_with = "empty_str_to_none_enum")]
     pub step_type: Option<MashStepType>,
     /// Volume of water added at this step, in liters (for infusion steps).
     #[serde(default, deserialize_with = "empty_str_to_none_f64")]
