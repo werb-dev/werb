@@ -2,7 +2,7 @@
 name = "werb-beerjson-gen"
 version = "0.0.0"
 edition = "2021"
-description = "One-shot generator that turns the vendored BeerJSON schemas into Rust types via the barbacane-dev typify fork. Not part of the workspace."
+description = "One-shot generator that turns the BeerJSON schemas into Rust types via the barbacane-dev/typify fork. Not part of the workspace."
 license = "MIT OR Apache-2.0"
 publish = false
 autobins = false
@@ -15,5 +15,19 @@ path = "gen.rs"
 
 [dependencies]
 serde_json = "1"
-typify = { path = "/Users/nicolasdreno/Work/Barbacane-dev/typify/typify" }
+# The barbacane-dev/typify fork carries two patches we need that
+# aren't in upstream oxidecomputer/typify yet:
+#
+#   1. Bundler resolves transitive internal `$ref` (`#/definitions/X`)
+#      inside externally-bundled sub-schemas — BeerJSON's `culture.json`,
+#      `style.json`, etc. all use this pattern.
+#   2. `RequiredWithDefault` state — drops `skip_serializing_if` from
+#      schema-required Vec fields so empty arrays stay on the wire
+#      (otherwise `IngredientsType.fermentable_additions: []` is
+#      omitted and the recipe fails its own schema).
+#
+# Pinned to a release tag so regeneration is reproducible across
+# machines. Bump after a fork update; switch to `oxidecomputer/typify`
+# once the patches land upstream.
+typify = { git = "https://github.com/barbacane-dev/typify", tag = "v1.0.0" }
 rustfmt-wrapper = "0.2"

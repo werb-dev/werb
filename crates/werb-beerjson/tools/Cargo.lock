@@ -526,7 +526,8 @@ dependencies = [
 
 [[package]]
 name = "typify"
-version = "0.6.1"
+version = "1.0.0"
+source = "git+https://github.com/barbacane-dev/typify?tag=v1.0.0#f9476658cdc9b2a994d13f4efbbdf3732aef1cbc"
 dependencies = [
  "typify-impl",
  "typify-macro",
@@ -534,7 +535,8 @@ dependencies = [
 
 [[package]]
 name = "typify-impl"
-version = "0.6.1"
+version = "1.0.0"
+source = "git+https://github.com/barbacane-dev/typify?tag=v1.0.0#f9476658cdc9b2a994d13f4efbbdf3732aef1cbc"
 dependencies = [
  "heck",
  "log",
@@ -552,7 +554,8 @@ dependencies = [
 
 [[package]]
 name = "typify-macro"
-version = "0.6.1"
+version = "1.0.0"
+source = "git+https://github.com/barbacane-dev/typify?tag=v1.0.0#f9476658cdc9b2a994d13f4efbbdf3732aef1cbc"
 dependencies = [
  "proc-macro2",
  "quote",
