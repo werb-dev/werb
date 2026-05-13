@@ -1,3 +1,6 @@
+//! BeerXML 1.0 model-level tests. The BeerXML → BeerJSON 2.x
+//! conversion is covered separately in `beerjson_conversion.rs`.
+
 use werb_beerxml::{parse, parse_one, Error, FermentableType, HopForm, HopUse, RecipeType, YeastForm, YeastType};
 
 const SAMPLE: &str = include_str!("fixtures/sample_ipa.beerxml");
@@ -66,49 +69,6 @@ fn missing_type_on_nested_elements_falls_back() {
 }
 
 #[test]
-fn beerjson_output_satisfies_required_fields() {
-    // Bare-minimum BeerXML — no brewer, no efficiency, no fermentables.
-    // The BeerJSON output still has to satisfy the schema's required
-    // fields (`author`, `efficiency`, `ingredients.fermentable_additions`)
-    // or the downstream app blows up dereferencing them.
-    let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
-<RECIPES>
-  <RECIPE>
-    <NAME>Bare Recipe</NAME>
-    <VERSION>1</VERSION>
-    <BATCH_SIZE>20.0</BATCH_SIZE>
-  </RECIPE>
-</RECIPES>"#;
-    let r = parse_one(xml).unwrap();
-    let json = r.to_beerjson();
-    assert!(json["author"].is_string(), "author must be present");
-    assert!(json["efficiency"]["brewhouse"]["value"].is_number(), "efficiency.brewhouse required");
-    assert!(json["ingredients"]["fermentable_additions"].is_array(), "fermentable_additions required");
-    assert_eq!(json["ingredients"]["fermentable_additions"].as_array().unwrap().len(), 0);
-}
-
-#[test]
-fn missing_optional_fields_use_sensible_defaults() {
-    let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
-<RECIPES>
-  <RECIPE>
-    <NAME>Sparse Recipe</NAME>
-    <VERSION>1</VERSION>
-    <BATCH_SIZE>19.0</BATCH_SIZE>
-  </RECIPE>
-</RECIPES>"#;
-    let r = parse_one(xml).expect("missing TYPE/BOIL_SIZE/BOIL_TIME should still parse");
-    assert!(r.recipe_type.is_none());
-    assert_eq!(r.effective_recipe_type(), RecipeType::AllGrain);
-    assert!(r.boil_size.is_none());
-    assert!((r.effective_boil_size() - 19.0 * 1.25).abs() < 1e-9);
-    assert_eq!(r.effective_boil_time(), 60.0);
-    let json = r.to_beerjson();
-    assert_eq!(json["type"], "all grain");
-    assert_eq!(json["boil"]["boil_time"]["value"], 60.0);
-}
-
-#[test]
 fn parses_style_block() {
     let r = parse_one(SAMPLE).unwrap();
     let style = r.style.as_ref().expect("style");
@@ -157,16 +117,6 @@ fn parses_yeasts() {
 }
 
 #[test]
-fn beerjson_emits_yeast_temperature_range() {
-    let r = parse_one(SAMPLE).unwrap();
-    let json = r.to_beerjson();
-    let yeast = &json["ingredients"]["culture_additions"][0];
-    assert_eq!(yeast["temperature_range"]["minimum"]["value"], 15.0);
-    assert_eq!(yeast["temperature_range"]["minimum"]["unit"], "C");
-    assert_eq!(yeast["temperature_range"]["maximum"]["value"], 22.0);
-}
-
-#[test]
 fn parses_mash_schedule() {
     let r = parse_one(SAMPLE).unwrap();
     let mash = r.mash.as_ref().unwrap();
@@ -192,32 +142,6 @@ fn empty_input_errors() {
 fn malformed_xml_errors() {
     let xml = "<RECIPES><RECIPE><NAME>oops"; // truncated
     assert!(matches!(parse(xml), Err(Error::Xml(_))));
-}
-
-#[test]
-fn beerjson_conversion_round_trip() {
-    let r = parse_one(SAMPLE).unwrap();
-    let json = r.to_beerjson();
-    assert_eq!(json["name"], "Cascade IPA");
-    assert_eq!(json["type"], "all grain");
-    assert_eq!(json["batch_size"]["value"], 20.0);
-    assert_eq!(json["batch_size"]["unit"], "l");
-    assert_eq!(json["boil"]["boil_time"]["value"], 60.0);
-    assert_eq!(json["boil"]["boil_time"]["unit"], "min");
-    assert_eq!(json["original_gravity"]["value"], 1.062);
-    assert_eq!(json["original_gravity"]["unit"], "sg");
-    assert_eq!(json["style"]["name"], "American IPA");
-    assert_eq!(json["style"]["type"], "ale");
-    assert_eq!(json["ingredients"]["fermentable_additions"][0]["name"], "Pale 2-Row");
-    assert_eq!(json["ingredients"]["fermentable_additions"][0]["amount"]["unit"], "kg");
-    // Fixture's EST_COLOR is "9.5 SRM" → fermentables labeled SRM too,
-    // since real BeerXML files use one display unit globally.
-    assert_eq!(json["ingredients"]["fermentable_additions"][0]["color"]["unit"], "SRM");
-    assert_eq!(json["color_estimate"]["unit"], "SRM");
-    assert_eq!(json["ingredients"]["hop_additions"][1]["timing"]["use"], "add_to_fermentation");
-    assert_eq!(json["ingredients"]["culture_additions"][0]["form"], "dry");
-    assert_eq!(json["ingredients"]["culture_additions"][0]["amount"]["unit"], "kg");
-    assert_eq!(json["mash"]["mash_steps"][0]["step_temperature"]["value"], 67.0);
 }
 
 #[test]
@@ -280,88 +204,4 @@ fn empty_numeric_elements_do_not_break_the_parse() {
     assert!(y.attenuation.is_none());
     assert!(y.min_temperature.is_none());
     assert!(y.max_temperature.is_none());
-}
-
-#[test]
-fn color_unit_falls_back_to_ebc_when_est_color_missing() {
-    let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
-<RECIPES>
-  <RECIPE>
-    <NAME>No-Estimate</NAME>
-    <VERSION>1</VERSION>
-    <BATCH_SIZE>20.0</BATCH_SIZE>
-    <FERMENTABLES>
-      <FERMENTABLE>
-        <NAME>Mystery</NAME>
-        <VERSION>1</VERSION>
-        <TYPE>Grain</TYPE>
-        <AMOUNT>5.0</AMOUNT>
-        <COLOR>8.0</COLOR>
-      </FERMENTABLE>
-    </FERMENTABLES>
-  </RECIPE>
-</RECIPES>"#;
-    let r = parse_one(xml).unwrap();
-    let json = r.to_beerjson();
-    assert_eq!(
-        json["ingredients"]["fermentable_additions"][0]["color"]["unit"],
-        "EBC"
-    );
-}
-
-#[test]
-fn color_unit_picks_up_ebc_from_est_color() {
-    let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
-<RECIPES>
-  <RECIPE>
-    <NAME>Euro</NAME>
-    <VERSION>1</VERSION>
-    <BATCH_SIZE>20.0</BATCH_SIZE>
-    <FERMENTABLES>
-      <FERMENTABLE>
-        <NAME>Pilsner</NAME>
-        <VERSION>1</VERSION>
-        <TYPE>Grain</TYPE>
-        <AMOUNT>5.0</AMOUNT>
-        <COLOR>4.0</COLOR>
-      </FERMENTABLE>
-    </FERMENTABLES>
-    <EST_COLOR>15 EBC</EST_COLOR>
-  </RECIPE>
-</RECIPES>"#;
-    let r = parse_one(xml).unwrap();
-    let json = r.to_beerjson();
-    assert_eq!(
-        json["ingredients"]["fermentable_additions"][0]["color"]["unit"],
-        "EBC"
-    );
-    assert_eq!(json["color_estimate"]["unit"], "EBC");
-}
-
-#[test]
-fn color_unit_picks_up_lovi_from_est_color() {
-    let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
-<RECIPES>
-  <RECIPE>
-    <NAME>US Recipe</NAME>
-    <VERSION>1</VERSION>
-    <BATCH_SIZE>20.0</BATCH_SIZE>
-    <FERMENTABLES>
-      <FERMENTABLE>
-        <NAME>2-Row</NAME>
-        <VERSION>1</VERSION>
-        <TYPE>Grain</TYPE>
-        <AMOUNT>5.0</AMOUNT>
-        <COLOR>2.0</COLOR>
-      </FERMENTABLE>
-    </FERMENTABLES>
-    <EST_COLOR>5.5 °L</EST_COLOR>
-  </RECIPE>
-</RECIPES>"#;
-    let r = parse_one(xml).unwrap();
-    let json = r.to_beerjson();
-    assert_eq!(
-        json["ingredients"]["fermentable_additions"][0]["color"]["unit"],
-        "Lovi"
-    );
 }

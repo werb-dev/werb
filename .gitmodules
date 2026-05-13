@@ -1,0 +1,4 @@
+[submodule "vendor/beerjson"]
+	path = vendor/beerjson
+	url = git@github.com:werb-dev/beerjson.git
+	branch = fix-packaging-vessel-graphics-items

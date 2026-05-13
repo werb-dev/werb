@@ -5,6 +5,11 @@
 resolver = "2"
 members = [
   "apps/desktop/src-tauri",
+  "crates/werb-beerjson",
   "crates/werb-beerxml",
   "crates/werb-beerxml-wasm",
 ]
+# `crates/werb-beerjson/tools/` is a self-contained generator workspace
+# (it pulls in the path-pinned `typify` fork) — exclude it so day-to-day
+# `cargo build` from the repo root doesn't drag those deps in.
+exclude = ["crates/werb-beerjson/tools"]

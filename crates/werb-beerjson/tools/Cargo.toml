@@ -1,0 +1,19 @@
+[package]
+name = "werb-beerjson-gen"
+version = "0.0.0"
+edition = "2021"
+description = "One-shot generator that turns the vendored BeerJSON schemas into Rust types via the barbacane-dev typify fork. Not part of the workspace."
+license = "MIT OR Apache-2.0"
+publish = false
+autobins = false
+
+[[bin]]
+name = "werb-beerjson-gen"
+path = "gen.rs"
+
+[workspace]
+
+[dependencies]
+serde_json = "1"
+typify = { path = "/Users/nicolasdreno/Work/Barbacane-dev/typify/typify" }
+rustfmt-wrapper = "0.2"

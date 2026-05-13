@@ -20,8 +20,10 @@ const ROOT = join(__dirname, "..");
 const SCHEMAS_DIR = join(ROOT, "schemas");
 const OUT_DIR = join(ROOT, "packages/types/src/generated");
 
-// Schemas to compile. We deliberately skip schemas/beerjson/ at this stage —
-// BeerJSON types will be wired in a later step.
+// Schemas to compile. BeerJSON types are produced separately by
+// `crates/werb-beerjson/tools/gen.rs` (Rust → typify) and live in the
+// `werb-beerjson` crate; this generator only covers our own werb-*
+// schemas plus the per-tool i/o contracts.
 //
 // `name` is the root TypeScript interface name produced by the generator.
 const TARGETS = [

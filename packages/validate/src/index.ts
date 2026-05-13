@@ -1,9 +1,10 @@
 /**
  * BeerJSON 2.x validator.
  *
- * Wraps Ajv with the 20 vendored schema files and exposes a single
- * `validateBeerJson` function. Schemas are eager-glob-imported at module
- * load so the validator is ready to call synchronously.
+ * Wraps Ajv with the 20 schema files from the `vendor/beerjson/` git
+ * submodule and exposes a single `validateBeerJson` function. Schemas
+ * are eager-glob-imported at module load so the validator is ready to
+ * call synchronously.
  *
  * Environment: works in Vite-based consumers (apps/desktop) and in Vitest
  * (which uses Vite for transforms). For pure-Node use, prefer the
@@ -12,7 +13,7 @@
 
 import Ajv, { type ErrorObject } from "ajv";
 
-const schemaModules = import.meta.glob("../../../schemas/beerjson/*.json", {
+const schemaModules = import.meta.glob("../../../vendor/beerjson/json/*.json", {
   eager: true,
 }) as Record<string, { default: object }>;
 
@@ -28,7 +29,7 @@ for (const [path, mod] of Object.entries(schemaModules)) {
 const _rootValidator = ajv.getSchema("beer.json#");
 if (!_rootValidator) {
   throw new Error(
-    "BeerJSON root schema (beer.json) failed to load — check schemas/beerjson/ vendoring",
+    "BeerJSON root schema (beer.json) failed to load — run `git submodule update --init`?",
   );
 }
 const rootValidator = _rootValidator;

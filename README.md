@@ -35,6 +35,9 @@ The app speaks **English and French** end-to-end (auto-detected, switchable in S
 Requirements: Node.js 20+, [pnpm](https://pnpm.io/), Rust toolchain (for the BeerXML WASM crate), and for desktop builds also a Tauri toolchain (see [Tauri prerequisites](https://tauri.app/v2/guides/getting-started/prerequisites/)).
 
 ```bash
+git clone --recurse-submodules <repo>   # vendor/beerjson/ is a submodule
+# Already cloned? Run: git submodule update --init --recursive
+
 pnpm install
 pnpm gen:types   # generate TS types from JSON Schemas
 pnpm test        # 264+ tests across calc / adapters / desktop hooks
@@ -48,6 +51,12 @@ pnpm -F @werb/desktop tauri:dev
 # Production web build:
 pnpm -F @werb/desktop build
 ```
+
+The BeerJSON 2.x schemas (used by the validator, the Rust type
+generator, and the schema-driven tests) live under `vendor/beerjson/`
+as a git submodule. It tracks the [werb-dev/beerjson](https://github.com/werb-dev/beerjson)
+fork while [PR #222](https://github.com/beerjson/beerjson/pull/222) is
+pending; once merged we'll repoint at upstream `beerjson/beerjson`.
 
 ## Architecture
 

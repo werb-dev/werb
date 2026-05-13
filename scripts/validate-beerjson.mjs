@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * Validate a .beerjson file against the vendored BeerJSON 2.x schema.
+ * Validate a .beerjson file against the BeerJSON 2.x schemas vendored
+ * as a git submodule at vendor/beerjson/.
  *
  * Usage: node scripts/validate-beerjson.mjs <file.beerjson>
  *
@@ -12,7 +13,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
-const SCHEMAS_DIR = join(ROOT, "schemas/beerjson");
+const SCHEMAS_DIR = join(ROOT, "vendor/beerjson/json");
 
 // BeerJSON 2.x schemas declare draft-07; default Ajv supports draft-07.
 const ajv = new Ajv.default({ allErrors: true, strict: false, allowUnionTypes: true });

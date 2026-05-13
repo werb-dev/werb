@@ -190,7 +190,7 @@ A single command (`pnpm gen:types`) regenerates every type. CI checks they're up
 ## Open questions
 
 1. **UI framework**: React (safe, large ecosystem) vs Svelte (lighter, nicer for desktop)?
-2. **BeerJSON official schema**: vendored in `schemas/beerjson/` or pulled as an npm dependency?
+2. ~~**BeerJSON official schema**: vendored in `schemas/beerjson/` or pulled as an npm dependency?~~ — Resolved: pinned as a git submodule under `vendor/beerjson/` (currently tracking the `werb-dev/beerjson` fork branch with upstream PR pending; switch to `beerjson/beerjson` once merged).
 3. **Working directory**: single user-chosen folder (`~/Werb/`) or multi-library support?
 4. **Recipe versioning**: support variants (`saison-v1.beerjson`, `saison-v2.beerjson`) or rely on Git for history?
 5. **Wake lock on iPad via Tauri 2**: needs an early POC — main technical risk.

@@ -21,6 +21,9 @@ use wasm_bindgen::prelude::*;
 #[wasm_bindgen(js_name = parseBeerXmlJson)]
 pub fn parse_beerxml_json(xml: &str) -> Result<String, JsValue> {
     let recipes = werb_beerxml::parse(xml).map_err(|e| JsValue::from_str(&e.to_string()))?;
-    let json: Vec<serde_json::Value> = recipes.iter().map(|r| r.to_beerjson()).collect();
-    serde_json::to_string(&json).map_err(|e| JsValue::from_str(&e.to_string()))
+    // `to_beerjson()` returns a strongly-typed `werb_beerjson::Recipe`;
+    // serde drives the wire format. Collect to a `Vec<Recipe>` and let
+    // `serde_json::to_string` serialize the whole array in one pass.
+    let recipes: Vec<werb_beerjson::Recipe> = recipes.iter().map(|r| r.to_beerjson()).collect();
+    serde_json::to_string(&recipes).map_err(|e| JsValue::from_str(&e.to_string()))
 }
