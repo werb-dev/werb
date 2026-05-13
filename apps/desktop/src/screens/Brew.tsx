@@ -33,6 +33,14 @@ interface BrewScreenProps {
   sessionId?: string | undefined;
   activeProfile?: ProfileWithId | undefined;
   onBack: () => void;
+  /**
+   * Label for the back-button arrow. Decided by the caller so the
+   * label and the actual destination of [`onBack`] stay in sync —
+   * the active-session route falls back to the Recipe screen, the
+   * journal-entry route falls back to the Journal, and the label
+   * needs to match.
+   */
+  backLabel: string;
 }
 
 interface BoilHop {
@@ -97,7 +105,7 @@ function checkKettleFit(water: WaterOutput, profile: ProfileWithId | undefined):
   return { kind: "ok" };
 }
 
-export function BrewScreen({ recipeId, recipe, sessionId, activeProfile, onBack }: BrewScreenProps) {
+export function BrewScreen({ recipeId, recipe, sessionId, activeProfile, onBack, backLabel }: BrewScreenProps) {
   const brew = useBrewSession(recipeId, recipe, sessionId);
   const tick = useTick(1000);
   const wakeLockHeld = useScreenWakeLock(brew.session?.status === "in_progress");
@@ -150,6 +158,7 @@ export function BrewScreen({ recipeId, recipe, sessionId, activeProfile, onBack 
           session={session}
           wakeLockHeld={wakeLockHeld}
           onBack={onBack}
+          backLabel={backLabel}
         />
 
         {ctx.hltFit && ctx.hltFit.kind !== "ok" && <HltFitBanner fit={ctx.hltFit} prefs={prefs} />}
@@ -239,11 +248,13 @@ function Header({
   session,
   wakeLockHeld,
   onBack,
+  backLabel,
 }: {
   recipe: BeerJsonRecipe;
   session: { status: string; started_at: string };
   wakeLockHeld: boolean;
   onBack: () => void;
+  backLabel: string;
 }) {
   const t = useT();
   const localeTag = useBcp47();
@@ -253,7 +264,7 @@ function Header({
         onClick={onBack}
         className="text-caption font-medium text-text-muted hover:text-text transition-colors flex items-center gap-2"
       >
-        <span aria-hidden>←</span> {t("recipe.back_library")}
+        <span aria-hidden>←</span> {backLabel}
       </button>
       <div className="mt-5 sm:mt-6 flex items-start justify-between gap-3 sm:gap-6">
         <div className="min-w-0">

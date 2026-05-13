@@ -152,12 +152,11 @@ async function main() {
     // ─── 4. Journal ─────────────────────────────────────────────────
     // Back out of the brew (it's the only screen with no DevNav), then
     // navigate to the Journal via the floating pill. The Brew header's
-    // back-button label reads "Library" (the ← span is aria-hidden, so
-    // it's stripped from the computed accessible name) but the actual
-    // destination is the Recipe screen for the recipe we just brewed
-    // — the route is /brew/<recipeId> without a sessionId, and that
-    // case falls through to goRecipe() in App.tsx, not goLibrary().
-    await page.getByRole("button", { name: /^Library$/i }).click();
+    // back-button label is context-aware — when the route lacks a
+    // sessionId (our flow here: Library → Recipe → Start brewing)
+    // the back action goes to the Recipe screen, and the label reads
+    // "Recipe" to match.
+    await page.getByRole("button", { name: /^Recipe$/i }).click();
     await page.waitForSelector("text=Water volumes", { timeout: 10_000 });
     await page
       .getByRole("button", { name: /^Journal$/i })

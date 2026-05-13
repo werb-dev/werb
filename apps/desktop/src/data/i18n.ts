@@ -169,6 +169,8 @@ const STRINGS: Record<string, Entry> = {
 
   // ─── Recipe screen ─────────────────────────────────────────────
   "recipe.back_library": { en: "Library", fr: "Bibliothèque" },
+  "brew.back_recipe": { en: "Recipe", fr: "Recette" },
+  "brew.back_journal": { en: "Journal", fr: "Journal" },
   "recipe.start_brewing": { en: "Start brewing →", fr: "Démarrer le brassage →" },
   "recipe.resume_brewing": { en: "Resume brewing →", fr: "Reprendre le brassage →" },
   "recipe.edit": { en: "Edit recipe", fr: "Modifier la recette" },

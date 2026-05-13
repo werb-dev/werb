@@ -122,6 +122,7 @@ export function App() {
           sessionId={state.sessionId}
           activeProfile={equipmentApi.activeProfile}
           onBack={() => (state.sessionId ? goJournal() : goRecipe(state.recipeId))}
+          backLabel={state.sessionId ? t("brew.back_journal") : t("brew.back_recipe")}
         />
       );
     }
