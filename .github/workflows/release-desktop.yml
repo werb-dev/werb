@@ -1,14 +1,20 @@
-name: Release desktop builds
+name: Release builds
 
-# Tag-driven release pipeline. Push a tag like `v0.1.0` and this job
-# builds Werb for macOS (Intel + Apple Silicon), Windows, and Linux,
-# then attaches the artifacts to a GitHub Release draft. We don't
-# auto-publish — review the draft before flipping it to public.
+# Tag-driven release pipeline. Push a tag like `v0.1.0` and this
+# workflow builds both:
 #
-# Triggering manually via workflow_dispatch is also supported; the
-# resulting release will be named after the HEAD commit's tag if any,
-# otherwise the run will fail at the tauri-action step (which needs
-# a tag).
+#   - The Tauri desktop app for macOS (Apple Silicon), Linux, and
+#     Windows (see the `build-desktop` job).
+#   - The standalone `werb` CLI binary for macOS (Apple Silicon +
+#     Intel), Linux (musl, fully static), and Windows (see
+#     `build-cli`).
+#
+# All artifacts attach to the same draft GitHub Release — desktop
+# builds via tauri-action, CLI binaries via softprops/action-gh-release.
+# We don't auto-publish — review the draft before flipping it to public.
+#
+# Triggering manually via workflow_dispatch is supported, but the
+# release jobs need a tag — they'll fail otherwise.
 on:
   push:
     tags:
@@ -19,7 +25,7 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  build-desktop:
     strategy:
       fail-fast: false
       matrix:
@@ -115,5 +121,92 @@ jobs:
             See [CHANGELOG](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for the full list of changes.
 
             Downloads below — pick the one that matches your OS. macOS builds are Apple Silicon only (aarch64); Intel Mac users can run the [web PWA](https://werb-dev.github.io/werb/) for now.
+
+            The `werb` CLI (`convert`, `validate`) ships in this same release as separate archives below — pick the `werb-<target>` asset for your platform, or `cargo install --git https://github.com/${{ github.repository }} werb-cli`.
           releaseDraft: true
           prerelease: false
+
+  # The CLI is a thin, no-system-deps Rust binary. We build it for
+  # four targets covering the homebrew/data-eng platforms most users
+  # actually run from a shell, and attach each as a separate archive
+  # to the same draft release the desktop job creates.
+  build-cli:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Apple Silicon — native build on macos-14 (Apple Silicon runner).
+          - target: aarch64-apple-darwin
+            platform: macos-14
+            archive: tar.gz
+          # Intel macOS — cross-compiled from the same Apple Silicon
+          # runner. No SDK setup needed; the rustup target alone covers
+          # a `cargo build` for the CLI (no system libs to link).
+          - target: x86_64-apple-darwin
+            platform: macos-14
+            archive: tar.gz
+          # Linux — musl target so the resulting binary is fully static
+          # and runs on any glibc/musl distro without dependency drift.
+          - target: x86_64-unknown-linux-musl
+            platform: ubuntu-22.04
+            archive: tar.gz
+          - target: x86_64-pc-windows-msvc
+            platform: windows-latest
+            archive: zip
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # vendor/beerjson submodule — werb-cli embeds the schema
+          # files at compile time via include_str!.
+          submodules: recursive
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: ./crates/werb-cli -> target
+          key: cli-${{ matrix.target }}
+
+      # musl target needs the musl-gcc toolchain on the Ubuntu runner.
+      - name: Install musl-gcc
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools
+
+      - name: Build werb CLI
+        run: cargo build --release --target ${{ matrix.target }} -p werb-cli
+
+      - name: Package archive
+        id: package
+        shell: bash
+        run: |
+          set -euo pipefail
+          name="werb-${{ matrix.target }}"
+          stage="$(mktemp -d)/$name"
+          mkdir -p "$stage"
+          if [[ "${{ matrix.archive }}" == "zip" ]]; then
+            cp "target/${{ matrix.target }}/release/werb.exe" "$stage/"
+            cp LICENSE README.md "$stage/"
+            (cd "$(dirname "$stage")" && 7z a "$name.zip" "$name" > /dev/null)
+            echo "asset=$(dirname "$stage")/$name.zip" >> "$GITHUB_OUTPUT"
+          else
+            cp "target/${{ matrix.target }}/release/werb" "$stage/"
+            cp LICENSE README.md "$stage/"
+            (cd "$(dirname "$stage")" && tar czf "$name.tar.gz" "$name")
+            echo "asset=$(dirname "$stage")/$name.tar.gz" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Attach to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: "Werb ${{ github.ref_name }}"
+          draft: true
+          files: ${{ steps.package.outputs.asset }}
+          fail_on_unmatched_files: true

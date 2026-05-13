@@ -22,6 +22,8 @@ export default tseslint.config(
       // Git submodule. Upstream owns its lint posture; we should never
       // try to enforce ours on a third-party schema repo.
       "vendor/**",
+      // mdBook build output — themed JS we don't author or maintain.
+      "docs/book/**",
       // The schema-driven type generator is auto-written; lint feedback
       // there is just noise.
       "packages/types/src/generated/**",

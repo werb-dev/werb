@@ -1,0 +1,26 @@
+# mdBook config for the Werb documentation site.
+#
+# Builds to `docs/book/` (gitignored). The CI deploy-web workflow
+# copies that output under the PWA's `dist/docs/` directory so the
+# site is served from `https://werb-dev.github.io/werb/docs/`.
+
+[book]
+title = "Werb — file-driven homebrewing"
+authors = ["Werb contributors"]
+description = "User guide and reference for Werb, the file-driven homebrewing tool."
+src = "src"
+language = "en"
+
+[output.html]
+# When deployed under /werb/docs/, every link/asset URL needs the
+# /werb/docs/ prefix. mdBook handles that automatically when the
+# site is served from a subpath, so leave `site-url` blank and rely
+# on the relative paths it emits.
+default-theme = "rust"
+preferred-dark-theme = "ayu"
+git-repository-url = "https://github.com/werb-dev/werb"
+edit-url-template = "https://github.com/werb-dev/werb/edit/main/docs/{path}"
+
+[output.html.fold]
+enable = true
+level = 1

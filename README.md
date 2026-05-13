@@ -88,6 +88,24 @@ scripts/
 
 Every calc tool is contract-first: define the JSON Schema, regenerate types, implement, test. The UI consumes those generated types.
 
+## The `werb` CLI
+
+A standalone Rust binary that converts and validates recipe files from the shell. Useful for bootstrapping a recipe archive on GitHub, scripting batch imports, or wiring schema validation into CI on a recipes-only repo.
+
+```bash
+# Bulk-convert mixed BeerXML/BeerJSON files into per-recipe .beerjson
+werb convert ~/Downloads/*.xml ~/old-recipes/ -o ./recipes
+
+# Validate every recipe in a folder against the BeerJSON 2.x schema
+werb validate ./recipes
+# ✓ ./recipes/blanche.beerjson
+# ✗ ./recipes/typo.beerjson
+#     /beerjson/recipes/0/style/category_number: want integer, but got string
+# 1 valid · 1 invalid
+```
+
+Install: download the binary for your platform from the [latest release](https://github.com/werb-dev/werb/releases/latest), or `cargo install --git https://github.com/werb-dev/werb werb-cli`. The full reference lives in the [docs site](https://werb-dev.github.io/werb/docs/cli.html).
+
 ## Data & privacy
 
 - **Everything stays on your device by default.** Web build uses [OPFS](https://developer.mozilla.org/en-US/docs/Web/API/File_System_API/Origin_private_file_system); desktop build writes to the platform's app-data directory.

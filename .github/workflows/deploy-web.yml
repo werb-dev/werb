@@ -51,7 +51,7 @@ jobs:
       # actions-deprecation track.
       - uses: taiki-e/install-action@v2
         with:
-          tool: wasm-pack
+          tool: wasm-pack,mdbook
 
       - name: Build web bundle (incl. WASM)
         run: pnpm --filter @werb/desktop build
@@ -59,6 +59,17 @@ jobs:
           # Repo is werb-dev/werb → site lives at /werb/. Adjust if a
           # custom domain gets wired up (then VITE_BASE=/).
           VITE_BASE: /werb/
+
+      # mdBook builds the user-facing documentation site. The output
+      # is dropped under the PWA's `dist/docs/` so Pages serves it at
+      # /werb/docs/ — relative URLs in the book stay correct because
+      # mdBook emits them, and the PWA's base path covers everything
+      # above the docs subdir.
+      - name: Build docs (mdBook)
+        run: |
+          mdbook build docs
+          mkdir -p apps/desktop/dist/docs
+          cp -R docs/book/. apps/desktop/dist/docs/
 
       - uses: actions/configure-pages@v6
 
