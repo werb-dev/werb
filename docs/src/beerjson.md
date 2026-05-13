@@ -1,8 +1,6 @@
 # BeerJSON schema notes
 
-> 🚧 This page is a stub. The detailed compatibility writeup is coming.
-
-A few quick facts about how Werb handles BeerJSON 2.x:
+How Werb handles BeerJSON 2.x — what it reads, what it writes, where it diverges, and why.
 
 ## We vendor the schemas
 

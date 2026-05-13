@@ -1,7 +1,5 @@
 # Sync to a GitHub repo
 
-> 🚧 This page is a stub. Quick reference until it's fleshed out:
-
 Werb syncs recipes to a GitHub repository of your choice, one file per recipe. The repo browses like a curated cookbook on github.com, and edits produce legible diffs on commit — the file-driven story from the README.
 
 ## What's synced
