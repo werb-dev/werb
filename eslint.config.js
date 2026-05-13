@@ -19,6 +19,9 @@ export default tseslint.config(
       "**/generated/**",
       "**/node_modules/**",
       "**/coverage/**",
+      // Git submodule. Upstream owns its lint posture; we should never
+      // try to enforce ours on a third-party schema repo.
+      "vendor/**",
       // The schema-driven type generator is auto-written; lint feedback
       // there is just noise.
       "packages/types/src/generated/**",
