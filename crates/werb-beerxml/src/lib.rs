@@ -65,10 +65,12 @@
 
 mod beerjson;
 mod error;
+mod joliebulle;
 mod model;
 mod parse;
 
 pub use error::Error;
+pub use joliebulle::{looks_like_joliebulle, parse_joliebulle};
 pub use model::{
     Fermentable, FermentableType, Hop, HopForm, HopUse, MashStep, MashStepType, Misc, MiscUse,
     Recipe, RecipeType, Style, Yeast, YeastForm, YeastType,

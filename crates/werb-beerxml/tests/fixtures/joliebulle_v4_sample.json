@@ -1,0 +1,465 @@
+{
+  "recipes": [
+    {
+      "name": "BDA / JM 2",
+      "version": "1",
+      "type": "All Grain",
+      "brewer": "Test Brewer",
+      "style": {
+        "name": "generic",
+        "version": "1",
+        "category": "",
+        "category_number": "",
+        "style_letter": "",
+        "style_guide": "",
+        "type": "",
+        "og_min": "",
+        "og_max": "",
+        "fg_min": "",
+        "fg_max": "",
+        "ibu_min": "",
+        "ibu_max": "",
+        "color_min": "",
+        "color_max": ""
+      },
+      "batch_size": 20,
+      "boil_size": "",
+      "boil_time": 60,
+      "efficiency": 80,
+      "og": 1.061,
+      "fg": 1.018,
+      "fermentables": [
+        {
+          "name": "Pilsner",
+          "version": "1",
+          "amount": 4000,
+          "type": "Grain",
+          "yield": 81,
+          "recommend_mash": "undefined",
+          "add_after_boil": "FALSE",
+          "color": 3.94,
+          "use": "add_to_mash",
+          "id": "3CycGU02Wko5O3Z~AUgAi",
+          "nameId": "bgK7~D2JsjylyGc0~6jYR",
+          "amountRatio": 0.814663951120163,
+          "colorRatio": 0.24621152944852365
+        },
+        {
+          "name": "Munich (Malt)",
+          "version": "1",
+          "amount": 500,
+          "type": "Grain",
+          "yield": 80,
+          "recommend_mash": "undefined",
+          "add_after_boil": "FALSE",
+          "color": 17.73,
+          "use": "add_to_mash",
+          "id": "EaP60C9jEwY8oy0N2Mmgc",
+          "nameId": "gOTBnvlqLhtmAKORjPj5O",
+          "amountRatio": 0.10183299389002037,
+          "colorRatio": 0.1384939853147946
+        },
+        {
+          "name": "Froment Blond (Malt)",
+          "version": "1",
+          "amount": 250,
+          "type": "Grain",
+          "yield": 80,
+          "recommend_mash": "undefined",
+          "add_after_boil": "FALSE",
+          "color": 3.94,
+          "use": "add_to_mash",
+          "id": "5zXltYU43r3BzE8ZqkE_n",
+          "nameId": "eFiVRJlLcmRW89Q6Gmxw6",
+          "amountRatio": 0.05091649694501019,
+          "colorRatio": 0.015388220590532728
+        },
+        {
+          "name": "Crystal Malt (Dark)",
+          "version": "1",
+          "amount": 160,
+          "type": "Grain",
+          "yield": 72,
+          "recommend_mash": "undefined",
+          "add_after_boil": "FALSE",
+          "color": 240,
+          "use": "add_to_mash",
+          "id": "X9RHAnwNtva24zCr2Y13U",
+          "nameId": "OL9Pk4Yy_VA4sAQIdo1zJ",
+          "amountRatio": 0.032586558044806514,
+          "colorRatio": 0.599906264646149
+        }
+      ],
+      "hops": [
+        {
+          "name": "Hallertauer Mittelfrueh",
+          "version": "1",
+          "amount": 40,
+          "form": "Plug",
+          "time": 60,
+          "alpha": "4",
+          "use": "Boil",
+          "id": "oasU9T5sXo3laguY_xJ4y",
+          "nameId": "waAS5lt6kol7ExAeeKXgD",
+          "ibuPart": 16.75607719434454
+        },
+        {
+          "name": "Hallertauer Mittelfrueh",
+          "version": "1",
+          "amount": 10,
+          "form": "Plug",
+          "time": 30,
+          "alpha": "4",
+          "use": "Boil",
+          "id": "8xWJhWQmTLGpZboDMqCt0",
+          "nameId": "4t8qmpQ~E9N~Ji8pVuD7n",
+          "ibuPart": 3.219365149519117
+        },
+        {
+          "name": "Hallertauer Mittelfrueh",
+          "version": "1",
+          "amount": 15,
+          "form": "Plug",
+          "time": 10,
+          "alpha": "4",
+          "use": "Boil",
+          "id": "KAWowTgi8_uEruhSnbOSK",
+          "nameId": "iL155~gSjV6cP4om4APeb",
+          "ibuPart": 2.2782298867162085
+        }
+      ],
+      "yeasts": [
+        {
+          "name": "Safbrew",
+          "version": "1",
+          "type": "",
+          "form": "Dry",
+          "laboratory": "Fermentis",
+          "product_id": "T-58",
+          "attenuation": "70",
+          "id": "y92zxs3hu4qw2alURlPKX",
+          "nameId": "XIPKSjLy7NSgtp6xNmanD"
+        }
+      ],
+      "miscs": [],
+      "waters": "",
+      "mash": {
+        "name": "Infusion simple, corps moyen",
+        "version": "1",
+        "grain_temp": "18",
+        "tun_temp": "20",
+        "sparge_temp": "78.0",
+        "ph": "5.4",
+        "mash_steps": [
+          {
+            "name": "Emp\u00e2tage",
+            "version": "1",
+            "type": "Infusion",
+            "step_time": "60",
+            "step_temp": "67.0",
+            "infuse_amount": "0"
+          },
+          {
+            "name": "Mash Out",
+            "version": "1",
+            "type": "Temperature",
+            "step_time": "10",
+            "step_temp": "75.0",
+            "infuse_amount": "0"
+          }
+        ],
+        "classicBaseRatio": 3,
+        "biabTargetTemp": 67,
+        "mode": "classic"
+      },
+      "notes": "cuve GRAF\n\n15 LITRES EMPATAGE\n10 LITRES RINCAGE",
+      "path": "C:\\Users\\lordp\\AppData\\Local\\joliebulle\\recettes\\15194896101.xml",
+      "id": "JBCwHpvInylCRjo~uDQKk",
+      "equipment": {
+        "compensated": 0,
+        "lost": 0,
+        "boiloff": 16,
+        "trub": 1
+      },
+      "water": {
+        "profile": {
+          "ca": 0,
+          "mg": 0,
+          "na": 0,
+          "cl": 0,
+          "so": 0,
+          "hco": 0
+        },
+        "roasted": 0,
+        "dilutionRatio": 0,
+        "salts": {
+          "caso": 0,
+          "cacl": 0,
+          "mgso": 0,
+          "nahco": 0,
+          "caoh": 0
+        },
+        "acids": {
+          "lactic": 0,
+          "phosphoric": 0,
+          "acidMalt": 0
+        },
+        "sparge": {
+          "size": 0,
+          "salts": {
+            "caso": 0,
+            "cacl": 0,
+            "mgso": 0,
+            "nahco": 0,
+            "caoh": 0
+          }
+        }
+      },
+      "batches": [],
+      "ebc": 18,
+      "ibu": 22,
+      "alc": 5.7,
+      "bugu": 0.36,
+      "preboilGravity": 1.0510169540608,
+      "grainWeight": 4910,
+      "grainVolume": 7.365,
+      "preboilVolume": 23.80952380952381,
+      "historyMessage": "Name updated"
+    },
+    {
+      "name": "AB14 / Acouph\u00e8nes",
+      "version": "1",
+      "type": "All Grain",
+      "brewer": "Test Brewer",
+      "style": {
+        "name": "generic",
+        "version": "1",
+        "category": "",
+        "category_number": "",
+        "style_letter": "",
+        "style_guide": "",
+        "type": "",
+        "og_min": "",
+        "og_max": "",
+        "fg_min": "",
+        "fg_max": "",
+        "ibu_min": "",
+        "ibu_max": "",
+        "color_min": "",
+        "color_max": ""
+      },
+      "batch_size": 28,
+      "boil_size": "",
+      "boil_time": 60,
+      "efficiency": 85,
+      "og": 1.052,
+      "fg": 1.007,
+      "fermentables": [
+        {
+          "name": "Pale Ale (Malt)",
+          "version": "1",
+          "amount": 3500,
+          "type": "Grain",
+          "yield": 85,
+          "recommend_mash": "undefined",
+          "add_after_boil": "FALSE",
+          "color": 7.092,
+          "use": "add_to_mash",
+          "id": "63jYUZLiu2Djn5ryxQaL4",
+          "nameId": "oTD~EcTx42Fv9UjgNS7iY",
+          "amountRatio": 0.6205673758865248,
+          "colorRatio": 0.6877729257641921
+        },
+        {
+          "name": "Seigle Blond (Malt)",
+          "version": "1",
+          "amount": 1440,
+          "type": "Grain",
+          "yield": 63,
+          "recommend_mash": "undefined",
+          "add_after_boil": "FALSE",
+          "color": 5.91,
+          "use": "add_to_mash",
+          "id": "6fJc7y6Zob6jYolOAc4W4",
+          "nameId": "~Tn7tVh37_Fexwe~n27wb",
+          "amountRatio": 0.2553191489361702,
+          "colorRatio": 0.23580786026200873
+        },
+        {
+          "name": "Froment Blond (Malt)",
+          "version": "1",
+          "amount": 700,
+          "type": "Grain",
+          "yield": 80,
+          "recommend_mash": "undefined",
+          "add_after_boil": "FALSE",
+          "color": 3.94,
+          "use": "add_to_mash",
+          "id": "SK_fvzy08DjOtN_rGVRqn",
+          "nameId": "twSfVA_o3~GkCDkBxKDJQ",
+          "amountRatio": 0.12411347517730496,
+          "colorRatio": 0.07641921397379912
+        }
+      ],
+      "hops": [
+        {
+          "name": "Bobek",
+          "version": "1",
+          "amount": 15,
+          "form": "Leaf",
+          "time": 30,
+          "alpha": "3.59",
+          "use": "First Wort",
+          "id": "swNPQwVKYWKaZHu8yvxbz",
+          "nameId": "S7FH2of5w_8anbaqAIrJQ",
+          "ibuPart": 3.355542941664761
+        },
+        {
+          "name": "Sterling",
+          "version": "1",
+          "amount": 10,
+          "form": "Leaf",
+          "time": 60,
+          "alpha": "12",
+          "use": "Boil",
+          "id": "A4gxu8J_jQaZCcDc~Uk18",
+          "nameId": "_H5RHo4bYDVIPWSMPq7gL",
+          "ibuPart": 9.729722681932103
+        },
+        {
+          "name": "Sterling",
+          "version": "1",
+          "amount": 10,
+          "form": "Leaf",
+          "time": 10,
+          "alpha": "12",
+          "use": "Boil",
+          "id": "uMGZ6MOKdKuI9P2zaVT0W",
+          "nameId": "Gi4KqDqKE6Ku8j1hJlWCc",
+          "ibuPart": 3.5277222699705835
+        },
+        {
+          "name": "Sterling",
+          "version": "1",
+          "amount": 10,
+          "form": "Leaf",
+          "time": 5,
+          "alpha": "12",
+          "use": "Boil",
+          "id": "RONs1hNAH2bGguUJ7WoCz",
+          "nameId": "VvIotc1J9GtFKQVZumbtx",
+          "ibuPart": 1.9396616371061743
+        },
+        {
+          "name": "Sterling",
+          "version": "1",
+          "amount": 3,
+          "form": "Plug",
+          "time": 30,
+          "alpha": "12",
+          "use": "Flame Out",
+          "id": "u2Hn2Jxis2ghexR2YaX0c",
+          "nameId": "ZiMY4HvjOuy_1B3yMCfIm",
+          "ibuPart": 1.1216299526456026
+        }
+      ],
+      "yeasts": [
+        {
+          "name": "Safbrew",
+          "version": "1",
+          "type": "",
+          "form": "Dry",
+          "laboratory": "Fermentis",
+          "product_id": "WB-06",
+          "attenuation": "86",
+          "id": "3Gt3P6xIZmd~_5MPVs1C0",
+          "nameId": "7vcN9gsUMRZhdd8Ti~bae"
+        }
+      ],
+      "miscs": [],
+      "waters": "",
+      "mash": {
+        "name": "Infusion simple, corps moyen",
+        "version": "1",
+        "grain_temp": "18",
+        "tun_temp": "20",
+        "sparge_temp": "78.0",
+        "ph": "5.4",
+        "mash_steps": [
+          {
+            "name": "Emp\u00e2tage",
+            "version": "1",
+            "type": "Infusion",
+            "step_time": "60",
+            "step_temp": "67.0",
+            "infuse_amount": "0"
+          },
+          {
+            "name": "Mash Out",
+            "version": "1",
+            "type": "Temperature",
+            "step_time": "10",
+            "step_temp": "75.0",
+            "infuse_amount": "0"
+          }
+        ],
+        "classicBaseRatio": 3,
+        "biabTargetTemp": 67,
+        "mode": "classic"
+      },
+      "notes": "B 14\n\nBRASSER LE 05/04/18\n7L 64\u00b0 > MALT > 53\u00b0 10 MINUTES ( BAISSER A 61\u00b0 POCHAIN BRASSIN )\n7.5L 99\u00b0 > 65\u00b0 30 MINUTES\n7.5L 99\u00b0 > 69\u00b0 15 MINUTES\n13L 99\u00b0 > 75\u00b0 10 MINUTES\n\nREDUIRE QUANTITE 10/15%\nRINCAGE AVEC ELO PRESQUE PLEINE\n35L AU FINAL\n\n1045 PRE EBU REFRACTOMETRE 1043 DENSI\n\n24 LITRES EN FERMENTEUR  A 1052 AU GARAGE\n\n1009 LE 24/04/18 1009 LE 01/05/18",
+      "path": "C:\\Users\\lordp\\AppData\\Local\\joliebulle\\recettes\\15221603298.xml",
+      "id": "NH0N_hrgSzAW1hAI4nkSV",
+      "equipment": {
+        "compensated": 0,
+        "lost": 0.5,
+        "boiloff": 10,
+        "trub": 1
+      },
+      "water": {
+        "profile": {
+          "ca": 0,
+          "mg": 0,
+          "na": 0,
+          "cl": 0,
+          "so": 0,
+          "hco": 0
+        },
+        "roasted": 0,
+        "dilutionRatio": 0,
+        "salts": {
+          "caso": 0,
+          "cacl": 0,
+          "mgso": 0,
+          "nahco": 0,
+          "caoh": 0
+        },
+        "acids": {
+          "lactic": 0,
+          "phosphoric": 0,
+          "acidMalt": 0
+        },
+        "sparge": {
+          "size": 0,
+          "salts": {
+            "caso": 0,
+            "cacl": 0,
+            "mgso": 0,
+            "nahco": 0,
+            "caoh": 0
+          }
+        }
+      },
+      "batches": [],
+      "ebc": 9,
+      "ibu": 20,
+      "alc": 5.9,
+      "bugu": 0.39,
+      "preboilGravity": 1.0465916736025,
+      "grainWeight": 5640,
+      "grainVolume": 8.46,
+      "preboilVolume": 31.11111111111111,
+      "historyMessage": "Name updated"
+    }
+  ]
+}

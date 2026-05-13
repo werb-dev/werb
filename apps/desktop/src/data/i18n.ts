@@ -74,8 +74,11 @@ const STRINGS: Record<string, Entry> = {
   "library.subtitle_loading": { en: "Werb · loading…", fr: "Werb · chargement…" },
   "library.subtitle_count": { en: "Werb · {count} recipe{s}", fr: "Werb · {count} recette{s}" },
   "library.new_recipe": { en: "+ New recipe", fr: "+ Nouvelle recette" },
-  "library.import_beerjson": { en: "Import .beerjson", fr: "Importer .beerjson" },
-  "library.import_beerxml": { en: "Import .beerxml", fr: "Importer .beerxml" },
+  "library.import_recipes": { en: "Import recipes", fr: "Importer des recettes" },
+  "library.import_formats_help": {
+    en: "Accepts BeerJSON 2.x, BeerXML 1.0 (incl. joliebulle v3 exports), and joliebulle v4 library exports.",
+    fr: "Accepte BeerJSON 2.x, BeerXML 1.0 (y compris les exports joliebulle v3) et les exports de bibliothèque joliebulle v4.",
+  },
   "library.importing": { en: "Importing…", fr: "Import en cours…" },
   "library.import_samples": { en: "Import samples", fr: "Importer des exemples" },
   "library.search_placeholder": { en: "Search recipes…", fr: "Rechercher des recettes…" },

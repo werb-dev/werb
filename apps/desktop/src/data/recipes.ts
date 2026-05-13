@@ -171,33 +171,39 @@ export function parseBeerJsonText(raw: string): ImportResult {
 }
 
 /**
- * Open a file dialog filtered to .beerjson, read the file, and parse it.
- * In the desktop build this goes through Tauri's native dialog +
- * filesystem; in a browser build it falls back to a hidden
- * `<input type="file">`. Returns `{ recipes: [] }` with no error if the
- * user cancels.
+ * Open a file dialog, read whatever the user picks, and route it
+ * through the right parser based on a content sniff. Supports
+ * BeerJSON 2.x, BeerXML 1.0, and joliebulle v4 exports out of one
+ * door — the user never has to know which one their file is.
+ *
+ * On desktop this goes through Tauri's native dialog with a filter
+ * covering every supported extension; in a browser build it falls
+ * back to a hidden `<input type="file">` with no filter (iOS / iPadOS
+ * would otherwise grey out files the picker doesn't recognize).
+ *
+ * Returns `{ recipes: [] }` with no error if the user cancels.
  */
-export async function importBeerJsonFromDisk(): Promise<ImportResult> {
+export async function importRecipesFromDisk(): Promise<ImportResult> {
   if (isTauri()) {
-    return importBeerJsonViaTauri();
+    return importRecipesViaTauri();
   }
   // Browser fallback. pickAndReadTextFile() must be called in the same
   // task as the user's tap on iOS, so this is a plain sync call with
-  // no awaits in front of it. No accept filter — iOS / iPadOS would
-  // grey out .beerjson files. The validator inside parseBeerJsonText
-  // surfaces a clear error if the user picks something else.
+  // no awaits in front of it.
   const picker = pickAndReadTextFile();
   const picked = await picker;
   if (!picked) return { recipes: [] };
-  return parseBeerJsonText(picked.text);
+  return dispatchByContent(picked.text);
 }
 
-async function importBeerJsonViaTauri(): Promise<ImportResult> {
+async function importRecipesViaTauri(): Promise<ImportResult> {
   const { open } = await import("@tauri-apps/plugin-dialog");
   const selected = await open({
     multiple: false,
-    filters: [{ name: "BeerJSON", extensions: ["beerjson", "json"] }],
-    title: "Import a .beerjson recipe",
+    filters: [
+      { name: "Recipes", extensions: ["beerjson", "beerxml", "xml", "json"] },
+    ],
+    title: "Import a recipe",
   });
   if (typeof selected !== "string") return { recipes: [] }; // cancelled
   const { readTextFile } = await import("@tauri-apps/plugin-fs");
@@ -210,6 +216,23 @@ async function importBeerJsonViaTauri(): Promise<ImportResult> {
       error: new WerbError("import.read_failed", { detail: (err as Error).message }),
     };
   }
+  return dispatchByContent(raw);
+}
+
+/**
+ * Sniff the file's content and route to the right parser. The
+ * detection is cheap — first non-whitespace byte distinguishes XML
+ * from JSON, and within JSON the top-level shape distinguishes
+ * joliebulle from BeerJSON.
+ */
+async function dispatchByContent(raw: string): Promise<ImportResult> {
+  const trimmed = raw.trimStart();
+  if (trimmed.startsWith("<")) {
+    return parseBeerXmlText(raw);
+  }
+  if (looksLikeJoliebulle(raw)) {
+    return parseJoliebulleText(raw);
+  }
   return parseBeerJsonText(raw);
 }
 
@@ -220,13 +243,7 @@ async function importBeerJsonViaTauri(): Promise<ImportResult> {
  */
 export async function parseBeerXmlText(raw: string): Promise<ImportResult> {
   try {
-    const wasm = await import(
-      "../../../../crates/werb-beerxml-wasm/pkg/werb_beerxml_wasm.js"
-    );
-    await wasm.default(); // wasm-bindgen init — no-op after the first call
-    // The WASM returns a JSON string, not a JS object, so plain
-    // `recipe.name` access works without serde_wasm_bindgen's Map
-    // gotchas. See the crate's lib.rs for the rationale.
+    const wasm = await loadWasm();
     const recipes = JSON.parse(wasm.parseBeerXmlJson(raw)) as BeerJsonRecipe[];
     if (recipes.length === 0) {
       return { recipes: [], error: new WerbError("import.no_recipes_beerxml") };
@@ -239,42 +256,62 @@ export async function parseBeerXmlText(raw: string): Promise<ImportResult> {
 }
 
 /**
- * Open a file dialog filtered to .xml/.beerxml, read the file, and
- * convert it to BeerJSON via the WASM parser. Same code path on
- * desktop (Tauri webview) and browser — only the file picker differs.
- * Returns `{ recipes: [] }` with no error if the user cancels.
+ * Parse a joliebulle v4 library export into BeerJSON 2.x recipes
+ * via the same WASM bundle that handles BeerXML. Joliebulle saves
+ * its whole library as a single `.json` file with a custom shape;
+ * we sniff for that shape inside [`parseBeerJsonText`] and route
+ * here so the picker can stay a plain "Import BeerJSON" entry point.
  */
-export async function importBeerXmlFromDisk(): Promise<ImportResult> {
-  if (isTauri()) {
-    return importBeerXmlViaTauri();
+export async function parseJoliebulleText(raw: string): Promise<ImportResult> {
+  try {
+    const wasm = await loadWasm();
+    const recipes = JSON.parse(wasm.parseJoliebulleJson(raw)) as BeerJsonRecipe[];
+    if (recipes.length === 0) {
+      return { recipes: [], error: new WerbError("import.no_recipes_beerxml") };
+    }
+    return { recipes };
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
+    return { recipes: [], error: new WerbError("import.beerxml_parse_failed", { detail }) };
   }
-  // Browser fallback. pickAndReadTextFile() runs synchronously up to
-  // input.click() so the iOS user-gesture token survives. No accept
-  // filter — iPadOS greys out .beerxml files; the WASM parser
-  // surfaces a clear error if the picked file isn't XML.
-  const picker = pickAndReadTextFile();
-  const picked = await picker;
-  if (!picked) return { recipes: [] };
-  return parseBeerXmlText(picked.text);
 }
 
-async function importBeerXmlViaTauri(): Promise<ImportResult> {
-  const { open } = await import("@tauri-apps/plugin-dialog");
-  const selected = await open({
-    multiple: false,
-    filters: [{ name: "BeerXML", extensions: ["beerxml", "xml"] }],
-    title: "Import a .beerxml recipe",
-  });
-  if (typeof selected !== "string") return { recipes: [] }; // cancelled
-  const { readTextFile } = await import("@tauri-apps/plugin-fs");
-  let raw: string;
-  try {
-    raw = await readTextFile(selected);
-  } catch (err) {
-    return {
-      recipes: [],
-      error: new WerbError("import.read_failed", { detail: (err as Error).message }),
-    };
-  }
-  return parseBeerXmlText(raw);
+// WASM is loaded lazily on the first call of any importer and cached
+// across subsequent calls. The wasm-bindgen `default()` call is a
+// no-op after the first invocation, but the dynamic import alone
+// avoids pulling the binary into the cold-start path.
+type ImportWasm = typeof import(
+  "../../../../crates/werb-beerxml-wasm/pkg/werb_beerxml_wasm.js"
+);
+let wasmCache: ImportWasm | null = null;
+async function loadWasm(): Promise<ImportWasm> {
+  if (wasmCache) return wasmCache;
+  const wasm = await import(
+    "../../../../crates/werb-beerxml-wasm/pkg/werb_beerxml_wasm.js"
+  );
+  await wasm.default();
+  wasmCache = wasm;
+  return wasm;
 }
+
+/**
+ * Cheap JS-side sniff for joliebulle v4 exports: a top-level
+ * `recipes` array AND no `beerjson` wrapper key. Used by
+ * [`parseBeerJsonText`] to decide whether to delegate to the
+ * joliebulle parser before falling through to BeerJSON validation.
+ * Avoids loading WASM for every BeerJSON import.
+ */
+function looksLikeJoliebulle(raw: string): boolean {
+  try {
+    const obj = JSON.parse(raw) as Record<string, unknown>;
+    return (
+      obj !== null &&
+      typeof obj === "object" &&
+      Array.isArray((obj as { recipes?: unknown }).recipes) &&
+      !("beerjson" in obj)
+    );
+  } catch {
+    return false;
+  }
+}
+

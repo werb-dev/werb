@@ -24,4 +24,9 @@ pub enum Error {
     /// The input parsed as XML but contained no `<RECIPE>` elements.
     #[error("no <RECIPE> elements found in input")]
     NoRecipes,
+
+    /// The input was passed to the joliebulle JSON parser and didn't
+    /// match its expected shape.
+    #[error("joliebulle JSON parse error: {0}")]
+    Json(String),
 }

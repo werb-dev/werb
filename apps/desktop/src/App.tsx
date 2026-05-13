@@ -7,7 +7,7 @@ import { JournalScreen } from "./screens/Journal.tsx";
 import { SettingsScreen } from "./screens/Settings.tsx";
 import { useRecipes } from "./hooks/useRecipes.ts";
 import { useEquipment } from "./hooks/useEquipment.ts";
-import { BUNDLED_SAMPLES, createBlankRecipe, importBeerJsonFromDisk, importBeerXmlFromDisk } from "./data/recipes.ts";
+import { BUNDLED_SAMPLES, createBlankRecipe, importRecipesFromDisk } from "./data/recipes.ts";
 import { exportSessionHtml, exportSessionJson } from "./data/recipe-export.ts";
 import { partitionForImport, skippedSummary } from "./data/import-dedup.ts";
 import { useT, useUnits } from "./data/preferences.tsx";
@@ -199,14 +199,8 @@ export function App() {
           // in ingredients before anything renders meaningfully.
           goEditRecipe(fresh.id);
         }}
-        onImportBeerJsonFile={async () => {
-          const { recipes, error } = await importBeerJsonFromDisk();
-          const { fresh, skipped } = partitionForImport(recipes, recipesApi.recipes);
-          if (fresh.length > 0) recipesApi.createMany(fresh);
-          return { count: fresh.length, error, info: formatSkipped(skipped) };
-        }}
-        onImportBeerXmlFile={async () => {
-          const { recipes, error } = await importBeerXmlFromDisk();
+        onImportFile={async () => {
+          const { recipes, error } = await importRecipesFromDisk();
           const { fresh, skipped } = partitionForImport(recipes, recipesApi.recipes);
           if (fresh.length > 0) recipesApi.createMany(fresh);
           return { count: fresh.length, error, info: formatSkipped(skipped) };

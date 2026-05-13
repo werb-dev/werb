@@ -26,12 +26,7 @@ interface LibraryScreenProps {
   onDelete: (id: string) => void;
   onDuplicate: (id: string) => void;
   onImportSamples: () => { count: number; info?: string | undefined };
-  onImportBeerJsonFile: () => Promise<{
-    count: number;
-    error?: WerbError | undefined;
-    info?: string | undefined;
-  }>;
-  onImportBeerXmlFile: () => Promise<{
+  onImportFile: () => Promise<{
     count: number;
     error?: WerbError | undefined;
     info?: string | undefined;
@@ -48,8 +43,7 @@ export function LibraryScreen({
   onDelete,
   onDuplicate,
   onImportSamples,
-  onImportBeerJsonFile,
-  onImportBeerXmlFile,
+  onImportFile,
   onCreateBlank,
   activeProfile,
   onGoEquipment,
@@ -86,8 +80,7 @@ export function LibraryScreen({
     }
   };
 
-  const handleImportFile = () => runImport(onImportBeerJsonFile);
-  const handleImportXml = () => runImport(onImportBeerXmlFile);
+  const handleImportFile = () => runImport(onImportFile);
 
   return (
     <div className="min-h-dvh bg-bg text-text">
@@ -111,16 +104,10 @@ export function LibraryScreen({
             <button
               onClick={handleImportFile}
               disabled={importing}
+              title={t("library.import_formats_help")}
               className="px-4 py-2 rounded-lg bg-surface-raised border border-border text-body-sm font-medium hover:border-border-strong disabled:opacity-50 transition-colors"
             >
-              {importing ? t("library.importing") : t("library.import_beerjson")}
-            </button>
-            <button
-              onClick={handleImportXml}
-              disabled={importing}
-              className="px-4 py-2 rounded-lg bg-surface-raised border border-border text-body-sm font-medium hover:border-border-strong disabled:opacity-50 transition-colors"
-            >
-              {t("library.import_beerxml")}
+              {importing ? t("library.importing") : t("library.import_recipes")}
             </button>
             <button
               onClick={handleImportSamples}

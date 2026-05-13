@@ -209,7 +209,10 @@ fn collect_input_files(inputs: &[PathBuf]) -> Result<Vec<PathBuf>, String> {
 
 fn is_recipe_file(p: &Path) -> bool {
     let Some(ext) = p.extension().and_then(|e| e.to_str()) else { return false };
-    matches!(ext.to_ascii_lowercase().as_str(), "xml" | "beerxml" | "beerjson")
+    // `.json` covers joliebulle v4 library exports; the JSON
+    // dispatcher then sniffs the top-level shape to pick the right
+    // parser between joliebulle and bare BeerJSON.
+    matches!(ext.to_ascii_lowercase().as_str(), "xml" | "beerxml" | "beerjson" | "json")
 }
 
 /// Parse a single input file. Tries BeerXML first when the extension
@@ -224,8 +227,21 @@ fn parse_any(path: &Path, raw: &str) -> Result<Vec<werb_beerjson::Recipe>, Strin
         Some("xml") | Some("beerxml") => werb_beerxml::parse(raw)
             .map(|recipes| recipes.iter().map(|r| r.to_beerjson()).collect())
             .map_err(|e| format!("BeerXML parse: {e}")),
-        _ => parse_beerjson(raw),
+        _ => parse_json(raw),
     }
+}
+
+/// Dispatch a JSON input to the right parser. Joliebulle v4 exports
+/// (`{ recipes: [...], timestamp, … }`) and BeerJSON 2.x documents
+/// (`{ beerjson: { recipes: [...] } }`) both end in `.json` /
+/// `.beerjson` in practice, so we sniff the top-level shape.
+fn parse_json(raw: &str) -> Result<Vec<werb_beerjson::Recipe>, String> {
+    if werb_beerxml::looks_like_joliebulle(raw) {
+        return werb_beerxml::parse_joliebulle(raw)
+            .map(|recipes| recipes.iter().map(|r| r.to_beerjson()).collect())
+            .map_err(|e| format!("joliebulle parse: {e}"));
+    }
+    parse_beerjson(raw)
 }
 
 /// Parse a `.beerjson` file and pull out its recipes. Accepts both
@@ -376,6 +392,19 @@ fn raw_to_beerjson_value(path: &Path, raw: &str) -> Result<serde_json::Value, St
     if matches!(ext.as_deref(), Some("xml") | Some("beerxml")) {
         let recipes = werb_beerxml::parse(raw)
             .map_err(|e| format!("BeerXML parse: {e}"))?;
+        let typed: Vec<_> = recipes.iter().map(|r| r.to_beerjson()).collect();
+        let doc = werb_beerjson::Document {
+            beerjson: werb_beerjson::DocumentBody { version: 2.06, recipes: typed },
+        };
+        return serde_json::to_value(&doc).map_err(|e| format!("serialize: {e}"));
+    }
+
+    // Joliebulle v4 JSON has its own envelope; route to the dedicated
+    // parser so the BeerJSON validator sees converted recipes, not
+    // joliebulle's native shape.
+    if werb_beerxml::looks_like_joliebulle(raw) {
+        let recipes = werb_beerxml::parse_joliebulle(raw)
+            .map_err(|e| format!("joliebulle parse: {e}"))?;
         let typed: Vec<_> = recipes.iter().map(|r| r.to_beerjson()).collect();
         let doc = werb_beerjson::Document {
             beerjson: werb_beerjson::DocumentBody { version: 2.06, recipes: typed },

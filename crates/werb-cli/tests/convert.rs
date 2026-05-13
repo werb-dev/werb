@@ -281,3 +281,30 @@ fn validate_fail_fast_stops_after_first_failure() {
         // 0 valid because we stopped before getting to the valid file.
         .stderr(predicate::str::contains("0 valid · 1 invalid"));
 }
+
+#[test]
+fn converts_joliebulle_v4_json_export() {
+    let out = tempdir().unwrap();
+    Command::cargo_bin("werb")
+        .unwrap()
+        .arg("convert")
+        .arg(fixtures().join("joliebulle_v4_sample.json"))
+        .arg("-o")
+        .arg(out.path())
+        .assert()
+        .success()
+        .stderr(predicate::str::contains("2 written"));
+    // First recipe in the fixture is "BDA / JM 2" → bda-jm-2.beerjson.
+    assert!(out.path().join("bda-jm-2.beerjson").exists());
+}
+
+#[test]
+fn validates_joliebulle_v4_json_export() {
+    Command::cargo_bin("werb")
+        .unwrap()
+        .arg("validate")
+        .arg(fixtures().join("joliebulle_v4_sample.json"))
+        .assert()
+        .success()
+        .stderr(predicate::str::contains("1 valid · 0 invalid"));
+}

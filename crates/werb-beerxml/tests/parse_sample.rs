@@ -205,3 +205,55 @@ fn empty_numeric_elements_do_not_break_the_parse() {
     assert!(y.min_temperature.is_none());
     assert!(y.max_temperature.is_none());
 }
+
+// ─── Joliebulle v4 JSON ────────────────────────────────────────────────
+
+const JOLIEBULLE_V4: &str = include_str!("fixtures/joliebulle_v4_sample.json");
+
+#[test]
+fn parses_joliebulle_v4_export() {
+    let recipes = werb_beerxml::parse_joliebulle(JOLIEBULLE_V4).expect("must parse");
+    assert!(!recipes.is_empty(), "fixture should contain recipes");
+    let first = &recipes[0];
+    assert_eq!(first.name, "BDA / JM 2");
+    assert_eq!(first.brewer.as_deref(), Some("Test Brewer"));
+    // joliebulle stores fermentable amounts in grams; we divide by
+    // 1000 on the way in, so 4000g → 4kg.
+    let ferms = first.fermentables.as_ref().unwrap();
+    let pilsner = ferms.items.iter().find(|f| f.name == "Pilsner").unwrap();
+    assert!((pilsner.amount - 4.0).abs() < 1e-9);
+    // Hop amount: 40g → 0.04kg.
+    let hop = &first.hops.as_ref().unwrap().items[0];
+    assert!((hop.amount - 0.040).abs() < 1e-9);
+    // Yeast amount is missing on joliebulle; defaults to 0.
+    let yeast = &first.yeasts.as_ref().unwrap().items[0];
+    assert_eq!(yeast.amount, 0.0);
+    // The recipe-level OG and FG plant into est_og / est_fg.
+    assert!(first.est_og_value().is_some());
+    assert!(first.est_fg_value().is_some());
+}
+
+#[test]
+fn joliebulle_v4_round_trips_through_to_beerjson() {
+    let recipes = werb_beerxml::parse_joliebulle(JOLIEBULLE_V4).unwrap();
+    for recipe in &recipes {
+        let json = serde_json::to_value(recipe.to_beerjson()).unwrap();
+        // The required-by-schema fields land in the output.
+        assert!(json["name"].is_string());
+        assert_eq!(json["type"], "all grain");
+        assert!(json["batch_size"]["value"].is_number());
+        assert!(json["ingredients"]["fermentable_additions"].is_array());
+        assert!(json["efficiency"]["brewhouse"]["value"].is_number());
+    }
+}
+
+#[test]
+fn joliebulle_v4_sniff_matches_real_exports() {
+    assert!(werb_beerxml::looks_like_joliebulle(JOLIEBULLE_V4));
+    // BeerJSON 2.x documents should NOT sniff as joliebulle.
+    assert!(!werb_beerxml::looks_like_joliebulle(
+        r#"{"beerjson":{"version":2.06,"recipes":[]}}"#
+    ));
+    // Random JSON shouldn't either.
+    assert!(!werb_beerxml::looks_like_joliebulle(r#"{"hello":"world"}"#));
+}
