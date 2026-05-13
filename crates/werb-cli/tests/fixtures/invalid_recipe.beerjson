@@ -1,0 +1,22 @@
+{
+  "beerjson": {
+    "version": 2.06,
+    "recipes": [
+      {
+        "name": "Bad",
+        "type": "all grain",
+        "author": "x",
+        "batch_size": { "value": 20, "unit": "l" },
+        "efficiency": { "brewhouse": { "value": 75, "unit": "%" } },
+        "ingredients": {},
+        "style": {
+          "name": "X",
+          "category": "X",
+          "category_number": "21",
+          "style_guide": "BJCP",
+          "type": "beer"
+        }
+      }
+    ]
+  }
+}

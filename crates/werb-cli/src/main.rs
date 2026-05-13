@@ -31,6 +31,10 @@ enum Command {
     /// Convert one or more BeerXML or BeerJSON files into per-recipe
     /// `.beerjson` files written under `--output`.
     Convert(ConvertArgs),
+    /// Validate one or more recipe files against the BeerJSON 2.x
+    /// schema. BeerXML inputs are converted to BeerJSON first, so
+    /// the question answered is "would Werb import this cleanly?".
+    Validate(ValidateArgs),
 }
 
 #[derive(Parser, Debug)]
@@ -55,6 +59,18 @@ struct ConvertArgs {
     force: bool,
 }
 
+#[derive(Parser, Debug)]
+struct ValidateArgs {
+    /// Input files or directories. Directories are scanned for
+    /// `.xml`, `.beerxml`, and `.beerjson` files (non-recursively).
+    #[arg(required = true)]
+    inputs: Vec<PathBuf>,
+
+    /// Stop on the first failure instead of validating every file.
+    #[arg(long)]
+    fail_fast: bool,
+}
+
 fn main() -> ExitCode {
     let cli = Cli::parse();
     match cli.command {
@@ -68,6 +84,7 @@ fn main() -> ExitCode {
                 ExitCode::FAILURE
             }
         },
+        Command::Validate(args) => run_validate(&args),
     }
 }
 
@@ -280,6 +297,180 @@ fn unique_slug(
         }
         candidate = format!("{base}-{n}");
         n += 1;
+    }
+}
+
+// ─── validate ─────────────────────────────────────────────────────────────
+
+/// Every schema file from `vendor/beerjson/json/`, embedded at compile
+/// time. Ships inside the `werb` binary so `werb validate` is
+/// self-contained — no submodule, no `--schemas-dir` flag, no
+/// network. Total weight ~30 KB across all 20 files.
+///
+/// Filenames here mirror the `$ref` strings the schemas use to point
+/// at each other (e.g. `recipe.json` references
+/// `measureable_units.json#/...`). The compiler verifies each file
+/// exists at build time, so a missing/renamed schema fails fast.
+const EMBEDDED_SCHEMAS: &[(&str, &str)] = &[
+    ("beer.json", include_str!("../../../vendor/beerjson/json/beer.json")),
+    ("boil.json", include_str!("../../../vendor/beerjson/json/boil.json")),
+    ("boil_step.json", include_str!("../../../vendor/beerjson/json/boil_step.json")),
+    ("culture.json", include_str!("../../../vendor/beerjson/json/culture.json")),
+    ("equipment.json", include_str!("../../../vendor/beerjson/json/equipment.json")),
+    ("fermentable.json", include_str!("../../../vendor/beerjson/json/fermentable.json")),
+    ("fermentation.json", include_str!("../../../vendor/beerjson/json/fermentation.json")),
+    ("fermentation_step.json", include_str!("../../../vendor/beerjson/json/fermentation_step.json")),
+    ("hop.json", include_str!("../../../vendor/beerjson/json/hop.json")),
+    ("mash.json", include_str!("../../../vendor/beerjson/json/mash.json")),
+    ("mash_step.json", include_str!("../../../vendor/beerjson/json/mash_step.json")),
+    ("measureable_units.json", include_str!("../../../vendor/beerjson/json/measureable_units.json")),
+    ("misc.json", include_str!("../../../vendor/beerjson/json/misc.json")),
+    ("packaging.json", include_str!("../../../vendor/beerjson/json/packaging.json")),
+    ("packaging_graphic.json", include_str!("../../../vendor/beerjson/json/packaging_graphic.json")),
+    ("packaging_vessel.json", include_str!("../../../vendor/beerjson/json/packaging_vessel.json")),
+    ("recipe.json", include_str!("../../../vendor/beerjson/json/recipe.json")),
+    ("style.json", include_str!("../../../vendor/beerjson/json/style.json")),
+    ("timing.json", include_str!("../../../vendor/beerjson/json/timing.json")),
+    ("water.json", include_str!("../../../vendor/beerjson/json/water.json")),
+];
+
+/// Schemas register under the same canonical `$id` URL the upstream
+/// repo uses, so the cross-file `$ref` values resolve.
+const SCHEMA_URL_BASE: &str = "https://raw.githubusercontent.com/beerjson/beerjson/master/json/";
+
+fn build_validator() -> Result<(boon::Schemas, boon::SchemaIndex), String> {
+    let mut compiler = boon::Compiler::new();
+    for (name, raw) in EMBEDDED_SCHEMAS {
+        let value: serde_json::Value = serde_json::from_str(raw)
+            .map_err(|e| format!("schema {name} parse: {e}"))?;
+        compiler
+            .add_resource(&format!("{SCHEMA_URL_BASE}{name}"), value)
+            .map_err(|e| format!("schema {name} add: {e:#}"))?;
+    }
+    let mut schemas = boon::Schemas::new();
+    let idx = compiler
+        .compile(&format!("{SCHEMA_URL_BASE}beer.json#"), &mut schemas)
+        .map_err(|e| format!("compile root schema: {e:#}"))?;
+    Ok((schemas, idx))
+}
+
+/// Produce a `{beerjson: {version, recipes:[…]}}` JSON value ready
+/// to feed boon, regardless of input shape:
+///
+///  - `.xml` / `.beerxml` — parse via werb-beerxml, run the typed
+///    converter, serialize. Same path the in-app import takes.
+///  - `.beerjson` — pass the raw JSON through unchanged so the
+///    validator sees the file's actual bytes (not a typify-shaped
+///    round-trip). This is intentional: typify deserialization is
+///    stricter than JSON Schema (rejects `60.0` for an `integer`
+///    field, for instance), but the schema itself accepts
+///    integer-valued floats. Validation must follow the schema, not
+///    typify. Bare single-recipe documents are still wrapped in an
+///    envelope so the root-schema gets a consistent shape.
+fn raw_to_beerjson_value(path: &Path, raw: &str) -> Result<serde_json::Value, String> {
+    let ext = path
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(|s| s.to_ascii_lowercase());
+
+    if matches!(ext.as_deref(), Some("xml") | Some("beerxml")) {
+        let recipes = werb_beerxml::parse(raw)
+            .map_err(|e| format!("BeerXML parse: {e}"))?;
+        let typed: Vec<_> = recipes.iter().map(|r| r.to_beerjson()).collect();
+        let doc = werb_beerjson::Document {
+            beerjson: werb_beerjson::DocumentBody { version: 2.06, recipes: typed },
+        };
+        return serde_json::to_value(&doc).map_err(|e| format!("serialize: {e}"));
+    }
+
+    let value: serde_json::Value =
+        serde_json::from_str(raw).map_err(|e| format!("BeerJSON parse: {e}"))?;
+    // Tolerate a bare single-recipe document by wrapping it in the
+    // standard envelope before validation.
+    if value.get("beerjson").is_some() {
+        Ok(value)
+    } else {
+        Ok(serde_json::json!({ "beerjson": { "version": 2.06, "recipes": [value] } }))
+    }
+}
+
+fn run_validate(args: &ValidateArgs) -> ExitCode {
+    let (schemas, idx) = match build_validator() {
+        Ok(v) => v,
+        Err(e) => {
+            eprintln!("error: {e}");
+            return ExitCode::FAILURE;
+        }
+    };
+
+    let files = match collect_input_files(&args.inputs) {
+        Ok(f) => f,
+        Err(e) => {
+            eprintln!("error: {e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    if files.is_empty() {
+        eprintln!("error: no .xml / .beerxml / .beerjson files in any input");
+        return ExitCode::FAILURE;
+    }
+
+    let mut valid = 0usize;
+    let mut invalid = 0usize;
+
+    for file in &files {
+        let raw = match fs::read_to_string(file) {
+            Ok(s) => s,
+            Err(e) => {
+                println!("✗ {}", file.display());
+                println!("    read failed: {e}");
+                invalid += 1;
+                if args.fail_fast {
+                    break;
+                }
+                continue;
+            }
+        };
+
+        let json_value = match raw_to_beerjson_value(file, &raw) {
+            Ok(v) => v,
+            Err(e) => {
+                println!("✗ {}", file.display());
+                println!("    {e}");
+                invalid += 1;
+                if args.fail_fast {
+                    break;
+                }
+                continue;
+            }
+        };
+
+        match schemas.validate(&json_value, idx) {
+            Ok(_) => {
+                println!("✓ {}", file.display());
+                valid += 1;
+            }
+            Err(err) => {
+                println!("✗ {}", file.display());
+                // boon's Display is one error per line, already
+                // indented with the JSON pointer. Re-indent with our
+                // own gutter for readability.
+                for line in format!("{err:#}").lines() {
+                    println!("    {line}");
+                }
+                invalid += 1;
+                if args.fail_fast {
+                    break;
+                }
+            }
+        }
+    }
+
+    eprintln!("{valid} valid · {invalid} invalid");
+    if invalid == 0 {
+        ExitCode::SUCCESS
+    } else {
+        ExitCode::FAILURE
     }
 }
 

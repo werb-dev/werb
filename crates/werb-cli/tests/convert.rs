@@ -64,11 +64,25 @@ fn converts_joliebulle_export() {
 
 #[test]
 fn directory_input_picks_up_every_recipe_file() {
+    // Stage exactly the files we want walked into a private temp dir
+    // so adding new fixtures elsewhere doesn't perturb the count.
+    let input = tempdir().unwrap();
+    std::fs::copy(
+        fixtures().join("sample_ipa.beerxml"),
+        input.path().join("sample.beerxml"),
+    )
+    .unwrap();
+    std::fs::copy(
+        fixtures().join("joliebulle_blanche.xml"),
+        input.path().join("blanche.xml"),
+    )
+    .unwrap();
+
     let out = tempdir().unwrap();
     Command::cargo_bin("werb")
         .unwrap()
         .arg("convert")
-        .arg(fixtures())
+        .arg(input.path())
         .arg("-o")
         .arg(out.path())
         .assert()
@@ -182,4 +196,88 @@ fn errors_on_missing_input() {
         .assert()
         .failure()
         .stderr(predicate::str::contains("input not found"));
+}
+
+// ─── validate ──────────────────────────────────────────────────────────────
+
+#[test]
+fn validate_passes_a_real_beerjson_file() {
+    Command::cargo_bin("werb")
+        .unwrap()
+        .arg("validate")
+        .arg(fixtures().join("valid_recipe.beerjson"))
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("✓"))
+        .stderr(predicate::str::contains("1 valid · 0 invalid"));
+}
+
+#[test]
+fn validate_passes_beerxml_after_round_tripping_through_the_converter() {
+    // BeerXML in, validation says yes — same path as `werb convert`
+    // followed by reading the output. Tests our "would Werb import
+    // this?" promise for free.
+    Command::cargo_bin("werb")
+        .unwrap()
+        .arg("validate")
+        .arg(fixtures().join("sample_ipa.beerxml"))
+        .assert()
+        .success()
+        .stderr(predicate::str::contains("1 valid · 0 invalid"));
+}
+
+#[test]
+fn validate_passes_joliebulle_quirks() {
+    // The historical bug-reporter's file — empty <TYPE />, missing
+    // <AMOUNT> on yeast, <OG> instead of <EST_OG>. All survive the
+    // BeerXML→BeerJSON round-trip and validate against the schema.
+    Command::cargo_bin("werb")
+        .unwrap()
+        .arg("validate")
+        .arg(fixtures().join("joliebulle_blanche.xml"))
+        .assert()
+        .success();
+}
+
+#[test]
+fn validate_surfaces_schema_errors_with_json_pointer() {
+    Command::cargo_bin("werb")
+        .unwrap()
+        .arg("validate")
+        .arg(fixtures().join("invalid_recipe.beerjson"))
+        .assert()
+        .failure()
+        .stdout(predicate::str::contains("✗"))
+        // The fixture violates two rules — both should appear.
+        .stdout(predicate::str::contains("category_number"))
+        .stdout(predicate::str::contains("fermentable_additions"))
+        .stderr(predicate::str::contains("0 valid · 1 invalid"));
+}
+
+#[test]
+fn validate_reports_all_files_then_summary() {
+    Command::cargo_bin("werb")
+        .unwrap()
+        .arg("validate")
+        .arg(fixtures().join("valid_recipe.beerjson"))
+        .arg(fixtures().join("invalid_recipe.beerjson"))
+        .arg(fixtures().join("sample_ipa.beerxml"))
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("2 valid · 1 invalid"))
+        .stdout(predicate::str::contains("valid_recipe.beerjson"));
+}
+
+#[test]
+fn validate_fail_fast_stops_after_first_failure() {
+    Command::cargo_bin("werb")
+        .unwrap()
+        .arg("validate")
+        .arg("--fail-fast")
+        .arg(fixtures().join("invalid_recipe.beerjson"))
+        .arg(fixtures().join("valid_recipe.beerjson"))
+        .assert()
+        .failure()
+        // 0 valid because we stopped before getting to the valid file.
+        .stderr(predicate::str::contains("0 valid · 1 invalid"));
 }
