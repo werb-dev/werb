@@ -43,15 +43,15 @@ jobs:
     runs-on: ${{ matrix.platform }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           # vendor/beerjson submodule — @werb/validate, the desktop
           # bundle, and the Rust schema tests all need it.
           submodules: recursive
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 20
           cache: pnpm
@@ -82,9 +82,12 @@ jobs:
             ./apps/desktop/src-tauri -> target
             ./crates/werb-beerxml-wasm -> target
 
-      - uses: jetli/wasm-pack-action@v0.4.0
+      # taiki-e/install-action ships a maintained Node 24 runtime;
+      # jetli/wasm-pack-action is pinned to Node 16 and on the
+      # actions-deprecation track.
+      - uses: taiki-e/install-action@v2
         with:
-          version: latest
+          tool: wasm-pack
 
       - name: Install workspace
         run: pnpm install --frozen-lockfile

@@ -17,7 +17,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         # vendor/beerjson is a git submodule the validator + Rust
         # schema tests + type generator all read from. Without
         # `submodules: recursive` the runner gets an empty directory
@@ -26,9 +26,9 @@ jobs:
           submodules: recursive
 
       # Version comes from `packageManager` in root package.json.
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 20
           cache: pnpm
@@ -42,9 +42,12 @@ jobs:
         with:
           targets: wasm32-unknown-unknown
 
-      - uses: jetli/wasm-pack-action@v0.4.0
+      # taiki-e/install-action ships a maintained Node 24 runtime;
+      # jetli/wasm-pack-action is pinned to Node 16 and on the
+      # actions-deprecation track.
+      - uses: taiki-e/install-action@v2
         with:
-          version: latest
+          tool: wasm-pack
 
       - name: Generate types from JSON Schemas
         run: pnpm gen:types

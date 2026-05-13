@@ -21,16 +21,16 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           # vendor/beerjson submodule — @werb/validate fails to load
           # the BeerJSON schemas without it.
           submodules: recursive
 
       # Version comes from the "packageManager" field in root package.json.
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 20
           cache: pnpm
@@ -46,9 +46,12 @@ jobs:
         with:
           targets: wasm32-unknown-unknown
 
-      - uses: jetli/wasm-pack-action@v0.4.0
+      # taiki-e/install-action ships a maintained Node 24 runtime;
+      # jetli/wasm-pack-action is pinned to Node 16 and on the
+      # actions-deprecation track.
+      - uses: taiki-e/install-action@v2
         with:
-          version: latest
+          tool: wasm-pack
 
       - name: Build web bundle (incl. WASM)
         run: pnpm --filter @werb/desktop build
@@ -57,9 +60,9 @@ jobs:
           # custom domain gets wired up (then VITE_BASE=/).
           VITE_BASE: /werb/
 
-      - uses: actions/configure-pages@v5
+      - uses: actions/configure-pages@v6
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: apps/desktop/dist
 
@@ -71,4 +74,4 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
