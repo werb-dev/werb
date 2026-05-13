@@ -38,7 +38,7 @@ export interface ExportResult {
  * Sanitize a recipe name into a filename: ASCII-friendly and safe on
  * every desktop OS. "Hazy IPA / Mosaic" → "hazy-ipa-mosaic".
  */
-function slugify(name: string): string {
+export function slugify(name: string): string {
   return name
     .toLowerCase()
     .normalize("NFKD")

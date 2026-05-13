@@ -1,17 +1,18 @@
 import { useEffect, useRef, useState } from "react";
 import {
   clearWerbData,
-  copyKeysToBackend,
-  gitHubBackend,
+  pushRecipes,
+  pullRecipes,
   restoreSnapshot,
   snapshotBackend,
   useStorage,
   usePersistedJson,
   verifyGitHubAccess,
   type DataSnapshot,
-  type GitHubBackendConfig,
+  type GitHubRecipesConfig,
   type StorageBackend,
 } from "../storage/index.ts";
+import { loadStore, saveStore, type StoredRecipe } from "../data/recipes.ts";
 import { useT, useUnitsControl } from "../data/preferences.tsx";
 import type { UnitPreferences } from "../data/units-format.ts";
 import { SUPPORTED_LOCALES } from "../data/i18n.ts";
@@ -19,16 +20,18 @@ import { downloadTextFile, pickAndReadTextFile } from "../data/browser-fs.ts";
 import { translateError } from "../data/errors.ts";
 
 /**
- * Sync + advanced storage settings. v1 covers a single GitHub-based
- * sync target: user pastes a Personal Access Token + "owner/repo",
- * we verify the credentials, and Push / Pull buttons fan every
- * werb.* key in or out via the StorageBackend port. No automatic
- * background sync — explicit only, so the brewer always knows what
- * just happened to their data.
+ * Sync + advanced storage settings.
+ *
+ * v1 of sync is a GitHub-backed *recipes archive*: each recipe lives
+ * in its own `<recipesPath>/<slug>.beerjson` file inside the chosen
+ * repo. The user pastes a Personal Access Token + `owner/repo`, we
+ * verify the credentials, and the Push / Pull buttons drive the
+ * per-file flow. No automatic background sync — explicit only, so
+ * the brewer always knows what just happened to their data.
  */
 
 interface SyncConfig {
-  config: GitHubBackendConfig;
+  config: GitHubRecipesConfig;
   /** Login of the user the token authenticates as — shown for confirmation. */
   login: string;
   /** Normalized repo full_name from GitHub — guards against typo'd casing. */
@@ -39,11 +42,6 @@ interface SyncStatus {
   kind: "idle" | "verifying" | "syncing";
   message?: string;
   error?: string;
-}
-
-interface ProgressState {
-  done: number;
-  total: number;
 }
 
 export function SettingsScreen() {
@@ -492,6 +490,7 @@ function Connect({ onConnected }: { onConnected: (s: SyncConfig) => void }) {
   const [token, setToken] = useState("");
   const [repo, setRepo] = useState("");
   const [branch, setBranch] = useState("main");
+  const [recipesPath, setRecipesPath] = useState("recipes");
   const [status, setStatus] = useState<SyncStatus>({ kind: "idle" });
 
   const onVerify = async () => {
@@ -503,7 +502,7 @@ function Connect({ onConnected }: { onConnected: (s: SyncConfig) => void }) {
     try {
       const result = await verifyGitHubAccess({ token, repo, branch });
       onConnected({
-        config: { token, repo, branch },
+        config: { token, repo, branch, recipesPath: recipesPath.trim() || "recipes" },
         login: result.login,
         repoName: result.repoName,
       });
@@ -549,6 +548,14 @@ function Connect({ onConnected }: { onConnected: (s: SyncConfig) => void }) {
           onChange={setBranch}
           placeholder="main"
         />
+        <Field
+          label={t("settings.connect.field.recipes_path")}
+          autoComplete="off"
+          spellCheck={false}
+          value={recipesPath}
+          onChange={setRecipesPath}
+          placeholder="recipes"
+        />
       </div>
 
       {status.error && (
@@ -584,38 +591,71 @@ function Connected({
 }) {
   const t = useT();
   const [status, setStatus] = useState<SyncStatus>({ kind: "idle" });
-  const [progress, setProgress] = useState<ProgressState | null>(null);
+  const [overwriteOnPull, setOverwriteOnPull] = useState(false);
 
-  const runSync = async (
-    direction: "push" | "pull",
-  ) => {
+  const onPush = async () => {
     setStatus({ kind: "syncing" });
-    setProgress({ done: 0, total: 0 });
-    const remote = gitHubBackend(sync.config);
     try {
-      const source = direction === "push" ? backend : remote;
-      const target = direction === "push" ? remote : backend;
-      const count = await copyKeysToBackend(source, target, (done, total) =>
-        setProgress({ done, total }),
+      const store = await loadStore(backend);
+      if (store.recipes.length === 0) {
+        setStatus({ kind: "idle", message: t("settings.connected.nothing") });
+        return;
+      }
+      const result = await pushRecipes(
+        store.recipes.map((r) => r.recipe),
+        sync.config,
       );
       setStatus({
         kind: "idle",
-        message:
-          count === 0
-            ? t("settings.connected.nothing")
-            : direction === "push"
-            ? t("settings.connected.pushed", { count })
-            : t("settings.connected.pulled", { count }),
+        message: t("settings.connected.pushed", { count: result.written }),
       });
     } catch (err) {
       setStatus({
         kind: "idle",
         error: t("settings.connected.failed", { detail: translateError(err, t) }),
       });
-    } finally {
-      setProgress(null);
     }
   };
+
+  const onPull = async () => {
+    setStatus({ kind: "syncing" });
+    try {
+      const store = await loadStore(backend);
+      const { merged, result } = await pullRecipes(
+        store.recipes as StoredRecipe[],
+        sync.config,
+        { overwrite: overwriteOnPull },
+      );
+      if (result.added > 0 || result.replaced > 0) {
+        await saveStore(backend, { recipes: merged });
+      }
+      const total = result.added + result.replaced + result.skipped + result.failed.length;
+      if (total === 0) {
+        setStatus({ kind: "idle", message: t("settings.connected.nothing") });
+      } else {
+        const message = t("settings.connected.pulled_detail", {
+          added: result.added,
+          replaced: result.replaced,
+          skipped: result.skipped,
+        });
+        const next: SyncStatus = { kind: "idle", message };
+        if (result.failed.length > 0) {
+          next.error = t("settings.connected.pull_failed", {
+            count: result.failed.length,
+            detail: result.failed.map((f) => `${f.file}: ${f.error}`).join("; "),
+          });
+        }
+        setStatus(next);
+      }
+    } catch (err) {
+      setStatus({
+        kind: "idle",
+        error: t("settings.connected.failed", { detail: translateError(err, t) }),
+      });
+    }
+  };
+
+  const recipesPath = sync.config.recipesPath ?? "recipes";
 
   return (
     <div className="rounded-xl bg-surface border border-border p-4 sm:p-6">
@@ -628,15 +668,26 @@ function Connected({
             {" "}@ <span className="font-mono text-mono">{sync.config.branch}</span>
           </>
         )}
+        {" "}/ <span className="font-mono text-mono">{recipesPath}/</span>
       </p>
       <p className="text-caption text-text-muted mt-2 max-w-prose">
         {t("settings.connected.footer")}
       </p>
 
-      <div className="mt-6 flex flex-wrap gap-3">
+      <label className="mt-5 flex items-center gap-2 text-body-sm text-text-muted cursor-pointer">
+        <input
+          type="checkbox"
+          checked={overwriteOnPull}
+          onChange={(e) => setOverwriteOnPull(e.target.checked)}
+          className="accent-accent"
+        />
+        {t("settings.connected.overwrite_on_pull")}
+      </label>
+
+      <div className="mt-4 flex flex-wrap gap-3">
         <button
           type="button"
-          onClick={() => runSync("push")}
+          onClick={onPush}
           disabled={status.kind === "syncing"}
           className="px-5 py-2 rounded-lg bg-accent text-bg text-body-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
         >
@@ -644,7 +695,7 @@ function Connected({
         </button>
         <button
           type="button"
-          onClick={() => runSync("pull")}
+          onClick={onPull}
           disabled={status.kind === "syncing"}
           className="px-5 py-2 rounded-lg bg-surface-raised border border-border text-body-sm font-medium hover:border-accent hover:text-accent disabled:opacity-50 transition-colors"
         >
@@ -660,12 +711,7 @@ function Connected({
         </button>
       </div>
 
-      {progress && progress.total > 0 && (
-        <p className="mt-4 text-caption font-mono tabular-nums text-text-muted">
-          {t("settings.connected.progress", { done: progress.done, total: progress.total })}
-        </p>
-      )}
-      {status.message && !progress && (
+      {status.message && (
         <p className="mt-4 text-caption text-success">{status.message}</p>
       )}
       {status.error && (

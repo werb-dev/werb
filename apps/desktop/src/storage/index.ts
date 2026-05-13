@@ -8,6 +8,13 @@ export {
   type GitHubBackendConfig,
 } from "./github.ts";
 export {
+  pushRecipes,
+  pullRecipes,
+  type GitHubRecipesConfig,
+  type PushResult,
+  type PullResult,
+} from "./github-recipes.ts";
+export {
   migrateBackend,
   copyKeysToBackend,
   snapshotBackend,

@@ -303,6 +303,7 @@ const STRINGS: Record<string, Entry> = {
   "settings.connect.field.token": { en: "Token", fr: "Token" },
   "settings.connect.field.repo": { en: "Repository", fr: "Dépôt" },
   "settings.connect.field.branch": { en: "Branch", fr: "Branche" },
+  "settings.connect.field.recipes_path": { en: "Recipes folder", fr: "Dossier des recettes" },
   "settings.connect.verifying": { en: "Verifying…", fr: "Vérification…" },
   "settings.connect.verify": { en: "Verify & connect", fr: "Vérifier et connecter" },
   "settings.connect.footer": {
@@ -312,17 +313,27 @@ const STRINGS: Record<string, Entry> = {
   "settings.connected.status_lead": { en: "Connected as", fr: "Connecté en tant que" },
   "settings.connected.status_syncing": { en: "syncing", fr: "synchronisation de" },
   "settings.connected.footer": {
-    en: "Push overwrites the remote with your local data. Pull overwrites local with the remote. Neither deletes — keys on one side that are missing on the other are left alone.",
-    fr: "Push écrase le distant avec vos données locales. Pull écrase le local avec le distant. Aucun ne supprime — les clés présentes d'un côté seulement sont laissées intactes.",
+    en: "Push writes every local recipe to the folder as <slug>.beerjson — one file per recipe. Pull adds any new recipe files from the folder. Renames in Werb create a new file; the old one stays until you remove it on GitHub.",
+    fr: "Push écrit chaque recette locale dans le dossier sous la forme <slug>.beerjson — un fichier par recette. Pull importe les nouveaux fichiers présents dans le dossier. Renommer une recette dans Werb crée un nouveau fichier ; l'ancien reste jusqu'à suppression manuelle sur GitHub.",
+  },
+  "settings.connected.overwrite_on_pull": {
+    en: "Overwrite local recipes that share a name with one on GitHub",
+    fr: "Écraser les recettes locales qui portent le même nom qu'une recette GitHub",
   },
   "settings.connected.push": { en: "Push to GitHub", fr: "Pousser vers GitHub" },
   "settings.connected.pull": { en: "Pull from GitHub", fr: "Tirer depuis GitHub" },
   "settings.connected.working": { en: "Working…", fr: "En cours…" },
   "settings.connected.disconnect": { en: "Disconnect", fr: "Se déconnecter" },
-  "settings.connected.progress": { en: "{done}/{total} items…", fr: "{done}/{total} éléments…" },
-  "settings.connected.nothing": { en: "Nothing to copy.", fr: "Rien à copier." },
-  "settings.connected.pushed": { en: "Pushed {count} item{s} to GitHub.", fr: "{count} élément{s} poussé{s} vers GitHub." },
-  "settings.connected.pulled": { en: "Pulled {count} item{s} from GitHub.", fr: "{count} élément{s} tiré{s} depuis GitHub." },
+  "settings.connected.nothing": { en: "Nothing to sync.", fr: "Rien à synchroniser." },
+  "settings.connected.pushed": { en: "Pushed {count} recipe{s} to GitHub.", fr: "{count} recette{s} poussée{s} vers GitHub." },
+  "settings.connected.pulled_detail": {
+    en: "Pulled: {added} added, {replaced} replaced, {skipped} skipped.",
+    fr: "Importé : {added} ajoutée·s, {replaced} remplacée·s, {skipped} ignorée·s.",
+  },
+  "settings.connected.pull_failed": {
+    en: "{count} file{s} couldn't be imported: {detail}",
+    fr: "{count} fichier{s} n'a/ont pas pu être importé{s} : {detail}",
+  },
   "settings.connected.failed": { en: "Sync failed: {detail}", fr: "Échec de synchronisation : {detail}" },
 
   // ─── Recipe — export menu ────────────────────────────────────
