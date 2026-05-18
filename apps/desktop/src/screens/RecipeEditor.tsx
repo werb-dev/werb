@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useIngredientRows } from "../hooks/useIngredientRows.ts";
 import type {
   BeerJsonRecipe,
   CultureAddition,
@@ -201,32 +202,19 @@ function FermentablesSection({
   updateIngredients: (patch: Partial<BeerJsonRecipe["ingredients"]>) => void;
 }) {
   const t = useT();
-  const items = draft.ingredients.fermentable_additions;
-  const [pendingFocusIdx, setPendingFocusIdx] = useState<number | null>(null);
+  const { items, pendingFocusIdx, addRow, updateRow, removeRow } = useIngredientRows<FermentableAddition>(
+    draft.ingredients.fermentable_additions,
+    (next) => updateIngredients({ fermentable_additions: next }),
+  );
 
-  const addRow = () => {
-    const fresh: FermentableAddition = {
+  const addFermentable = () =>
+    addRow({
       name: "",
       type: "grain",
       amount: { value: 1, unit: "kg" },
       color: { value: 2, unit: "Lovi" },
       yield: { fine_grind: { value: 80, unit: "%" } },
-    };
-    setPendingFocusIdx(items.length);
-    updateIngredients({ fermentable_additions: [...items, fresh] });
-  };
-
-  const updateRow = (i: number, next: FermentableAddition) => {
-    const copy = items.slice();
-    copy[i] = next;
-    updateIngredients({ fermentable_additions: copy });
-  };
-
-  const removeRow = (i: number) => {
-    updateIngredients({
-      fermentable_additions: items.filter((_, j) => j !== i),
     });
-  };
 
   return (
     <Section title={t("editor.section.fermentables")}>
@@ -311,7 +299,7 @@ function FermentablesSection({
           </div>
         ))}
       </div>
-      <AddRowButton label={t("editor.add.fermentable")} onClick={addRow} />
+      <AddRowButton label={t("editor.add.fermentable")} onClick={addFermentable} />
     </Section>
   );
 }
@@ -335,30 +323,19 @@ function HopsSection({
   updateIngredients: (patch: Partial<BeerJsonRecipe["ingredients"]>) => void;
 }) {
   const t = useT();
-  const items = draft.ingredients.hop_additions ?? [];
-  const [pendingFocusIdx, setPendingFocusIdx] = useState<number | null>(null);
+  const { items, pendingFocusIdx, addRow, updateRow, removeRow } = useIngredientRows<HopAddition>(
+    draft.ingredients.hop_additions,
+    (next) => updateIngredients({ hop_additions: next }),
+  );
 
-  const addRow = () => {
-    const fresh: HopAddition = {
+  const addHop = () =>
+    addRow({
       name: "",
       alpha_acid: { value: 5, unit: "%" },
       amount: { value: 0.028, unit: "kg" },
       form: "pellet",
       timing: { use: "add_to_boil", time: { value: 60, unit: "min" } },
-    };
-    setPendingFocusIdx(items.length);
-    updateIngredients({ hop_additions: [...items, fresh] });
-  };
-
-  const updateRow = (i: number, next: HopAddition) => {
-    const copy = items.slice();
-    copy[i] = next;
-    updateIngredients({ hop_additions: copy });
-  };
-
-  const removeRow = (i: number) => {
-    updateIngredients({ hop_additions: items.filter((_, j) => j !== i) });
-  };
+    });
 
   return (
     <Section title={t("editor.section.hops")}>
@@ -459,7 +436,7 @@ function HopsSection({
           </div>
         ))}
       </div>
-      <AddRowButton label={t("editor.add.hop")} onClick={addRow} />
+      <AddRowButton label={t("editor.add.hop")} onClick={addHop} />
     </Section>
   );
 }
@@ -494,30 +471,19 @@ function CulturesSection({
   updateIngredients: (patch: Partial<BeerJsonRecipe["ingredients"]>) => void;
 }) {
   const t = useT();
-  const items = draft.ingredients.culture_additions ?? [];
-  const [pendingFocusIdx, setPendingFocusIdx] = useState<number | null>(null);
+  const { items, pendingFocusIdx, addRow, updateRow, removeRow } = useIngredientRows<CultureAddition>(
+    draft.ingredients.culture_additions,
+    (next) => updateIngredients({ culture_additions: next }),
+  );
 
-  const addRow = () => {
-    const fresh: CultureAddition = {
+  const addCulture = () =>
+    addRow({
       name: "",
       type: "ale",
       form: "dry",
       amount: { value: 11, unit: "g" },
       attenuation: { value: 75, unit: "%" },
-    };
-    setPendingFocusIdx(items.length);
-    updateIngredients({ culture_additions: [...items, fresh] });
-  };
-
-  const updateRow = (i: number, next: CultureAddition) => {
-    const copy = items.slice();
-    copy[i] = next;
-    updateIngredients({ culture_additions: copy });
-  };
-
-  const removeRow = (i: number) => {
-    updateIngredients({ culture_additions: items.filter((_, j) => j !== i) });
-  };
+    });
 
   return (
     <Section title={t("editor.section.cultures")}>
@@ -606,7 +572,7 @@ function CulturesSection({
           </div>
         ))}
       </div>
-      <AddRowButton label={t("editor.add.culture")} onClick={addRow} />
+      <AddRowButton label={t("editor.add.culture")} onClick={addCulture} />
     </Section>
   );
 }
@@ -928,32 +894,21 @@ function MiscsSection({
   updateIngredients: (patch: Partial<BeerJsonRecipe["ingredients"]>) => void;
 }) {
   const t = useT();
-  const items = draft.ingredients.miscellaneous_additions ?? [];
-  const [pendingFocusIdx, setPendingFocusIdx] = useState<number | null>(null);
+  const { items, pendingFocusIdx, addRow, updateRow, removeRow } = useIngredientRows<MiscAddition>(
+    draft.ingredients.miscellaneous_additions,
+    (next) => updateIngredients({ miscellaneous_additions: next }),
+  );
   const miscUseLabels = Object.fromEntries(
     MISC_USES.map((u) => [u, t(MISC_USE_KEYS[u])]),
   ) as Record<(typeof MISC_USES)[number], string>;
 
-  const addRow = () => {
-    const fresh: MiscAddition = {
+  const addMisc = () =>
+    addRow({
       name: "",
       type: "spice",
       amount: { value: 5, unit: "g" },
       timing: { use: "add_to_boil", time: { value: 5, unit: "min" } },
-    };
-    setPendingFocusIdx(items.length);
-    updateIngredients({ miscellaneous_additions: [...items, fresh] });
-  };
-
-  const updateRow = (i: number, next: MiscAddition) => {
-    const copy = items.slice();
-    copy[i] = next;
-    updateIngredients({ miscellaneous_additions: copy });
-  };
-
-  const removeRow = (i: number) => {
-    updateIngredients({ miscellaneous_additions: items.filter((_, j) => j !== i) });
-  };
+    });
 
   return (
     <Section title={t("editor.section.miscs")}>
@@ -1038,7 +993,7 @@ function MiscsSection({
           </div>
         ))}
       </div>
-      <AddRowButton label={t("editor.add.misc")} onClick={addRow} />
+      <AddRowButton label={t("editor.add.misc")} onClick={addMisc} />
     </Section>
   );
 }
