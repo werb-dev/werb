@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { Measurement, WerbSession } from "@werb/types";
 import { useBcp47, useT } from "../../data/preferences.tsx";
 import { Section } from "./Section.tsx";
-import { formatTimeOfDay } from "./format.ts";
+import { formatTimeOfDay, stepTitle } from "./format.ts";
 
 /**
  * Each measurement kind ships a sensible default value so the input
@@ -52,12 +52,12 @@ export function MeasurementsSection({
   };
 
   const measurements = session.measurements ?? [];
+  const t = useT();
   const stepLabel = (stepId: string | undefined) => {
     if (!stepId) return null;
     const step = session.steps.find((s) => s.id === stepId);
-    return step?.label ?? null;
+    return step ? stepTitle(step, t) : null;
   };
-  const t = useT();
 
   const submit = () => {
     if (!Number.isFinite(value)) return;

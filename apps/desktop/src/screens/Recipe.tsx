@@ -195,7 +195,7 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
             })()}
             {recipe.boil?.boil_time && ` · ${t("recipe.header.boil_min", { min: toMinutes(recipe.boil.boil_time).toFixed(0) })}`}
             {recipe.efficiency?.brewhouse && ` · ${t("recipe.header.efficiency", { pct: recipe.efficiency.brewhouse.value })}`}
-            {recipe.type && ` · ${recipe.type}`}
+            {recipe.type && ` · ${t(`recipe.type.${recipe.type.replace(" ", "_")}`)}`}
           </p>
           <div className="mt-6 flex flex-wrap gap-3 items-center">
             {onStartBrewing && (
@@ -425,8 +425,8 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
                 <li key={i} className="px-4 py-4 sm:px-6 sm:py-5 flex items-baseline justify-between gap-3 sm:gap-6">
                   <div className="min-w-0">
                     <p className="text-body font-medium">{step.name}</p>
-                    <p className="text-body-sm text-text-muted mt-1 capitalize">
-                      {step.type}
+                    <p className="text-body-sm text-text-muted mt-1">
+                      {t(`recipe.mash.type.${step.type}`)}
                       {step.amount && ` · ${t("recipe.mash.infusion", { volume: formatVolume(step.amount, prefs).display })}`}
                       {step.infuse_temperature &&
                         ` @ ${formatTemperature(step.infuse_temperature, prefs).display}`}

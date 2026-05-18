@@ -22,7 +22,7 @@ import { HopSchedule } from "./Brew/HopSchedule.tsx";
 import { MeasurementsSection } from "./Brew/MeasurementsSection.tsx";
 import { Section } from "./Brew/Section.tsx";
 import { TastingSection } from "./Brew/TastingSection.tsx";
-import { formatDuration } from "./Brew/format.ts";
+import { formatDuration, stepTitle } from "./Brew/format.ts";
 
 interface BrewScreenProps {
   recipeId: string;
@@ -407,7 +407,9 @@ function ActiveStepCard({
           <p className="text-caption uppercase tracking-widest text-text-muted">
             {t(`brew.kind.${step.kind}`)}
           </p>
-          <h2 className="text-h3 sm:text-h2 font-semibold mt-2 capitalize break-words">{step.label}</h2>
+          <h2 className="text-h3 sm:text-h2 font-semibold mt-2 capitalize break-words">
+            {stepTitle(step, t)}
+          </h2>
         </div>
         <div className="text-right shrink-0">
           <p
@@ -744,7 +746,7 @@ function TimelineRow({
         </span>
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline justify-between gap-4">
-            <p className="text-body font-medium break-words">{step.label}</p>
+            <p className="text-body font-medium break-words">{stepTitle(step, t)}</p>
           </div>
           <StepInfo step={step} ctx={ctx} elapsedSec={elapsedSec} variant="row" prefs={prefs} />
           {step.status === "active" && elapsedSec > 0 && (

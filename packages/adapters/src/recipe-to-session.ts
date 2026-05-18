@@ -92,6 +92,15 @@ export function recipeToSessionPlan(
   // Heat strike water to the temperature that will hit the recipe's mash
   // target once cool grain is added. Inserted before mash so the brewer
   // gets a dedicated timer/temperature target during the heat-up phase.
+  // Step labels live on the brew session JSON, which is written once
+  // and read back on every render. We deliberately leave `label`
+  // empty for the canonical step kinds so the UI translates them
+  // via `t("brew.kind.<kind>")` at display time — otherwise a French
+  // brewer who started a session in English would see English labels
+  // for the rest of the brew day. The only steps that *do* carry a
+  // stored label are user-authored mash-step names (BeerJSON
+  // `step.name` like "Sacc rest") and the pitch step, which appends
+  // the culture names that the kind translation can't know about.
   const strikeInput = recipeToStrikeTempInput(recipe, deps.strikeTemp ?? {});
   const hasMashSteps = (recipe.mash?.mash_steps?.length ?? 0) > 0;
   if (strikeInput) {
@@ -99,30 +108,26 @@ export function recipeToSessionPlan(
     steps.push({
       id: id(),
       kind: "prepare_water",
-      label: "Heat strike water",
+      label: "",
       status: "pending",
       target_temperature_c: out.strike_temp_c,
     });
   }
 
-  // Mash in: pour the grain bill into the strike water. Distinct from the
-  // mash rest so the brewer gets a dedicated step to weigh / dump grain
-  // before the rest timer starts.
   if (hasMashSteps) {
     steps.push({
       id: id(),
       kind: "mash_in",
-      label: "Mash in",
+      label: "",
       status: "pending",
     });
   }
 
-  // Mash steps
   for (const step of recipe.mash?.mash_steps ?? []) {
     steps.push({
       id: id(),
       kind: "mash",
-      label: step.name || "Mash step",
+      label: step.name ?? "",
       status: "pending",
       target_duration_min: toMinutes(step.step_time),
       target_temperature_c: toCelsius(step.step_temperature),
@@ -137,18 +142,17 @@ export function recipeToSessionPlan(
     steps.push({
       id: id(),
       kind: "sparge",
-      label: "Sparge",
+      label: "",
       status: "pending",
       target_temperature_c: 75,
     });
   }
 
-  // Boil
   if (recipe.boil?.boil_time) {
     steps.push({
       id: id(),
       kind: "boil",
-      label: "Boil",
+      label: "",
       status: "pending",
       target_duration_min: toMinutes(recipe.boil.boil_time),
     });
@@ -160,27 +164,30 @@ export function recipeToSessionPlan(
   steps.push({
     id: id(),
     kind: "chill",
-    label: "Chill to pitch temp",
+    label: "",
     status: "pending",
     target_temperature_c: pitchTempC(recipe.ingredients.culture_additions ?? []),
   });
 
-  // Transfer (custom)
   steps.push({
     id: id(),
     kind: "transfer",
-    label: "Transfer to fermenter",
+    label: "",
     status: "pending",
   });
 
-  // Pitch yeast(s)
+  // Pitch step's label carries the culture names — the kind
+  // translation alone ("Pitch") doesn't tell the brewer *which*
+  // strain. We prepend "Pitch · " in render time via translation
+  // and append the stored names; the names themselves stay verbatim
+  // (proper-noun strain names cross every locale).
   const cultures = recipe.ingredients.culture_additions ?? [];
   if (cultures.length > 0) {
     const names = cultures.map((c) => c.name).join(" + ");
     steps.push({
       id: id(),
       kind: "ferment_pitch",
-      label: `Pitch ${names}`,
+      label: names,
       status: "pending",
     });
   }

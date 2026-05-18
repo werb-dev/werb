@@ -222,6 +222,22 @@ const STRINGS: Record<string, Entry> = {
   "recipe.time.days": { en: "{n} day", fr: "{n} jour" },
   "recipe.time.minutes": { en: "{n} min", fr: "{n} min" },
   "recipe.mash.infusion": { en: "{volume} infusion", fr: "infusion {volume}" },
+  // BeerJSON 2.x MashStepKind enum (drives the mash-step type pill
+  // shown under each step on the Recipe view).
+  "recipe.mash.type.infusion": { en: "Infusion", fr: "Infusion" },
+  "recipe.mash.type.temperature": { en: "Temperature", fr: "Palier de température" },
+  "recipe.mash.type.decoction": { en: "Decoction", fr: "Décoction" },
+  // BeerJSON 2.x RecipeType — `type.replace(" ", "_")` collapses
+  // "all grain" / "partial mash" to underscore form for the lookup.
+  "recipe.type.all_grain": { en: "all grain", fr: "tout grain" },
+  "recipe.type.extract": { en: "extract", fr: "extrait" },
+  "recipe.type.partial_mash": { en: "partial mash", fr: "empâtage partiel" },
+  "recipe.type.cider": { en: "cider", fr: "cidre" },
+  "recipe.type.kombucha": { en: "kombucha", fr: "kombucha" },
+  "recipe.type.soda": { en: "soda", fr: "soda" },
+  "recipe.type.mead": { en: "mead", fr: "hydromel" },
+  "recipe.type.wine": { en: "wine", fr: "vin" },
+  "recipe.type.other": { en: "other", fr: "autre" },
   "recipe.section.hops_subtitle": {
     en: "Boil hops contribute IBU. Dry hops are listed for reference.",
     fr: "Les houblons d'ébullition contribuent aux IBU. Les houblons à cru sont listés pour référence.",
