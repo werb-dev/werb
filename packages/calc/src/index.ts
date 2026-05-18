@@ -1,6 +1,7 @@
 export { computeIbu } from "./ibu.js";
 export { computeWater } from "./water.js";
 export { computeAbv } from "./abv.js";
+export { computeFg } from "./fg.js";
 export { computeColor } from "./color.js";
 export { computeGravity } from "./gravity.js";
 export { computeScale } from "./scale.js";

@@ -15,6 +15,7 @@ import {
   toSrm,
   isMass,
   isVolume,
+  recipeApparentAttenuationPct,
   type BeerJsonRecipe,
 } from "@werb/adapters";
 import {
@@ -22,6 +23,7 @@ import {
   computeWater,
   computeAbv,
   computeColor,
+  computeFg,
   computeGravity,
   computeScale,
   computeCarbonation,
@@ -82,10 +84,16 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
     const water = computeWater(recipeToWaterInput(recipe, profileToWaterOverrides(activeProfile)));
     const color = computeColor(recipeToColorInput(recipe));
     const gravity = computeGravity(recipeToGravityInput(recipe));
-    const abv =
-      recipe.original_gravity && recipe.final_gravity
-        ? computeAbv(recipe.original_gravity.value, recipe.final_gravity.value)
-        : null;
+    // FG is always computed (yeast attenuation × OG); the file value
+    // takes precedence in the display but the estimate is the
+    // workhorse for bare BeerXML imports that ship without a target
+    // FG. ABV cascades: claimed file FG → computed FG, so we never
+    // show "—" when a brewer has typed a grain bill + yeast.
+    const apparentAttenuationPct = recipeApparentAttenuationPct(recipe);
+    const fgEstimate = computeFg(gravity.og, apparentAttenuationPct);
+    const ogForAbv = recipe.original_gravity?.value ?? gravity.og;
+    const fgForAbv = recipe.final_gravity?.value ?? fgEstimate;
+    const abv = computeAbv(ogForAbv, fgForAbv);
     // Per-addition IBU lookup keyed by index, since duplicate hop names exist.
     const boilHopIndices = (recipe.ingredients.hop_additions ?? [])
       .map((h, i) => ({ h, i }))
@@ -95,7 +103,7 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
     boilHopIndices.forEach((idx, k) => {
       ibuByIndex.set(idx, ibu.additions[k]?.ibu ?? 0);
     });
-    return { ibu, water, color, gravity, abv, ibuByIndex };
+    return { ibu, water, color, gravity, fg: fgEstimate, abv, ibuByIndex };
   }, [recipe, activeProfile]);
 
   const claimedIbu = recipe.ibu_estimate?.ibu?.value ?? null;
@@ -118,6 +126,7 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
     : null;
   const computedColorDisplay = formatSrm(computed.color.srm, prefs).display;
   const computedOgDisplay = formatSpecificGravity(computed.gravity.og, prefs).display;
+  const computedFgDisplay = formatSpecificGravity(computed.fg, prefs).display;
 
   // BJCP range hints. `current` prefers the recipe's claimed value and falls
   // back to our computed estimate so the indicator works on bare imports.
@@ -129,7 +138,7 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
       format: (v) => formatSpecificGravity(v, prefs).display,
     }),
     fg: rangeHint({
-      current: claimedFgSg,
+      current: claimedFgSg ?? computed.fg,
       min: recipe.style?.final_gravity?.minimum?.value,
       max: recipe.style?.final_gravity?.maximum?.value,
       format: (v) => formatSpecificGravity(v, prefs).display,
@@ -238,6 +247,10 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
           <Tile
             label="FG"
             value={claimedFgDisplay}
+            sub={`≈${computedFgDisplay}`}
+            warn={
+              claimedFgSg !== null && Math.abs(computed.fg - claimedFgSg) > 0.005
+            }
             styleHint={styleHints.fg}
           />
           <Tile
@@ -250,11 +263,9 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
           <Tile
             label="ABV"
             value={claimedAbv !== null ? `${claimedAbv.toFixed(1)}%` : "—"}
-            sub={computed.abv !== null ? `≈${computed.abv.toFixed(1)}%` : undefined}
+            sub={`≈${computed.abv.toFixed(1)}%`}
             warn={
-              claimedAbv !== null &&
-              computed.abv !== null &&
-              Math.abs(computed.abv - claimedAbv) > 0.5
+              claimedAbv !== null && Math.abs(computed.abv - claimedAbv) > 0.5
             }
             styleHint={styleHints.abv}
           />
@@ -1715,14 +1726,25 @@ function Tile({
   styleHint?: RangeHint | null | undefined;
 }) {
   const t = useT();
+  // Color the main value by BJCP fit when a styleHint is available;
+  // otherwise fall back to the older accent / warn / default scheme.
+  // `warn` (claimed-vs-computed disagreement) still wins so the brewer
+  // sees the disagreement first before they read the style fit.
+  const valueColor = warn
+    ? "text-warning"
+    : highlight
+    ? "text-accent"
+    : styleHint
+    ? styleHint.status === "in"
+      ? "text-success"
+      : styleHint.status === "near"
+      ? "text-warning"
+      : "text-danger"
+    : "text-text";
   return (
     <div className="bg-surface px-3 py-3 sm:px-5 sm:py-4">
       <p className="text-[10px] sm:text-caption uppercase tracking-widest text-text-muted">{label}</p>
-      <p
-        className={`font-mono text-h3 sm:text-h2 mt-1 ${
-          highlight ? "text-accent" : warn ? "text-warning" : "text-text"
-        }`}
-      >
+      <p className={`font-mono text-h3 sm:text-h2 mt-1 ${valueColor}`}>
         {value}
       </p>
       {sub && (
@@ -1732,16 +1754,16 @@ function Tile({
       )}
       {styleHint && (
         <p
-          className={`font-mono text-caption mt-1 ${
-            styleHint.status === "in" ? "text-success" : "text-warning"
-          }`}
-          title={t("recipe.style.range_tooltip", { range: styleHint.range })}
+          className="font-mono text-caption mt-1 text-text-muted"
+          title={
+            styleHint.status === "in"
+              ? t("recipe.style.in")
+              : styleHint.status === "near"
+              ? t("recipe.style.near")
+              : t("recipe.style.out")
+          }
         >
-          {styleHint.status === "low"
-            ? t("recipe.style.under")
-            : styleHint.status === "high"
-            ? t("recipe.style.over")
-            : t("recipe.style.in")}
+          {styleHint.range}
         </p>
       )}
     </div>
@@ -1749,7 +1771,13 @@ function Tile({
 }
 
 interface RangeHint {
-  status: "in" | "low" | "high";
+  /**
+   * Three-tier fit:
+   *  - "in":   inside the BJCP range, green;
+   *  - "near": within 10 % of the range width past either bound, orange;
+   *  - "out":  further than that, red.
+   */
+  status: "in" | "near" | "out";
   /** Pre-formatted BJCP range, e.g. "1.046–1.054" or "≥ 4.5%". */
   range: string;
 }
@@ -1773,7 +1801,19 @@ function rangeHint({
       : min !== undefined
       ? `≥ ${format(min)}`
       : `≤ ${format(max!)}`;
-  if (min !== undefined && current < min) return { status: "low", range };
-  if (max !== undefined && current > max) return { status: "high", range };
+  // Tolerance for "near": 10 % of the range width, or — when only one
+  // bound is set — 10 % of the bound itself so a "≥ 4.5 %" comes with
+  // a sensible 0.45 % cushion before turning red.
+  const width =
+    min !== undefined && max !== undefined
+      ? max - min
+      : Math.abs((min ?? max!) * 0.1);
+  const tolerance = Math.abs(width) * 0.1;
+  if (min !== undefined && current < min) {
+    return { status: current < min - tolerance ? "out" : "near", range };
+  }
+  if (max !== undefined && current > max) {
+    return { status: current > max + tolerance ? "out" : "near", range };
+  }
   return { status: "in", range };
 }

@@ -14,6 +14,7 @@ import {
   recipeToStrikeTempInput,
   recipeToCarbonationInput,
   recipeToYeastPitchInput,
+  recipeApparentAttenuationPct,
 } from "../src/index.js";
 import { pitchTempC } from "../src/recipe-to-session.js";
 import type { BeerJsonFile } from "../src/index.js";
@@ -524,5 +525,40 @@ describe("recipeToYeastPitchInput — Double IPA fixture", () => {
   it("explicit style_type wins over the derived one", () => {
     const input = recipeToYeastPitchInput(recipe, { style_type: "lager" });
     expect(input!.style_type).toBe("lager");
+  });
+});
+
+describe("recipeApparentAttenuationPct", () => {
+  it("picks the highest attenuation from culture_additions", () => {
+    const r = {
+      ...recipe,
+      ingredients: {
+        ...recipe.ingredients,
+        culture_additions: [
+          { name: "X", type: "ale", form: "dry", attenuation: { value: 72, unit: "%" } },
+          { name: "Y", type: "ale", form: "dry", attenuation: { value: 84, unit: "%" } },
+        ],
+      },
+    } as typeof recipe;
+    expect(recipeApparentAttenuationPct(r)).toBe(84);
+  });
+
+  it("falls back to 75% when no culture is declared", () => {
+    const r = {
+      ...recipe,
+      ingredients: { ...recipe.ingredients, culture_additions: [] },
+    } as typeof recipe;
+    expect(recipeApparentAttenuationPct(r)).toBe(75);
+  });
+
+  it("ignores cultures missing a numeric attenuation", () => {
+    const r = {
+      ...recipe,
+      ingredients: {
+        ...recipe.ingredients,
+        culture_additions: [{ name: "X", type: "ale", form: "dry" }],
+      },
+    } as typeof recipe;
+    expect(recipeApparentAttenuationPct(r)).toBe(75);
   });
 });

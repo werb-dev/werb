@@ -34,6 +34,7 @@ export { recipeToIbuInput } from "./recipe-to-ibu.js";
 export { recipeToWaterInput, type EquipmentOverrides } from "./recipe-to-water.js";
 export { recipeToColorInput } from "./recipe-to-color.js";
 export { recipeToGravityInput } from "./recipe-to-gravity.js";
+export { recipeApparentAttenuationPct } from "./recipe-attenuation.js";
 export {
   recipeToScaleInput,
   applyScale,
