@@ -68,6 +68,11 @@
       "minimum": 0,
       "default": 0.5,
       "description": "Volume lost transferring from the boil kettle to the fermenter (liters)."
+    },
+    "biab": {
+      "type": "boolean",
+      "default": false,
+      "description": "Brew-in-a-bag mode: all water (mash + would-be-sparge) goes into one vessel; the grain bag is lifted out at the end of the mash. Sparge water is zero; mash water = pre_boil + grain_absorption + mash_dead_space."
     }
   }
 }

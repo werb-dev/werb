@@ -145,7 +145,14 @@ export function BrewScreen({ recipeId, recipe, sessionId, activeProfile, onBack,
   }, [recipe, activeProfile]);
 
   if (!brew.session) {
-    return <NoSession onBack={onBack} recipe={recipe} onStart={brew.start} />;
+    const biab = activeProfile?.mash_mode === "biab";
+    return (
+      <NoSession
+        onBack={onBack}
+        recipe={recipe}
+        onStart={() => brew.start({ biab })}
+      />
+    );
   }
 
   const { session, activeStep } = brew;

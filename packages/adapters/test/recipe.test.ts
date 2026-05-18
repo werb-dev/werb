@@ -173,6 +173,17 @@ describe("recipeToSessionPlan — Double IPA fixture", () => {
     expect(kinds).toContain("ferment_pitch");
   });
 
+  it("BIAB mode omits the sparge step", () => {
+    reset();
+    const session = recipeToSessionPlan(recipe, "x", { ...deps, biab: true });
+    const kinds = session.steps.map((s) => s.kind);
+    expect(kinds).not.toContain("sparge");
+    // Everything else stays.
+    expect(kinds).toContain("mash_in");
+    expect(kinds).toContain("boil");
+    expect(kinds).toContain("chill");
+  });
+
   it("orders prepare_water → mash_in → mash so the brewer hits each phase in sequence", () => {
     reset();
     const session = recipeToSessionPlan(recipe, "x", deps);

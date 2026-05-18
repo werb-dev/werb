@@ -66,6 +66,11 @@ export interface SessionPlanDeps {
   id?: () => string;
   /** Strike-temp tuning passed through to the prepare-water step. */
   strikeTemp?: StrikeTempOptions;
+  /**
+   * BIAB rig: skip the sparge step entirely. The brewer lifts the
+   * grain bag at the end of the mash and goes straight to boil.
+   */
+  biab?: boolean;
 }
 
 export function recipeToSessionPlan(
@@ -126,13 +131,17 @@ export function recipeToSessionPlan(
 
   // Sparge (implied; recipes rarely encode it as a discrete step).
   // Default target temperature 75°C — typical sparge water temp.
-  steps.push({
-    id: id(),
-    kind: "sparge",
-    label: "Sparge",
-    status: "pending",
-    target_temperature_c: 75,
-  });
+  // BIAB rigs skip it: the brewer lifts the bag at the end of mash
+  // and pours directly into the boil.
+  if (!deps.biab) {
+    steps.push({
+      id: id(),
+      kind: "sparge",
+      label: "Sparge",
+      status: "pending",
+      target_temperature_c: 75,
+    });
+  }
 
   // Boil
   if (recipe.boil?.boil_time) {

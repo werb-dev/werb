@@ -48,4 +48,8 @@ export interface WaterInput {
    * Volume lost transferring from the boil kettle to the fermenter (liters).
    */
   kettle_to_fermenter_loss_l?: number;
+  /**
+   * Brew-in-a-bag mode: all water (mash + would-be-sparge) goes into one vessel; the grain bag is lifted out at the end of the mash. Sparge water is zero; mash water = pre_boil + grain_absorption + mash_dead_space.
+   */
+  biab?: boolean;
 }

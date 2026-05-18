@@ -150,12 +150,15 @@ export function useBrewSession(
     };
   }, [backend, recipeId, sessionId]);
 
-  const start = useCallback(() => {
-    const fresh = recipeToSessionPlan(recipe, recipeId);
-    fresh.status = "in_progress";
-    void save(backend, fresh);
-    setSession(fresh);
-  }, [backend, recipe, recipeId]);
+  const start = useCallback(
+    (opts: { biab?: boolean } = {}) => {
+      const fresh = recipeToSessionPlan(recipe, recipeId, { biab: opts.biab ?? false });
+      fresh.status = "in_progress";
+      void save(backend, fresh);
+      setSession(fresh);
+    },
+    [backend, recipe, recipeId],
+  );
 
   const update = useCallback(
     (mutator: (draft: WerbSession) => void) => {

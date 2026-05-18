@@ -293,7 +293,12 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
         <TastingCard recipeId={recipeId} />
 
         {/* ─── Computed water strip ────────────────────────────────────── */}
-        <Section title={t("recipe.section.water")}>
+        <Section
+          title={t("recipe.section.water")}
+          {...(activeProfile?.mash_mode === "biab" && {
+            subtitle: t("recipe.water.biab_hint"),
+          })}
+        >
           <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-border rounded-xl overflow-hidden">
             <Tile label="Mash" value={formatLiters(computed.water.mash_water_l, prefs).display} />
             <Tile label="Sparge" value={formatLiters(computed.water.sparge_water_l, prefs).display} />

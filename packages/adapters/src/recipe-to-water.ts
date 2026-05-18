@@ -26,6 +26,8 @@ export interface EquipmentOverrides {
   evaporation_rate_l_per_hour?: number;
   post_boil_shrinkage_pct?: number;
   kettle_to_fermenter_loss_l?: number;
+  /** BIAB rig: collapse mash + sparge into a full-volume kettle mash. */
+  biab?: boolean;
 }
 
 export function recipeToWaterInput(

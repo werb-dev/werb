@@ -362,6 +362,26 @@ function ProfileForm({
         step={0.1}
       />
 
+      <label className="block">
+        <span className="block text-caption uppercase tracking-widest text-text-muted mb-2">
+          {t("equipment.field.mash_mode")}
+        </span>
+        <select
+          value={draft.mash_mode ?? "classic"}
+          onChange={(e) => {
+            update("mash_mode", e.target.value as "classic" | "biab");
+            commit();
+          }}
+          className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-body text-text focus:outline-none focus:border-accent"
+        >
+          <option value="classic">{t("equipment.opt.mash_classic")}</option>
+          <option value="biab">{t("equipment.opt.mash_biab")}</option>
+        </select>
+        <p className="text-caption text-text-muted mt-1">
+          {t("equipment.field.mash_mode_hint")}
+        </p>
+      </label>
+
       <Field
         label={t("equipment.field.notes")}
         value={draft.notes ?? ""}

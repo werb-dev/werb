@@ -75,4 +75,40 @@ describe("computeWater", () => {
     expect(out.boil_off_l).toBe(0);
     expect(out.pre_boil_volume_l).toBeCloseTo(out.post_boil_volume_l, 4);
   });
+
+  it("BIAB mode rolls mash + sparge into one full-volume mash", () => {
+    const base = {
+      batch_size_l: 20,
+      total_grain_kg: 5,
+      boil_time_min: 60,
+      mash_thickness_l_per_kg: 3.0,
+    };
+    const classic = computeWater(base);
+    const biab = computeWater({ ...base, biab: true });
+
+    // Sparge collapses to zero, mash absorbs pre-boil + grain absorption.
+    expect(biab.sparge_water_l).toBe(0);
+    expect(biab.mash_water_l).toBeCloseTo(
+      classic.pre_boil_volume_l + classic.grain_absorption_l,
+      4,
+    );
+    // The total water you put in the system is conserved between
+    // modes (within rounding): mash + sparge classic ≡ mash BIAB.
+    expect(biab.total_water_l).toBeCloseTo(classic.total_water_l, 4);
+    // Downstream volumes (pre-boil, post-boil, kettle) are unchanged.
+    expect(biab.pre_boil_volume_l).toBeCloseTo(classic.pre_boil_volume_l, 4);
+    expect(biab.post_boil_volume_l).toBeCloseTo(classic.post_boil_volume_l, 4);
+  });
+
+  it("BIAB ignores mash_thickness_l_per_kg", () => {
+    const base = {
+      batch_size_l: 20,
+      total_grain_kg: 5,
+      boil_time_min: 60,
+      biab: true,
+    };
+    const thin = computeWater({ ...base, mash_thickness_l_per_kg: 2.0 });
+    const thick = computeWater({ ...base, mash_thickness_l_per_kg: 4.0 });
+    expect(thin.mash_water_l).toBeCloseTo(thick.mash_water_l, 4);
+  });
 });

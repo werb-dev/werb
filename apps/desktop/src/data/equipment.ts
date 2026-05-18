@@ -111,6 +111,9 @@ export function profileToWaterOverrides(profile: ProfileWithId | undefined): Equ
   if (profile.transfer_loss_l !== undefined) {
     overrides.kettle_to_fermenter_loss_l = profile.transfer_loss_l;
   }
+  if (profile.mash_mode === "biab") {
+    overrides.biab = true;
+  }
   return overrides;
 }
 

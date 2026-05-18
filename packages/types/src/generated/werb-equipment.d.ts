@@ -59,5 +59,9 @@ export interface WerbEquipmentProfile {
    * Volume lost during transfers between vessels (kettle to fermenter, fermenter to package).
    */
   transfer_loss_l?: number;
+  /**
+   * How this rig mashes. 'classic' = mash tun + separate sparge. 'biab' = brew in a bag, all water in the kettle, lift the bag, no sparge.
+   */
+  mash_mode?: "classic" | "biab";
   notes?: string;
 }

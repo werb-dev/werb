@@ -545,6 +545,10 @@ const STRINGS: Record<string, Entry> = {
     fr: "Eau source + ajouts de sels. Choisissez un profil cible pour voir les écarts sur la bande d'ions résultante.",
   },
   "recipe.water.section_title": { en: "Water chemistry", fr: "Chimie de l'eau" },
+  "recipe.water.biab_hint": {
+    en: "BIAB equipment — all water in the kettle at once, no sparge.",
+    fr: "Équipement BIAB — toute l'eau dans la cuve d'ébullition en une fois, sans rinçage.",
+  },
   "recipe.water.target.off": { en: "No target", fr: "Pas de cible" },
   "recipe.water.target.balanced": { en: "Balanced (general purpose)", fr: "Équilibrée (usage général)" },
   "recipe.water.target.pilsner": { en: "Pilsner / light lager", fr: "Pilsner / lager légère" },
@@ -711,6 +715,13 @@ const STRINGS: Record<string, Entry> = {
   "equipment.field.post_boil_shrink": { en: "Post-boil shrink", fr: "Retrait après ébullition" },
   "equipment.field.trub_loss": { en: "Trub loss", fr: "Perte au trub" },
   "equipment.field.transfer_loss": { en: "Kettle → fermenter transfer loss", fr: "Perte au transfert cuve → fermenteur" },
+  "equipment.field.mash_mode": { en: "Mash mode", fr: "Mode d'empâtage" },
+  "equipment.field.mash_mode_hint": {
+    en: "Classic = mash tun + separate sparge. BIAB = grain bag in the kettle, full water at once, no sparge.",
+    fr: "Classique = cuve d'empâtage + rinçage séparé. BIAB = sac de grain dans la cuve d'ébullition, toute l'eau en une fois, sans rinçage.",
+  },
+  "equipment.opt.mash_classic": { en: "Classic 3-vessel", fr: "Classique 3 cuves" },
+  "equipment.opt.mash_biab": { en: "BIAB (brew in a bag)", fr: "BIAB (sac dans la cuve)" },
   "equipment.field.notes": { en: "Notes", fr: "Notes" },
 
   "equipment.set_active": { en: "Set as active", fr: "Définir comme actif" },
