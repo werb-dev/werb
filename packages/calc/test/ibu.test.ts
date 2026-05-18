@@ -65,14 +65,55 @@ describe("computeIbu — Tinseth", () => {
     expect(lowOg.total_ibu).toBeGreaterThan(highOg.total_ibu);
   });
 
-  it("rejects non-Tinseth methods until they are implemented", () => {
+  it("rejects unimplemented methods", () => {
     expect(() =>
       computeIbu({
-        method: "Rager",
+        method: "Garetz",
         og: 1.05,
         batch_size_l: 20,
         hops: [{ amount_g: 30, alpha_acid_pct: 6, time_min: 60 }],
       }),
     ).toThrow(/not implemented/);
+  });
+});
+
+describe("computeIbu — Rager", () => {
+  it("60-min addition lands in the textbook range", () => {
+    // 28 g @ 5.5% AA, 60 min, OG 1.050 (no gravity adjustment), 19 L.
+    // Hand-check: tanh((60-31.32)/18.27) ≈ 0.928 → util ≈ 30.98%
+    // mg/L = 0.055 × 28 × 1000 / 19 ≈ 81.05 → IBU ≈ 25.1
+    const out = computeIbu({
+      method: "Rager",
+      og: 1.05,
+      batch_size_l: 19,
+      hops: [{ amount_g: 28, alpha_acid_pct: 5.5, time_min: 60 }],
+    });
+    expect(out.method).toBe("Rager");
+    expect(out.total_ibu).toBeCloseTo(25.1, 0);
+  });
+
+  it("reads higher than Tinseth at 60 min, all else equal", () => {
+    const tinseth = computeIbu({
+      og: 1.05, batch_size_l: 20,
+      hops: [{ amount_g: 30, alpha_acid_pct: 6, time_min: 60 }],
+    });
+    const rager = computeIbu({
+      method: "Rager", og: 1.05, batch_size_l: 20,
+      hops: [{ amount_g: 30, alpha_acid_pct: 6, time_min: 60 }],
+    });
+    expect(rager.total_ibu).toBeGreaterThan(tinseth.total_ibu);
+  });
+
+  it("applies the gravity adjustment past OG 1.050", () => {
+    const at_1050 = computeIbu({
+      method: "Rager", og: 1.05, batch_size_l: 20,
+      hops: [{ amount_g: 30, alpha_acid_pct: 6, time_min: 60 }],
+    });
+    const at_1090 = computeIbu({
+      method: "Rager", og: 1.09, batch_size_l: 20,
+      hops: [{ amount_g: 30, alpha_acid_pct: 6, time_min: 60 }],
+    });
+    // GA at 1.090 = (0.09 - 0.05) / 0.2 = 0.2 → divide IBU by 1.2.
+    expect(at_1090.total_ibu).toBeCloseTo(at_1050.total_ibu / 1.2, 1);
   });
 });

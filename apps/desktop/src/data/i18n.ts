@@ -247,6 +247,8 @@ const STRINGS: Record<string, Entry> = {
   "settings.units.mass": { en: "Mass", fr: "Masse" },
   "settings.units.gravity": { en: "Gravity", fr: "Densité" },
   "settings.units.color": { en: "Color", fr: "Couleur" },
+  "settings.units.ibu_method": { en: "IBU formula", fr: "Formule IBU" },
+  "settings.units.color_method": { en: "Color formula", fr: "Formule de couleur" },
   "settings.units.currency": { en: "Currency", fr: "Devise" },
   "settings.units.cost_adjustment": { en: "Cost adjustment", fr: "Ajustement des coûts" },
   "settings.units.cost_adjustment_hint": {
@@ -284,6 +286,22 @@ const STRINGS: Record<string, Entry> = {
   "settings.units.opt.eur": { en: "€ Euro", fr: "€ Euro" },
   "settings.units.opt.usd": { en: "$ US dollar", fr: "$ Dollar US" },
   "settings.units.opt.gbp": { en: "£ Pound sterling", fr: "£ Livre sterling" },
+  "settings.units.opt.ibu_tinseth": {
+    en: "Tinseth (default)",
+    fr: "Tinseth (défaut)",
+  },
+  "settings.units.opt.ibu_rager": {
+    en: "Rager (higher at long boils)",
+    fr: "Rager (plus élevé sur longues ébullitions)",
+  },
+  "settings.units.opt.color_morey": {
+    en: "Morey (default)",
+    fr: "Morey (défaut)",
+  },
+  "settings.units.opt.color_daniels": {
+    en: "Daniels (tuned for darker beers)",
+    fr: "Daniels (calibré pour les bières foncées)",
+  },
 
   // ─── Settings — Data card ────────────────────────────────────
   "settings.data.intro": {

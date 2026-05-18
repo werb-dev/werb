@@ -24,25 +24,40 @@ import type { IbuInput, IbuOutput } from "@werb/types";
 export function computeIbu(input: IbuInput): IbuOutput {
   const method = input.method ?? "Tinseth";
 
-  if (method !== "Tinseth") {
+  if (method !== "Tinseth" && method !== "Rager") {
     throw new Error(
-      `IBU method '${method}' is not implemented yet. Only 'Tinseth' is supported in v0.`,
+      `IBU method '${method}' is not implemented. Supported: Tinseth, Rager.`,
     );
   }
 
   const { og, batch_size_l, hops } = input;
+  // Rager uses a gravity adjustment as a flat post-divisor instead of
+  // Tinseth's bigness factor. Compute both up-front; per-hop math
+  // picks whichever the method needs.
   const bigness = 1.65 * Math.pow(0.000125, og - 1);
+  const gravityAdjustment = og > 1.05 ? (og - 1.05) / 0.2 : 0;
 
   const additions = hops.map((h) => {
-    const timeFactor = (1 - Math.exp(-0.04 * h.time_min)) / 4.15;
-    const utilization = bigness * timeFactor;
     const alphaDecimal = h.alpha_acid_pct / 100;
     const mgPerL = (alphaDecimal * h.amount_g * 1000) / batch_size_l;
-    const ibu = utilization * mgPerL;
+    let utilization: number;
+    let ibu: number;
+    if (method === "Rager") {
+      // Rager 1990 — hyperbolic tangent in boil time, then divide
+      // through (1 + GA) for high-gravity worts. Tends to read
+      // higher than Tinseth at long boils.
+      utilization = (18.11 + 13.86 * Math.tanh((h.time_min - 31.32) / 18.27)) / 100;
+      ibu = (mgPerL * utilization) / (1 + gravityAdjustment);
+    } else {
+      // Tinseth (default).
+      const timeFactor = (1 - Math.exp(-0.04 * h.time_min)) / 4.15;
+      utilization = bigness * timeFactor;
+      ibu = utilization * mgPerL;
+    }
     return {
       ...(h.name !== undefined ? { name: h.name } : {}),
-      ibu,
-      utilization,
+      ibu: Math.max(0, ibu),
+      utilization: Math.max(0, utilization),
     };
   });
 

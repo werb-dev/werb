@@ -55,6 +55,20 @@ export interface UnitPreferences {
    * outdoor brewing on sunny days where dark mode washes out.
    */
   theme: "auto" | "dark" | "light";
+  /**
+   * IBU calculation method. Tinseth is the homebrew default and
+   * what every modern calculator agrees on; Rager pre-dates it and
+   * reads higher at long boils with a flat gravity correction.
+   * Brewers comparing notes with older recipes / brewtarget often
+   * want Rager.
+   */
+  ibu_method: "Tinseth" | "Rager";
+  /**
+   * Color estimation. Morey is the de facto homebrew formula;
+   * Daniels uses a linear fit tuned for amber-to-dark beers and
+   * tends to read lower than Morey above ~SRM 15.
+   */
+  color_method: "Morey" | "Daniels";
 }
 
 export const DEFAULT_PREFS: UnitPreferences = {
@@ -67,6 +81,8 @@ export const DEFAULT_PREFS: UnitPreferences = {
   cost_inflation_pct: 100,
   locale: detectLocale(),
   theme: "auto",
+  ibu_method: "Tinseth",
+  color_method: "Morey",
 };
 
 const CURRENCY_SYMBOL: Record<UnitPreferences["currency"], string> = {

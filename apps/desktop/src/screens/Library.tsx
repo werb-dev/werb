@@ -208,7 +208,7 @@ function RecipeCard({
     : null;
   const computedIbu = (() => {
     try {
-      return computeIbu(recipeToIbuInput(recipe)).total_ibu;
+      return computeIbu({ ...recipeToIbuInput(recipe), method: prefs.ibu_method }).total_ibu;
     } catch {
       return null;
     }

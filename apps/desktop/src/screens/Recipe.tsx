@@ -81,9 +81,9 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
   const prefs = useUnits();
   const t = useT();
   const computed = useMemo(() => {
-    const ibu = computeIbu(recipeToIbuInput(recipe));
+    const ibu = computeIbu({ ...recipeToIbuInput(recipe), method: prefs.ibu_method });
     const water = computeWater(recipeToWaterInput(recipe, profileToWaterOverrides(activeProfile)));
-    const color = computeColor(recipeToColorInput(recipe));
+    const color = computeColor({ ...recipeToColorInput(recipe), method: prefs.color_method });
     const gravity = computeGravity(recipeToGravityInput(recipe));
     // FG is always computed (yeast attenuation × OG); the file value
     // takes precedence in the display but the estimate is the
@@ -105,7 +105,7 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
       ibuByIndex.set(idx, ibu.additions[k]?.ibu ?? 0);
     });
     return { ibu, water, color, gravity, fg: fgEstimate, abv, ibuByIndex };
-  }, [recipe, activeProfile]);
+  }, [recipe, activeProfile, prefs.ibu_method, prefs.color_method]);
 
   const claimedIbu = recipe.ibu_estimate?.ibu?.value ?? null;
   // Gravity values from BeerJSON are normalized through the formatter

@@ -203,6 +203,24 @@ function UnitsCard() {
           value={prefs.cost_inflation_pct}
           onChange={(v) => update("cost_inflation_pct", v)}
         />
+        <UnitPicker
+          label={t("settings.units.ibu_method")}
+          value={prefs.ibu_method}
+          onChange={(v) => update("ibu_method", v)}
+          options={[
+            { value: "Tinseth", label: t("settings.units.opt.ibu_tinseth") },
+            { value: "Rager", label: t("settings.units.opt.ibu_rager") },
+          ]}
+        />
+        <UnitPicker
+          label={t("settings.units.color_method")}
+          value={prefs.color_method}
+          onChange={(v) => update("color_method", v)}
+          options={[
+            { value: "Morey", label: t("settings.units.opt.color_morey") },
+            { value: "Daniels", label: t("settings.units.opt.color_daniels") },
+          ]}
+        />
       </div>
     </div>
   );
