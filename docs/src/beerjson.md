@@ -4,7 +4,7 @@ How Werb handles BeerJSON 2.x — what it reads, what it writes, where it diverg
 
 ## We vendor the schemas
 
-The BeerJSON 2.x JSON Schema files live under `vendor/beerjson/` as a git submodule pinning [werb-dev/beerjson](https://github.com/werb-dev/beerjson) (a fork with two pending upstream PRs). Once the PRs land in `beerjson/beerjson`, we repoint at upstream.
+The BeerJSON 2.x JSON Schema files live under `vendor/beerjson/` as a git submodule pinning [werb-dev/beerjson](https://github.com/werb-dev/beerjson) on the `fix-packaging-vessel-graphics-items` branch. Two upstream contributions are bundled there: a `$ref + type: array` packaging-vessel fix submitted as [beerjson/beerjson#222](https://github.com/beerjson/beerjson/pull/222), and a misc-additions root-level `additionalProperties: false` consistency fix. Once both land in `beerjson/beerjson`, we repoint the submodule at upstream `master`.
 
 The vendoring keeps validation reproducible — every layer (the ajv validator in the PWA, the boon validator in the Rust tests, the CLI's `werb validate`, the typify-generated `werb-beerjson` types) reads the same byte-for-byte schema set.
 

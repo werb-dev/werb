@@ -18,7 +18,7 @@ Download the bundle for your platform from the [latest release](https://github.c
 | Linux | `werb_*_amd64.deb` or `werb_*_amd64.AppImage` |
 | Windows | `Werb_*_x64-setup.exe` or `Werb_*_x64_en-US.msi` |
 
-Intel Macs aren't currently published — the GitHub Actions Intel-macOS runner pool is queue-starved. Use the web PWA instead until that opens up.
+Intel Macs are no longer supported as of v0.2 — the release matrix targets Apple Silicon only. Use the web PWA on Intel hardware.
 
 ## CLI
 
@@ -26,4 +26,23 @@ Intel Macs aren't currently published — the GitHub Actions Intel-macOS runner 
 
 ## From source
 
-The whole repo lives at <https://github.com/werb-dev/werb> and builds with `pnpm install && pnpm gen:types`. The README's [Quick start](https://github.com/werb-dev/werb#quick-start) section is the authoritative how-to — once it stabilises, the steps will move here.
+Requirements: Node.js 20+, [pnpm](https://pnpm.io/), Rust toolchain (for the BeerXML WASM crate), and for desktop builds also a [Tauri toolchain](https://tauri.app/v2/guides/getting-started/prerequisites/).
+
+```bash
+git clone --recurse-submodules https://github.com/werb-dev/werb.git
+cd werb
+pnpm install
+pnpm gen:types     # generate TS types from JSON Schemas
+pnpm test          # full suite, ~430 tests
+
+# Web dev:
+pnpm -F @werb/desktop dev
+
+# Desktop dev (Tauri):
+pnpm -F @werb/desktop tauri:dev
+
+# Production web build:
+pnpm -F @werb/desktop build
+```
+
+The `vendor/beerjson/` submodule is required — it's where the validator and the Rust type generator read the BeerJSON 2.x schemas from. If you cloned without `--recurse-submodules`, run `git submodule update --init --recursive`.
