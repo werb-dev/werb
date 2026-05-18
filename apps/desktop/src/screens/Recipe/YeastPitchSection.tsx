@@ -103,7 +103,7 @@ export function YeastPitchSection({ recipe }: { recipe: BeerJsonRecipe }) {
         <div className="grid grid-cols-2 gap-4 mb-6">
           <CarbStat
             label={tt("recipe.yeast.target")}
-            value={`${out.target_cells_billion.toFixed(0)} B`}
+            value={`${out.target_cells_billion.toFixed(0)} ${tt("recipe.yeast.billion_unit")}`}
             sub={tt("recipe.yeast.target_sub", {
               rate: out.target_rate_m_per_ml_per_plato.toFixed(2),
               og: `${out.og_plato.toFixed(1)} °P`,
@@ -111,7 +111,7 @@ export function YeastPitchSection({ recipe }: { recipe: BeerJsonRecipe }) {
           />
           <CarbStat
             label={tt("recipe.yeast.per_pack")}
-            value={`${out.cells_per_pack_effective_billion.toFixed(0)} B`}
+            value={`${out.cells_per_pack_effective_billion.toFixed(0)} ${tt("recipe.yeast.billion_unit")}`}
             sub={tt("recipe.yeast.per_pack_sub")}
           />
         </div>
@@ -216,7 +216,7 @@ function StarterRecommendation({
             }`}
           >
             {starter.predicted_cells_billion.toFixed(0)}{" "}
-            <span className="text-body-sm text-text-muted">B</span>
+            <span className="text-body-sm text-text-muted">{tt("recipe.yeast.billion_unit")}</span>
           </p>
           <p className="font-mono text-caption mt-1 text-text-muted">
             {tt("recipe.yeast.starter_growth", {

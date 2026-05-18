@@ -20,7 +20,7 @@ export function EquipmentScreen({ api }: EquipmentScreenProps) {
 
   const handleCreate = () => {
     const fresh = eq.create({
-      name: `Profile ${eq.profiles.length + 1}`,
+      name: t("equipment.default_profile_name", { n: eq.profiles.length + 1 }),
       batch_size_l: DEFAULT_PROFILE_VALUES.batch_size_l,
       efficiency_pct: DEFAULT_PROFILE_VALUES.efficiency_pct,
       hlt: { ...DEFAULT_PROFILE_VALUES.hlt },

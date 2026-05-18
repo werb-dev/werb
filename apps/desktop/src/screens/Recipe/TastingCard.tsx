@@ -1,5 +1,6 @@
 import { SensoryRadar } from "../../components/SensoryRadar.tsx";
 import { useRecipeTastings } from "../../hooks/useBrewLog.ts";
+import { useT } from "../../data/preferences.tsx";
 import { Section } from "./Section.tsx";
 
 /**
@@ -11,6 +12,7 @@ import { Section } from "./Section.tsx";
  * noise on a recipe that hasn't been brewed-and-tasted.
  */
 export function TastingCard({ recipeId }: { recipeId: string }) {
+  const tt = useT();
   const { tastings, loading } = useRecipeTastings(recipeId);
   if (loading) return null;
   if (tastings.length === 0) return null;
@@ -18,10 +20,10 @@ export function TastingCard({ recipeId }: { recipeId: string }) {
 
   return (
     <Section
-      title="Last tasting"
+      title={tt("recipe.section.tasting")}
       subtitle={
         tastings.length > 1
-          ? `Most recent of ${tastings.length} tastings across this recipe`
+          ? tt("recipe.tasting.most_recent_of", { count: tastings.length })
           : undefined
       }
     >

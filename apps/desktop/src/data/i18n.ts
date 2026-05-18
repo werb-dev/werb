@@ -62,6 +62,32 @@ const STRINGS: Record<string, Entry> = {
   "common.try_again": { en: "Try again", fr: "Réessayer" },
   "common.reload": { en: "Reload", fr: "Recharger" },
 
+  // ─── ErrorBoundary recovery screen ─────────────────────────────
+  "error.boundary.eyebrow": {
+    en: "Something went wrong",
+    fr: "Une erreur est survenue",
+  },
+  "error.boundary.title": {
+    en: "Werb hit an unexpected error",
+    fr: "Werb a rencontré une erreur inattendue",
+  },
+  "error.boundary.body": {
+    en: "Your data is safe — nothing is saved automatically when a render fails. Try again, or reload if it persists.",
+    fr: "Vos données sont en sécurité — rien n'est enregistré automatiquement lors d'une erreur d'affichage. Réessayez, ou rechargez si le problème persiste.",
+  },
+  "error.boundary.report_prefix": {
+    en: "If this keeps happening,",
+    fr: "Si cela persiste,",
+  },
+  "error.boundary.report_link": {
+    en: "file an issue",
+    fr: "ouvrez un ticket",
+  },
+  "error.boundary.report_suffix": {
+    en: "and include the message above.",
+    fr: "en incluant le message ci-dessus.",
+  },
+
   // ─── Navigation (DevNav) ──────────────────────────────────────
   "nav.library": { en: "Library", fr: "Bibliothèque" },
   "nav.journal": { en: "Journal", fr: "Journal" },
@@ -71,6 +97,18 @@ const STRINGS: Record<string, Entry> = {
 
   // ─── Library ───────────────────────────────────────────────────
   "library.title": { en: "Library", fr: "Bibliothèque" },
+  "library.delete_confirm": {
+    en: 'Delete "{name}"?',
+    fr: "Supprimer « {name} » ?",
+  },
+  "library.duplicated_name": {
+    en: "{name} (copy)",
+    fr: "{name} (copie)",
+  },
+  "library.no_profile_prompt": {
+    en: "No equipment profile yet — the new recipe will use generic defaults (20 L, 75 % efficiency).\n\nSet up your equipment profile first? (Cancel to continue with defaults.)",
+    fr: "Aucun profil de matériel — la nouvelle recette utilisera des valeurs par défaut génériques (20 L, 75 % d'efficacité).\n\nConfigurer votre profil de matériel d'abord ? (Annuler pour continuer avec les valeurs par défaut.)",
+  },
   "library.subtitle_loading": { en: "Werb · loading…", fr: "Werb · chargement…" },
   "library.subtitle_count": { en: "Werb · {count} recipe{s}", fr: "Werb · {count} recette{s}" },
   "library.new_recipe": { en: "+ New recipe", fr: "+ Nouvelle recette" },
@@ -177,6 +215,13 @@ const STRINGS: Record<string, Entry> = {
   "recipe.section.water": { en: "Water volumes", fr: "Volumes d'eau" },
   "recipe.section.fermentables": { en: "Fermentables", fr: "Fermentescibles" },
   "recipe.section.hops": { en: "Hop additions", fr: "Houblonnage" },
+  "recipe.header.boil_min": { en: "{min} min boil", fr: "ébullition {min} min" },
+  "recipe.header.efficiency": { en: "{pct}% efficiency", fr: "{pct} % d'efficacité" },
+  "recipe.hop.alpha_acid": { en: "{pct}% AA", fr: "{pct} % AA" },
+  "recipe.culture.attenuation": { en: "{pct}% atten", fr: "{pct} % d'atténuation" },
+  "recipe.time.days": { en: "{n} day", fr: "{n} jour" },
+  "recipe.time.minutes": { en: "{n} min", fr: "{n} min" },
+  "recipe.mash.infusion": { en: "{volume} infusion", fr: "infusion {volume}" },
   "recipe.section.hops_subtitle": {
     en: "Boil hops contribute IBU. Dry hops are listed for reference.",
     fr: "Les houblons d'ébullition contribuent aux IBU. Les houblons à cru sont listés pour référence.",
@@ -186,6 +231,10 @@ const STRINGS: Record<string, Entry> = {
   "recipe.section.cultures": { en: "Cultures", fr: "Levures" },
   "recipe.section.cost": { en: "Cost", fr: "Coût" },
   "recipe.section.tasting": { en: "Last tasting", fr: "Dernière dégustation" },
+  "recipe.tasting.most_recent_of": {
+    en: "Most recent of {count} tastings across this recipe",
+    fr: "La plus récente parmi {count} dégustations de cette recette",
+  },
   "recipe.section.carbonation": { en: "Carbonation", fr: "Carbonatation" },
   "recipe.export": { en: "Export", fr: "Exporter" },
 
@@ -625,6 +674,11 @@ const STRINGS: Record<string, Entry> = {
   "recipe.yeast.target_sub": { en: "{rate} M/mL/°P at {og}", fr: "{rate} M/mL/°P à {og}" },
   "recipe.yeast.per_pack": { en: "Per pack (viable)", fr: "Par sachet (viable)" },
   "recipe.yeast.per_pack_sub": { en: "Pack × viability", fr: "Sachet × viabilité" },
+  // SI giga (×10⁹) cell-count suffix. English "B" for billion;
+  // French "Md" for milliards — "G" reads as grams in a brewing
+  // context, and French "billion" actually means 10¹² so a literal
+  // "B" would be wrong by three orders of magnitude.
+  "recipe.yeast.billion_unit": { en: "B", fr: "Md" },
   "recipe.yeast.recommended": { en: "Recommended", fr: "Recommandé" },
   "recipe.yeast.exact_packs": { en: "{packs} packs exact", fr: "{packs} sachets exact" },
   "recipe.yeast.status": { en: "Status", fr: "État" },
@@ -632,7 +686,7 @@ const STRINGS: Record<string, Entry> = {
   "recipe.yeast.under_pitch": { en: "Under-pitch", fr: "Sous-ensemencement" },
   "recipe.yeast.shortfall": {
     en: "Short {cells} B — buy more or make a starter",
-    fr: "Manque {cells} G — achetez-en plus ou faites un pied de cuve",
+    fr: "Manque {cells} Md — achetez-en plus ou faites un pied de cuve",
   },
   "recipe.yeast.sufficient_body": {
     en: "{count} pack{s} covers the target",
@@ -684,6 +738,7 @@ const STRINGS: Record<string, Entry> = {
 
   // ─── Equipment screen ────────────────────────────────────────
   "equipment.title": { en: "Equipment", fr: "Matériel" },
+  "equipment.default_profile_name": { en: "Profile {n}", fr: "Profil {n}" },
   "equipment.subtitle_loading": { en: "Werb · loading…", fr: "Werb · chargement…" },
   "equipment.subtitle_count": { en: "Werb · {count} profile{s}", fr: "Werb · {count} profil{s}" },
   "equipment.intro": {

@@ -48,11 +48,15 @@ import { CostSection } from "./Recipe/CostSection.tsx";
 import { TastingCard } from "./Recipe/TastingCard.tsx";
 import { WaterChemistrySection } from "./Recipe/WaterChemistrySection.tsx";
 
-const TIMING_LABEL: Record<string, string> = {
-  add_to_boil: "Boil",
-  add_to_fermentation: "Dry hop",
-  add_to_mash: "Mash",
-  add_to_package: "Package",
+// Hop / misc addition stage → i18n key for the displayed label. The
+// dictionary returns a key (not a literal string) so the Recipe
+// view's `t()` resolves at render time and the same translations
+// power the editor pickers.
+const TIMING_KEY: Record<string, string> = {
+  add_to_boil: "editor.hop.use.boil",
+  add_to_fermentation: "editor.hop.use.dry_hop",
+  add_to_mash: "editor.hop.use.mash",
+  add_to_package: "editor.hop.use.package",
 };
 
 interface RecipeScreenProps {
@@ -189,8 +193,8 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
               const v = formatVolume(recipe.batch_size, prefs);
               return `${v.value.toFixed(0)} ${v.unit}`;
             })()}
-            {recipe.boil?.boil_time && ` · ${toMinutes(recipe.boil.boil_time).toFixed(0)} min boil`}
-            {recipe.efficiency?.brewhouse && ` · ${recipe.efficiency.brewhouse.value}% efficiency`}
+            {recipe.boil?.boil_time && ` · ${t("recipe.header.boil_min", { min: toMinutes(recipe.boil.boil_time).toFixed(0) })}`}
+            {recipe.efficiency?.brewhouse && ` · ${t("recipe.header.efficiency", { pct: recipe.efficiency.brewhouse.value })}`}
             {recipe.type && ` · ${recipe.type}`}
           </p>
           <div className="mt-6 flex flex-wrap gap-3 items-center">
@@ -334,7 +338,8 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
               const massDisplay = isMass(h.amount)
                 ? formatMassSmall(h.amount, prefs).display
                 : "—";
-              const useLabel = TIMING_LABEL[h.timing?.use ?? ""] ?? "—";
+              const timingKey = TIMING_KEY[h.timing?.use ?? ""];
+              const useLabel = timingKey ? t(timingKey) : "—";
               const time = h.timing?.time ? toMinutes(h.timing.time) : 0;
               const ibuValue = computed.ibuByIndex.get(i);
               return (
@@ -344,7 +349,7 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
                       {h.name}
                       {h.alpha_acid && (
                         <span className="text-text-muted font-mono text-body-sm ml-2">
-                          {h.alpha_acid.value}% AA
+                          {t("recipe.hop.alpha_acid", { pct: h.alpha_acid.value })}
                         </span>
                       )}
                     </p>
@@ -354,8 +359,8 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
                         <>
                           {" · "}
                           {time >= 1440
-                            ? `${(time / 1440).toFixed(0)} day`
-                            : `${time.toFixed(0)} min`}
+                            ? t("recipe.time.days", { n: (time / 1440).toFixed(0) })
+                            : t("recipe.time.minutes", { n: time.toFixed(0) })}
                         </>
                       )}
                       {h.form && ` · ${h.form}`}
@@ -382,7 +387,8 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
             <Section title={t("recipe.section.miscs")}>
               <ul className="rounded-xl bg-surface border border-border divide-y divide-border">
                 {recipe.ingredients.miscellaneous_additions.map((m, i) => {
-                  const useLabel = TIMING_LABEL[m.timing?.use ?? ""] ?? null;
+                  const miscKey = TIMING_KEY[m.timing?.use ?? ""];
+                  const useLabel = miscKey ? t(miscKey) : null;
                   const time = m.timing?.time ? toMinutes(m.timing.time) : 0;
                   const amount = isMass(m.amount)
                     ? formatMassSmall(m.amount, prefs).display
@@ -396,7 +402,7 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
                         <p className="text-body-sm text-text-muted mt-1">
                           {m.type && <span className="capitalize">{m.type}</span>}
                           {useLabel && ` · ${useLabel}`}
-                          {time > 0 && ` · ${time.toFixed(0)} min`}
+                          {time > 0 && ` · ${t("recipe.time.minutes", { n: time.toFixed(0) })}`}
                           {m.notes && ` · ${m.notes}`}
                         </p>
                       </div>
@@ -421,7 +427,7 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
                     <p className="text-body font-medium">{step.name}</p>
                     <p className="text-body-sm text-text-muted mt-1 capitalize">
                       {step.type}
-                      {step.amount && ` · ${formatVolume(step.amount, prefs).display} infusion`}
+                      {step.amount && ` · ${t("recipe.mash.infusion", { volume: formatVolume(step.amount, prefs).display })}`}
                       {step.infuse_temperature &&
                         ` @ ${formatTemperature(step.infuse_temperature, prefs).display}`}
                     </p>
@@ -455,7 +461,7 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
                         </span>
                         {c.producer && ` · ${c.producer}`}
                         {c.product_id && ` · ${c.product_id}`}
-                        {c.attenuation && ` · ${c.attenuation.value}% atten`}
+                        {c.attenuation && ` · ${t("recipe.culture.attenuation", { pct: c.attenuation.value })}`}
                       </p>
                     </div>
                     <div className="font-mono text-mono-lg shrink-0">

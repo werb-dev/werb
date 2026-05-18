@@ -10,18 +10,19 @@ import { formatTimeOfDay } from "./format.ts";
  * stale 67°C from sitting in a gravity field after the user just
  * switched kinds.
  */
+// The display label for each kind comes from `t("brew.meas.kind.${k.kind}")`
+// at render time — no English label here.
 const MEASUREMENT_KINDS: Array<{
   kind: Measurement["kind"];
-  label: string;
   unit: string;
   step: number;
   defaultValue: number;
 }> = [
-  { kind: "gravity_sg", label: "Gravity", unit: "SG", step: 0.001, defaultValue: 1.05 },
-  { kind: "temperature_c", label: "Temperature", unit: "°C", step: 0.5, defaultValue: 67 },
-  { kind: "ph", label: "pH", unit: "", step: 0.01, defaultValue: 5.4 },
-  { kind: "volume_l", label: "Volume", unit: "L", step: 0.5, defaultValue: 25 },
-  { kind: "abv_pct", label: "ABV", unit: "%", step: 0.1, defaultValue: 5.5 },
+  { kind: "gravity_sg", unit: "SG", step: 0.001, defaultValue: 1.05 },
+  { kind: "temperature_c", unit: "°C", step: 0.5, defaultValue: 67 },
+  { kind: "ph", unit: "", step: 0.01, defaultValue: 5.4 },
+  { kind: "volume_l", unit: "L", step: 0.5, defaultValue: 25 },
+  { kind: "abv_pct", unit: "%", step: 0.1, defaultValue: 5.5 },
 ];
 
 export function MeasurementsSection({

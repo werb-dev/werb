@@ -161,7 +161,7 @@ export function App() {
           if (!stored) return;
           recipesApi.create({
             ...stored.recipe,
-            name: `${stored.recipe.name} (copy)`,
+            name: t("library.duplicated_name", { name: stored.recipe.name }),
           });
         }}
         onImportSamples={() => {
@@ -177,9 +177,7 @@ export function App() {
           // real values rather than the generic 20 L / 75 % fallback.
           const profile = equipmentApi.activeProfile;
           if (!profile) {
-            const setUpFirst = confirm(
-              "No equipment profile yet — the new recipe will use generic defaults (20 L, 75 % efficiency).\n\nSet up your equipment profile first? (Cancel to continue with defaults.)",
-            );
+            const setUpFirst = confirm(t("library.no_profile_prompt"));
             if (setUpFirst) {
               goEquipment();
               return;
@@ -233,10 +231,11 @@ export function App() {
  * connections — once the chunk is cached, navigation is instant.
  */
 function ScreenLoading() {
+  const t = useT();
   return (
     <div className="min-h-dvh bg-bg text-text flex items-center justify-center">
       <p className="text-caption uppercase tracking-widest text-text-muted animate-pulse">
-        Loading…
+        {t("common.loading")}
       </p>
     </div>
   );

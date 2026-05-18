@@ -175,7 +175,9 @@ export function LibraryScreen({
                   onSelect={() => onSelect(id)}
                   onDuplicate={() => onDuplicate(id)}
                   onDelete={() => {
-                    if (confirm(`Delete "${recipe.name}"?`)) onDelete(id);
+                    if (confirm(t("library.delete_confirm", { name: recipe.name }))) {
+                      onDelete(id);
+                    }
                   }}
                 />
               </li>

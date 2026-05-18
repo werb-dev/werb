@@ -1,4 +1,5 @@
 import { Component, type ReactNode } from "react";
+import { useT } from "../data/preferences.tsx";
 
 /**
  * Catches uncaught render errors anywhere below it and shows a recovery
@@ -45,51 +46,11 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
   override render() {
     if (this.state.error) {
       return (
-        <div className="min-h-dvh bg-bg text-text flex items-center justify-center px-6">
-          <div className="max-w-md w-full rounded-2xl bg-surface border border-border p-6 sm:p-8">
-            <p className="text-caption uppercase tracking-widest text-danger font-medium">
-              Something went wrong
-            </p>
-            <h1 className="text-h2 font-semibold mt-2">
-              Werb hit an unexpected error
-            </h1>
-            <p className="text-body-sm text-text-muted mt-3">
-              Your data is safe — nothing is saved automatically when a
-              render fails. Try again, or reload if it persists.
-            </p>
-            <pre className="mt-4 max-h-40 overflow-auto rounded-lg bg-bg border border-border p-3 text-caption font-mono text-text-muted whitespace-pre-wrap break-all">
-              {this.state.error.message}
-            </pre>
-            <div className="mt-6 flex flex-wrap gap-3">
-              <button
-                type="button"
-                onClick={this.tryAgain}
-                className="px-5 py-2.5 rounded-lg bg-accent text-bg text-body-sm font-medium hover:opacity-90 transition-opacity min-h-[40px]"
-              >
-                Try again
-              </button>
-              <button
-                type="button"
-                onClick={this.reload}
-                className="px-5 py-2.5 rounded-lg bg-surface-raised border border-border text-body-sm font-medium hover:border-accent hover:text-accent transition-colors min-h-[40px]"
-              >
-                Reload
-              </button>
-            </div>
-            <p className="text-caption text-text-muted mt-5">
-              If this keeps happening,{" "}
-              <a
-                href="https://github.com/werb-dev/werb/issues/new"
-                target="_blank"
-                rel="noreferrer"
-                className="text-accent hover:underline"
-              >
-                file an issue
-              </a>{" "}
-              and include the message above.
-            </p>
-          </div>
-        </div>
+        <ErrorScreen
+          message={this.state.error.message}
+          onTryAgain={this.tryAgain}
+          onReload={this.reload}
+        />
       );
     }
     return (
@@ -98,6 +59,69 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
       </ErrorBoundaryReset>
     );
   }
+}
+
+/**
+ * Function component so we can call `useT()` — the surrounding
+ * boundary stays a class component because componentDidCatch
+ * requires it.
+ */
+function ErrorScreen({
+  message,
+  onTryAgain,
+  onReload,
+}: {
+  message: string;
+  onTryAgain: () => void;
+  onReload: () => void;
+}) {
+  const t = useT();
+  return (
+    <div className="min-h-dvh bg-bg text-text flex items-center justify-center px-6">
+      <div className="max-w-md w-full rounded-2xl bg-surface border border-border p-6 sm:p-8">
+        <p className="text-caption uppercase tracking-widest text-danger font-medium">
+          {t("error.boundary.eyebrow")}
+        </p>
+        <h1 className="text-h2 font-semibold mt-2">
+          {t("error.boundary.title")}
+        </h1>
+        <p className="text-body-sm text-text-muted mt-3">
+          {t("error.boundary.body")}
+        </p>
+        <pre className="mt-4 max-h-40 overflow-auto rounded-lg bg-bg border border-border p-3 text-caption font-mono text-text-muted whitespace-pre-wrap break-all">
+          {message}
+        </pre>
+        <div className="mt-6 flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={onTryAgain}
+            className="px-5 py-2.5 rounded-lg bg-accent text-bg text-body-sm font-medium hover:opacity-90 transition-opacity min-h-[40px]"
+          >
+            {t("common.try_again")}
+          </button>
+          <button
+            type="button"
+            onClick={onReload}
+            className="px-5 py-2.5 rounded-lg bg-surface-raised border border-border text-body-sm font-medium hover:border-accent hover:text-accent transition-colors min-h-[40px]"
+          >
+            {t("common.reload")}
+          </button>
+        </div>
+        <p className="text-caption text-text-muted mt-5">
+          {t("error.boundary.report_prefix")}{" "}
+          <a
+            href="https://github.com/werb-dev/werb/issues/new"
+            target="_blank"
+            rel="noreferrer"
+            className="text-accent hover:underline"
+          >
+            {t("error.boundary.report_link")}
+          </a>{" "}
+          {t("error.boundary.report_suffix")}
+        </p>
+      </div>
+    </div>
+  );
 }
 
 /**
