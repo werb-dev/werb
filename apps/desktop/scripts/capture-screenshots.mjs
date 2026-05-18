@@ -3,10 +3,10 @@
  * Capture the README screenshots in one shot.
  *
  * Boots `vite preview` against the built bundle, drives a headless
- * Chromium through the main four screens (Library, Recipe, Brew,
- * Journal), and writes PNGs to docs/screenshots/. Each capture
- * walks the actual UI — same buttons a brewer would click — so the
- * shots stay honest if the layout drifts.
+ * Chromium through the five main screens (Library, Recipe, Brew,
+ * Journal, Settings), and writes PNGs to docs/screenshots/. Each
+ * capture walks the actual UI — same buttons a brewer would click —
+ * so the shots stay honest if the layout drifts.
  *
  * Re-run via `pnpm screenshots` from the repo root. Build is left to
  * the caller; if dist/ is stale, the screenshots will be too.
@@ -182,6 +182,21 @@ async function main() {
     await page.waitForSelector("h1:has-text('Journal')", { timeout: 10_000 });
     await settle(page);
     await capture(page, "journal");
+
+    // ─── 5. Settings ────────────────────────────────────────────────
+    // The bottom nav pill carries the Settings button; clicking it
+    // navigates to the units / sync / data / build-footer screen.
+    // Catches regressions in the build-time __APP_VERSION__ +
+    // __APP_COMMIT__ + __APP_BUILD_DATE__ stamps that vite.config.ts
+    // injects — if the defines stop reaching the bundle, the footer
+    // renders nothing and this shot looks visibly different.
+    await page
+      .getByRole("button", { name: /^Settings$/i })
+      .first()
+      .click();
+    await page.waitForSelector("h1:has-text('Sync & storage')", { timeout: 10_000 });
+    await settle(page);
+    await capture(page, "settings");
 
     await browser.close();
   } catch (err) {
