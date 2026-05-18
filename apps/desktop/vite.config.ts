@@ -1,7 +1,38 @@
+import { execSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { VitePWA } from "vite-plugin-pwa";
+
+// Build-time stamping. These are baked into the bundle at config
+// load and surfaced through the Settings footer so a bug report can
+// quote an exact commit. `git` failures (Docker build without a
+// .git, shallow checkout, …) degrade to "unknown" rather than
+// breaking the build.
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const pkg = JSON.parse(readFileSync(join(__dirname, "package.json"), "utf8")) as {
+  version: string;
+};
+function gitCommit(): string {
+  try {
+    const sha = execSync("git rev-parse --short HEAD", { stdio: ["ignore", "pipe", "ignore"] })
+      .toString()
+      .trim();
+    // -dirty suffix when the working tree has uncommitted changes,
+    // so a tester's local build is visibly distinct from a clean one.
+    const dirty = execSync("git status --porcelain", { stdio: ["ignore", "pipe", "ignore"] })
+      .toString()
+      .trim().length > 0;
+    return dirty ? `${sha}-dirty` : sha;
+  } catch {
+    return "unknown";
+  }
+}
+const COMMIT = gitCommit();
+const BUILD_DATE = new Date().toISOString().slice(0, 10);
 
 // Vite config tuned for Tauri 2: fixed dev port, no auto-clear of stderr,
 // HMR over the host Tauri injects, and exclusion of the Rust build dir from
@@ -13,6 +44,11 @@ import { VitePWA } from "vite-plugin-pwa";
 //   • custom domain on Pages:   base="/"  (CI sets VITE_BASE=/)
 export default defineConfig({
   base: process.env.VITE_BASE ?? "/",
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version),
+    __APP_COMMIT__: JSON.stringify(COMMIT),
+    __APP_BUILD_DATE__: JSON.stringify(BUILD_DATE),
+  },
   plugins: [
     react(),
     tailwindcss(),

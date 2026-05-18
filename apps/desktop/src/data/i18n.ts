@@ -231,6 +231,10 @@ const STRINGS: Record<string, Entry> = {
     en: "Keep recipes, equipment profiles, and brew sessions in sync across devices via a private GitHub repo. Manual push / pull in v1 — no background sync.",
     fr: "Gardez recettes, profils de matériel et sessions de brassage synchronisés entre appareils via un dépôt GitHub privé. Push / pull manuel en v1 — pas de synchronisation en arrière-plan.",
   },
+  "settings.build_stamp": {
+    en: "Werb {version} · {commit} · built {date}",
+    fr: "Werb {version} · {commit} · compilé le {date}",
+  },
   "settings.section.units": { en: "Units", fr: "Unités" },
   "settings.section.github": { en: "GitHub sync", fr: "Synchronisation GitHub" },
   "settings.section.data": { en: "Data", fr: "Données" },

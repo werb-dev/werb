@@ -86,8 +86,29 @@ export function SettingsScreen() {
         </Section>
 
         <PrivacyNote />
+
+        <BuildFooter />
       </main>
     </div>
+  );
+}
+
+/**
+ * Bottom-of-Settings stamp: `Werb 0.2.0 · 7747019 · 2026-05-18`.
+ * Concrete numbers a bug report can quote — version, commit, build
+ * date — instead of "the version I downloaded last week". Values
+ * come from build-time defines injected by vite.config.ts.
+ */
+function BuildFooter() {
+  const t = useT();
+  return (
+    <p className="mt-12 pt-6 border-t border-border text-caption text-text-muted font-mono text-center">
+      {t("settings.build_stamp", {
+        version: __APP_VERSION__,
+        commit: __APP_COMMIT__,
+        date: __APP_BUILD_DATE__,
+      })}
+    </p>
   );
 }
 
