@@ -188,18 +188,24 @@ jobs:
         run: |
           set -euo pipefail
           name="werb-${{ matrix.target }}"
-          stage="$(mktemp -d)/$name"
+          # Stage under the workspace, not /tmp. softprops/action-gh-
+          # release is a Node action and reads $GITHUB_OUTPUT as a
+          # literal path; Git Bash on the Windows runner produces a
+          # Unix-style /tmp/... path that Node can't resolve. A
+          # workspace-relative path round-trips cleanly on every
+          # runner.
+          stage="dist/$name"
           mkdir -p "$stage"
           if [[ "${{ matrix.archive }}" == "zip" ]]; then
             cp "target/${{ matrix.target }}/release/werb.exe" "$stage/"
             cp LICENSE README.md "$stage/"
-            (cd "$(dirname "$stage")" && 7z a "$name.zip" "$name" > /dev/null)
-            echo "asset=$(dirname "$stage")/$name.zip" >> "$GITHUB_OUTPUT"
+            (cd dist && 7z a "$name.zip" "$name" > /dev/null)
+            echo "asset=dist/$name.zip" >> "$GITHUB_OUTPUT"
           else
             cp "target/${{ matrix.target }}/release/werb" "$stage/"
             cp LICENSE README.md "$stage/"
-            (cd "$(dirname "$stage")" && tar czf "$name.tar.gz" "$name")
-            echo "asset=$(dirname "$stage")/$name.tar.gz" >> "$GITHUB_OUTPUT"
+            (cd dist && tar czf "$name.tar.gz" "$name")
+            echo "asset=dist/$name.tar.gz" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Attach to release
