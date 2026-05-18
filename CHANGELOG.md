@@ -6,6 +6,121 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-05-18
+
+Brewing-math + brew-day polish, plus a focused refactor pass that
+broke the two biggest screens into readable per-section files.
+This is the release where Werb starts feeling complete for the
+recipe → brew → tasting loop a homebrewer actually runs.
+
+### Added
+
+- **FG estimation from yeast attenuation.** `computeFg(og, atten)`
+  in `@werb/calc` plus a recipe-level `recipeApparentAttenuationPct`
+  helper. ABV now cascades through claimed → computed values, so a
+  bare BeerXML import without an explicit `final_gravity` field
+  shows a real number instead of "—".
+- **Alternative IBU and color methods.** Rager IBU (hyperbolic-
+  tangent utilisation with a gravity-adjustment divisor) and
+  Daniels color (linear fit for amber-and-darker beers). Switchable
+  in Settings → Units; both fall back to the prior defaults
+  (Tinseth / Morey) when not picked.
+- **Yeast starter sizing.** `computeYeastStarter` using Kai
+  Troester's Braukaiser stir-plate regression, scaled down for
+  shake / no-aeration setups. Renders under the yeast-pitch
+  verdict on the Recipe screen when the brewer is under-pitched —
+  starter volume, DME mass at 100 g/L, predicted final cell count,
+  and a `needs_step_up` flag when a single 4 L step can't bridge
+  the gap.
+- **BIAB mash mode.** New `mash_mode: "classic" | "biab"` on the
+  equipment schema, new `biab` boolean on the water-calc input.
+  In BIAB mode the water calc collapses mash + sparge into a single
+  full-volume kettle mash, the brew session plan omits the sparge
+  step, and the Recipe water section gets a "BIAB equipment" hint
+  subtitle. Toggle lives in the Equipment editor.
+- **Source-water profile presets.** Nine canonical brewing-city
+  profiles (Pilsen, Munich, Dortmund, Vienna, Burton, London,
+  Edinburgh, Dublin, RO) bundled in the catalog. Picker above the
+  ppm fields in Recipe → Water chemistry fills the six ions when
+  selected; "Custom" tag appears after manual tweaks.
+- **Next-hop callout in the active boil step.** "Add now / in X
+  min" banner above the per-hop checklist. Highlights more
+  prominently when the addition becomes due.
+- **Recipe metric BJCP-range coloring.** Each OG / FG / IBU / ABV /
+  Color tile now shows the actual BJCP range (e.g. `1.046–1.054`)
+  and colours the recipe value green / orange / red by fit (in
+  range / within 10 % of bounds / further out). Replaces the old
+  text-only "In range" line and tooltip-only range.
+- **Settings build-stamp footer.** Vite injects `__APP_VERSION__` /
+  `__APP_COMMIT__` / `__APP_BUILD_DATE__` at build time and the
+  Settings screen renders them as a centered footer. Local builds
+  with uncommitted changes get a `-dirty` suffix so a tester's
+  AppImage is visibly distinct from a CI release.
+
+### Changed
+
+- **Recipe screen falls back to the computed value as the main tile
+  number when the file omits the claim.** OG / FG / IBU / ABV /
+  Color all use the same rule: claimed in the main slot when
+  present, otherwise the computed estimate. The "≈x" subtitle only
+  appears when both differ — no more "—" hiding the real answer.
+- **Dry-hop time canonicalised on import + display.** BeerXML
+  stores hop times in minutes; a 3-day dry hop landed as
+  `4320 min`. The importer now writes days for dry-hop /
+  packaging additions, and the editor enforces the canonical unit
+  on display so legacy files still render correctly.
+- **Yeast amount is grams everywhere.** Importer always emits
+  `MassType` in grams (BeerXML kg ×1000 ≈ slurry density 1
+  approximation); editor reads any historical Volume/UnitCount
+  back as grams. Joliebulle path divides by 1000 first so its
+  source-side grams round-trip without inflation.
+- **Combobox auto-opens on row-add.** New ingredient rows
+  (fermentable / hop / culture / misc) start with an empty name
+  and the picker is auto-focused so the brewer goes straight to
+  catalog selection instead of dismissing a meaningless "New hop"
+  placeholder.
+- **Number inputs right-align.** The numbers now butt against
+  their unit labels — easier to scan a column of figures.
+
+### Fixed
+
+- **Division-by-zero in calc when `batch_size_l ≤ 0`.** The Ajv
+  schema rejects 0 at load/save time, but the editor lets a brewer
+  type it directly in the field and renders the screen
+  immediately. `computeGravity` / `computeColor` / `computeIbu`
+  now return neutral values (OG 1.000, SRM 0, IBU 0) instead of
+  letting `Infinity` / `NaN` propagate through BJCP coloring, tile
+  formatting, and the cost calc.
+- **Hops section subtitle on the Recipe screen** was hardcoded
+  English; now properly translated.
+
+### Internal — quality + maintainability
+
+- Extracted `useIngredientRows<T>` from RecipeEditor, replacing
+  four near-identical state blocks across the Fermentables / Hops
+  / Cultures / Miscs sections.
+- Lifted RecipeEditor's inline form primitives (~400 lines —
+  `InlineNumber`, `InlineSelect`, `Combobox`, unit-aware mass /
+  volume / temperature / color inputs, number-typing helpers) to
+  `components/editor/Fields.tsx`.
+- Split `Recipe.tsx` (1984 → 674 lines) into `screens/Recipe/`:
+  `Section`, `Tile`, `CarbFields`, `YeastPitchSection`,
+  `WaterChemistrySection`, `CarbonationSection`, `CostSection`,
+  `TastingCard`. RecipeScreen is now an orchestrator.
+- Split `Brew.tsx` (1557 → 878 lines) into `screens/Brew/`:
+  `Section`, `HopSchedule`, `MeasurementsSection`, `TastingSection`,
+  and `format.ts` (`formatDuration` / `formatTimeOfDay`).
+- Added Settings to the CI screenshot smoke walk so the build-
+  footer can't silently break.
+- New test coverage: round-trip value assertions for OG / FG / IBU
+  / color / ABV / style; equipment-profile → `computeWater`
+  integration covering override flow, BIAB mode, transfer-loss
+  propagation; water-profile catalog round-trip + sanity. 290
+  desktop tests, 92 calc tests, 59 adapter tests, 38 Rust tests.
+- README / install.md / docs/src/beerjson.md caught up with what
+  actually shipped (alternative IBU/color methods, yeast starter,
+  test count, Intel-Mac policy, named upstream PR contributions).
+
 ## [0.2.0] — 2026-05-12
 
 Language + theme pass. The app now ships English and French end-to-end,
