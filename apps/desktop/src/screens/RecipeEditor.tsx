@@ -202,15 +202,17 @@ function FermentablesSection({
 }) {
   const t = useT();
   const items = draft.ingredients.fermentable_additions;
+  const [pendingFocusIdx, setPendingFocusIdx] = useState<number | null>(null);
 
   const addRow = () => {
     const fresh: FermentableAddition = {
-      name: "New fermentable",
+      name: "",
       type: "grain",
       amount: { value: 1, unit: "kg" },
       color: { value: 2, unit: "Lovi" },
       yield: { fine_grind: { value: 80, unit: "%" } },
     };
+    setPendingFocusIdx(items.length);
     updateIngredients({ fermentable_additions: [...items, fresh] });
   };
 
@@ -250,6 +252,8 @@ function FermentablesSection({
               onChange={(v) => updateRow(i, { ...f, name: v })}
               suggest={searchFermentables}
               onPick={(entry) => updateRow(i, applyFermentableEntry(f, entry))}
+              placeholder={t("editor.placeholder.pick_fermentable")}
+              autoFocus={pendingFocusIdx === i}
               renderItem={(entry) => (
                 <div>
                   <p className="text-body-sm font-medium text-text">{entry.name}</p>
@@ -332,15 +336,17 @@ function HopsSection({
 }) {
   const t = useT();
   const items = draft.ingredients.hop_additions ?? [];
+  const [pendingFocusIdx, setPendingFocusIdx] = useState<number | null>(null);
 
   const addRow = () => {
     const fresh: HopAddition = {
-      name: "New hop",
+      name: "",
       alpha_acid: { value: 5, unit: "%" },
       amount: { value: 0.028, unit: "kg" },
       form: "pellet",
       timing: { use: "add_to_boil", time: { value: 60, unit: "min" } },
     };
+    setPendingFocusIdx(items.length);
     updateIngredients({ hop_additions: [...items, fresh] });
   };
 
@@ -379,6 +385,8 @@ function HopsSection({
               onChange={(v) => updateRow(i, { ...h, name: v })}
               suggest={searchHops}
               onPick={(entry) => updateRow(i, applyHopEntry(h, entry))}
+              placeholder={t("editor.placeholder.pick_hop")}
+              autoFocus={pendingFocusIdx === i}
               renderItem={(entry) => (
                 <div>
                   <p className="text-body-sm font-medium text-text">
@@ -487,15 +495,17 @@ function CulturesSection({
 }) {
   const t = useT();
   const items = draft.ingredients.culture_additions ?? [];
+  const [pendingFocusIdx, setPendingFocusIdx] = useState<number | null>(null);
 
   const addRow = () => {
     const fresh: CultureAddition = {
-      name: "New culture",
+      name: "",
       type: "ale",
       form: "dry",
       amount: { value: 11, unit: "g" },
       attenuation: { value: 75, unit: "%" },
     };
+    setPendingFocusIdx(items.length);
     updateIngredients({ culture_additions: [...items, fresh] });
   };
 
@@ -533,6 +543,8 @@ function CulturesSection({
               onChange={(v) => updateRow(i, { ...c, name: v })}
               suggest={searchCultures}
               onPick={(entry) => updateRow(i, applyCultureEntry(c, entry))}
+              placeholder={t("editor.placeholder.pick_culture")}
+              autoFocus={pendingFocusIdx === i}
               renderItem={(entry) => (
                 <div>
                   <p className="text-body-sm font-medium text-text">
@@ -845,7 +857,7 @@ function NumberField({
             const n = parseLocaleNumber(e.target.value);
             onChange(Number.isFinite(n) ? n : 0);
           }}
-          className="w-full bg-transparent text-body font-mono tabular-nums text-text focus:outline-none"
+          className="w-full bg-transparent text-body font-mono tabular-nums text-text focus:outline-none text-right"
         />
         <span className="text-caption font-mono text-text-muted shrink-0">{unit}</span>
       </div>
@@ -917,17 +929,19 @@ function MiscsSection({
 }) {
   const t = useT();
   const items = draft.ingredients.miscellaneous_additions ?? [];
+  const [pendingFocusIdx, setPendingFocusIdx] = useState<number | null>(null);
   const miscUseLabels = Object.fromEntries(
     MISC_USES.map((u) => [u, t(MISC_USE_KEYS[u])]),
   ) as Record<(typeof MISC_USES)[number], string>;
 
   const addRow = () => {
     const fresh: MiscAddition = {
-      name: "New addition",
+      name: "",
       type: "spice",
       amount: { value: 5, unit: "g" },
       timing: { use: "add_to_boil", time: { value: 5, unit: "min" } },
     };
+    setPendingFocusIdx(items.length);
     updateIngredients({ miscellaneous_additions: [...items, fresh] });
   };
 
@@ -965,6 +979,8 @@ function MiscsSection({
               onChange={(v) => updateRow(i, { ...m, name: v })}
               suggest={searchMiscs}
               onPick={(entry) => updateRow(i, applyMiscEntry(m, entry))}
+              placeholder={t("editor.placeholder.pick_misc")}
+              autoFocus={pendingFocusIdx === i}
               renderItem={(entry) => (
                 <div>
                   <p className="text-body-sm font-medium text-text">{entry.name}</p>
@@ -1035,6 +1051,8 @@ function Combobox<T>({
   suggest,
   onPick,
   renderItem,
+  placeholder,
+  autoFocus,
   className,
 }: {
   value: string;
@@ -1042,6 +1060,8 @@ function Combobox<T>({
   suggest: (query: string) => T[];
   onPick: (item: T) => void;
   renderItem: (item: T) => React.ReactNode;
+  placeholder?: string;
+  autoFocus?: boolean;
   className?: string;
 }) {
   const [focused, setFocused] = useState(false);
@@ -1058,6 +1078,8 @@ function Combobox<T>({
         onChange={(e) => onChange(e.target.value)}
         onFocus={() => setFocused(true)}
         onBlur={() => window.setTimeout(() => setFocused(false), 150)}
+        {...(placeholder !== undefined && { placeholder })}
+        {...(autoFocus && { autoFocus: true })}
         className="w-full bg-transparent border-b border-transparent px-1 py-1 text-body text-text placeholder:text-text-muted focus:outline-none focus:border-accent hover:border-border transition-colors min-w-0"
       />
       {items.length > 0 && (
@@ -1620,7 +1642,7 @@ function InlineNumber({
           const n = parseLocaleNumber(e.target.value);
           onChange(Number.isFinite(n) ? n : 0);
         }}
-        className="w-full bg-transparent text-body font-mono tabular-nums text-text focus:outline-none min-w-0"
+        className="w-full bg-transparent text-body font-mono tabular-nums text-text focus:outline-none min-w-0 text-right"
       />
       <span className="text-caption font-mono text-text-muted shrink-0">{unit}</span>
     </div>

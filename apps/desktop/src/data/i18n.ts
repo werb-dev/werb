@@ -364,10 +364,9 @@ const STRINGS: Record<string, Entry> = {
   "recipe.scale.line_capped": { en: "Strike water capped: {from} → {to} (won't fit {capacity} mash tun otherwise — sparge picks up the rest)", fr: "Eau d'empâtage plafonnée : {from} → {to} (sinon elle déborderait de votre cuve {capacity} — le rinçage compense)" },
 
   // ─── Recipe — BJCP style range badges ────────────────────────
-  "recipe.style.under": { en: "↓ under style", fr: "↓ sous le style" },
-  "recipe.style.over": { en: "↑ over style", fr: "↑ au-dessus du style" },
-  "recipe.style.in": { en: "✓ in style", fr: "✓ dans le style" },
-  "recipe.style.range_tooltip": { en: "BJCP range: {range}", fr: "Plage BJCP : {range}" },
+  "recipe.style.in": { en: "Within style range", fr: "Dans la plage du style" },
+  "recipe.style.near": { en: "Just outside style range", fr: "Juste hors plage du style" },
+  "recipe.style.out": { en: "Outside style range", fr: "Hors plage du style" },
 
   // ─── Brew — step kinds (used in headers + step labels) ───────
   "brew.kind.prepare_water": { en: "Prepare water", fr: "Préparer l'eau" },
@@ -743,6 +742,19 @@ const STRINGS: Record<string, Entry> = {
   "editor.add.culture": { en: "+ Add culture", fr: "+ Ajouter une levure" },
   "editor.add.mash_step": { en: "+ Add mash step", fr: "+ Ajouter une étape d'empâtage" },
   "editor.add.misc": { en: "+ Add miscellaneous", fr: "+ Ajouter un ingrédient divers" },
+  "editor.placeholder.pick_fermentable": {
+    en: "Pick a fermentable…",
+    fr: "Choisir un fermentescible…",
+  },
+  "editor.placeholder.pick_hop": { en: "Pick a hop…", fr: "Choisir un houblon…" },
+  "editor.placeholder.pick_culture": {
+    en: "Pick a culture…",
+    fr: "Choisir une levure…",
+  },
+  "editor.placeholder.pick_misc": {
+    en: "Pick an addition…",
+    fr: "Choisir un ingrédient…",
+  },
   "editor.row.delete": { en: "Delete", fr: "Supprimer" },
   "editor.mash.empty": { en: "No mash steps. Add one below.", fr: "Aucune étape d'empâtage. Ajoutez-en une ci-dessous." },
   "editor.style.clear_title": { en: "Clear style", fr: "Effacer le style" },
