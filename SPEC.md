@@ -168,7 +168,7 @@ A single command (`pnpm gen:types`) regenerates every type. CI checks they're up
 
 - Schemas + type generation (both TS and Rust via typify)
 - Ajv validation for recipes/sessions/equipment in the PWA + boon validation in Rust tests + a `werb validate` CLI binary
-- Calc engine: IBU (Tinseth), color (Morey), ABV, water volumes, gravity/efficiency, mash strike, carbonation (priming + force), yeast pitch rate, water-salt additions
+- Calc engine: IBU (Tinseth + Rager), color (Morey + Daniels), ABV, FG from yeast attenuation, water volumes (classic + BIAB), gravity/efficiency, mash strike, carbonation (priming + force), yeast pitch rate, yeast starter sizing, water-salt additions
 - Library + schema-driven recipe view + recipe editor
 - Brew mode with wake lock + timeline + per-step measurement logging + sensory tasting form
 - Cost tracking with a bundled price table
@@ -178,14 +178,17 @@ A single command (`pnpm gen:types`) regenerates every type. CI checks they're up
 - `werb` CLI for batch conversion + validation, distributed as prebuilt binaries
 - EN + FR, light + Cassis-dark themes
 - iPad PWA path validated against iOS 15 Safari
+- Source-water profile presets (Pilsen, Munich, Dortmund, Vienna, Burton, London, Edinburgh, Dublin, RO) bundled in the catalog and filled in from the Recipe water-chemistry form
+- BIAB equipment mode: all water in the kettle at once, no sparge step
+- Alternative IBU (Rager) and color (Daniels) methods, switchable in Settings
+- Yeast starter sizing using the Braukaiser growth model with stir-plate / shake / still aeration
+- Build-time version + commit + date stamp in Settings footer
 
 ### Next — joliebulle parity
 
 Pickup features for ex-joliebulle users. None of these are about *catching up* on output quality (Werb's brew + journal side already goes further than joliebulle did); they're about making the recipe-management side feel familiar.
 
 - **Mash profile library** — reusable mash schedules picked from a list; not redefined per recipe.
-- **BIAB mode in the mash math** — separate water calc path; joliebulle exposed this as `mode: "classic" | "biab"`. Werb today is classic-only.
-- **Water profile presets** — Burton, Pilsen, Munich, … as named profiles (Ca/Mg/SO4/Cl/HCO3) a recipe can attach to; existing salt-addition calc consumes the profile.
 - **Recipe history notes** — free-text timestamped notes field on each recipe ("scaled OG up 2 pts after the cold mash"). For longer-form change tracking, Git remains the timeline (principle #6).
 
 ### Next — universal brewing polish
@@ -194,8 +197,6 @@ Features useful to every brewer, not joliebulle-specific.
 
 - **PDF brew sheet** — a real, paginated PDF export. The existing printable HTML works through the browser's Print dialog, but a one-click PDF is friendlier.
 - **Inventory module** — malt/hop/yeast/misc stock list with expiry alerts. Recipe screen calls out missing or short ingredients.
-- **Yeast starter calculator** — pitch-rate target + starter size + step-up math, fed from the recipe's OG and batch size.
-- **Alternative IBU/color methods** — IBU Rager, color Daniels. Switchable in Settings; per-recipe override possible.
 
 ### Out of scope (revisit only on a strong specific signal)
 
