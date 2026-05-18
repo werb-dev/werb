@@ -50,6 +50,22 @@ describe("BeerJSON round-trip", () => {
     expect(r.efficiency).toEqual(RECIPE.efficiency);
   });
 
+  it("recipe-level numeric estimates round-trip with full precision", () => {
+    // A converter that silently defaults OG / FG / IBU / color when
+    // the source omits a field would mask future bugs — assert the
+    // exact published values come back identical.
+    const text = rebuildFile(RECIPE);
+    const r = parseBeerJsonText(text).recipes[0]!;
+
+    expect(r.original_gravity).toEqual(RECIPE.original_gravity);
+    expect(r.final_gravity).toEqual(RECIPE.final_gravity);
+    expect(r.ibu_estimate).toEqual(RECIPE.ibu_estimate);
+    expect(r.color_estimate).toEqual(RECIPE.color_estimate);
+    expect(r.alcohol_by_volume).toEqual(RECIPE.alcohol_by_volume);
+    expect(r.boil?.boil_time).toEqual(RECIPE.boil?.boil_time);
+    expect(r.style).toEqual(RECIPE.style);
+  });
+
   it("ingredient lists round-trip with counts and amounts intact", () => {
     const text = rebuildFile(RECIPE);
     const r = parseBeerJsonText(text).recipes[0]!;
