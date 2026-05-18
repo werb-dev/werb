@@ -88,6 +88,17 @@ describe("computeColor — Daniels", () => {
     expect(daniels.srm).toBeCloseTo(morey.srm, 4);
   });
 
+  it("returns SRM 0 instead of Infinity when batch_size_l is 0", () => {
+    const out = computeColor({
+      method: "Daniels",
+      batch_size_l: 0,
+      fermentables: [{ mass_kg: 5, color_srm: 4 }],
+    });
+    expect(out.srm).toBe(0);
+    expect(out.mcu).toBe(0);
+    expect(Number.isFinite(out.srm)).toBe(true);
+  });
+
   it("monotonic in MCU like Morey", () => {
     const lighter = computeColor({
       method: "Daniels",

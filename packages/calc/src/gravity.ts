@@ -27,7 +27,10 @@ export function computeGravity(input: GravityInput): GravityOutput {
     return sum + contribution;
   }, 0);
 
-  const gravity_units = totalGu / input.batch_size_l;
+  // The schema requires batch_size_l > 0, but the editor lets a brewer
+  // type 0 directly into the field. Guard so OG falls back to 1.000
+  // instead of Infinity / NaN propagating through the rest of the UI.
+  const gravity_units = input.batch_size_l > 0 ? totalGu / input.batch_size_l : 0;
   const og = 1 + gravity_units / 1000;
 
   return { og, gravity_units };

@@ -39,7 +39,11 @@ export function computeIbu(input: IbuInput): IbuOutput {
 
   const additions = hops.map((h) => {
     const alphaDecimal = h.alpha_acid_pct / 100;
-    const mgPerL = (alphaDecimal * h.amount_g * 1000) / batch_size_l;
+    // batch_size_l is schema-validated > 0, but the editor allows 0
+    // entry — guard so IBU is 0 instead of Infinity propagating
+    // through the Recipe tile and BJCP-range coloring.
+    const mgPerL =
+      batch_size_l > 0 ? (alphaDecimal * h.amount_g * 1000) / batch_size_l : 0;
     let utilization: number;
     let ibu: number;
     if (method === "Rager") {

@@ -26,6 +26,19 @@ describe("computeGravity", () => {
     expect(out.og).toBeCloseTo(1.0384, 3);
   });
 
+  it("returns OG 1.000 instead of Infinity when batch_size_l is 0", () => {
+    // Schema rejects 0, but the editor lets the user type it. Guard
+    // is in place to keep the rest of the Recipe screen rendering.
+    const out = computeGravity({
+      batch_size_l: 0,
+      efficiency_pct: 75,
+      fermentables: [{ mass_kg: 5, yield_pct: 80, category: "mashed" }],
+    });
+    expect(out.og).toBe(1);
+    expect(out.gravity_units).toBe(0);
+    expect(Number.isFinite(out.og)).toBe(true);
+  });
+
   it("doubling efficiency doubles mashed contribution but not extract", () => {
     const low = computeGravity({
       batch_size_l: 20,

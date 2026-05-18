@@ -65,6 +65,16 @@ describe("computeIbu — Tinseth", () => {
     expect(lowOg.total_ibu).toBeGreaterThan(highOg.total_ibu);
   });
 
+  it("returns 0 IBU instead of Infinity when batch_size_l is 0", () => {
+    const out = computeIbu({
+      og: 1.05,
+      batch_size_l: 0,
+      hops: [{ amount_g: 30, alpha_acid_pct: 6, time_min: 60 }],
+    });
+    expect(out.total_ibu).toBe(0);
+    expect(Number.isFinite(out.total_ibu)).toBe(true);
+  });
+
   it("rejects unimplemented methods", () => {
     expect(() =>
       computeIbu({

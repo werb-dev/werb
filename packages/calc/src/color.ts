@@ -26,15 +26,19 @@ export function computeColor(input: ColorInput): ColorOutput {
     );
   }
 
-  const batch_gal = input.batch_size_l * L_TO_GAL;
+  // batch_size_l is schema-validated > 0, but the editor lets the user
+  // type 0 — guard so MCU is 0 instead of Infinity.
+  const batch_gal = input.batch_size_l > 0 ? input.batch_size_l * L_TO_GAL : 0;
 
-  const mcu = input.fermentables.reduce((sum, f) => {
-    const mass_lb = f.mass_kg * KG_TO_LB;
-    // Morey / Daniels both expect Lovibond. SRM ≈ Lovibond at low
-    // values; the discrepancy at high values is absorbed by Morey's
-    // empirical exponent (and is bounded by Daniels' linear fit).
-    return sum + (mass_lb * f.color_srm) / batch_gal;
-  }, 0);
+  const mcu = batch_gal > 0
+    ? input.fermentables.reduce((sum, f) => {
+        const mass_lb = f.mass_kg * KG_TO_LB;
+        // Morey / Daniels both expect Lovibond. SRM ≈ Lovibond at low
+        // values; the discrepancy at high values is absorbed by Morey's
+        // empirical exponent (and is bounded by Daniels' linear fit).
+        return sum + (mass_lb * f.color_srm) / batch_gal;
+      }, 0)
+    : 0;
 
   // Daniels (1996, Designing Great Beers) — linear in MCU, tuned for
   // mid-to-darker beers (MCU ≥ ~6). Underestimates very pale beers;
