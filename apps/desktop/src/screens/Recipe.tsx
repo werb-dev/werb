@@ -233,11 +233,17 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
         </header>
 
         {/* ─── Targets vs computed strip ───────────────────────────────── */}
+        {/* Display rule, applied to every tile: if the file declares a
+            value, that's the main number and our compute appears as
+            "≈x" below it for a sanity check. If the file is silent,
+            we show our compute as the main number with no subtitle —
+            displaying "—" with the estimate as a tiny subtitle hides
+            the answer the brewer is actually looking for. */}
         <section className="mb-8 sm:mb-10 lg:mb-12 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-px bg-border rounded-xl overflow-hidden">
           <Tile
             label="OG"
-            value={claimedOgDisplay}
-            sub={`≈${computedOgDisplay}`}
+            value={claimedOgSg !== null ? claimedOgDisplay : computedOgDisplay}
+            sub={claimedOgSg !== null ? `≈${computedOgDisplay}` : undefined}
             warn={
               claimedOgSg !== null &&
               Math.abs(computed.gravity.og - claimedOgSg) > 0.008
@@ -246,8 +252,8 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
           />
           <Tile
             label="FG"
-            value={claimedFgDisplay}
-            sub={`≈${computedFgDisplay}`}
+            value={claimedFgSg !== null ? claimedFgDisplay : computedFgDisplay}
+            sub={claimedFgSg !== null ? `≈${computedFgDisplay}` : undefined}
             warn={
               claimedFgSg !== null && Math.abs(computed.fg - claimedFgSg) > 0.005
             }
@@ -255,15 +261,15 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
           />
           <Tile
             label="IBU"
-            value={claimedIbu?.toString() ?? "—"}
-            sub={`≈${computed.ibu.total_ibu.toFixed(0)}`}
+            value={(claimedIbu ?? computed.ibu.total_ibu).toFixed(0)}
+            sub={claimedIbu !== null ? `≈${computed.ibu.total_ibu.toFixed(0)}` : undefined}
             warn={claimedIbu !== null && Math.abs(computed.ibu.total_ibu - claimedIbu) > 15}
             styleHint={styleHints.ibu}
           />
           <Tile
             label="ABV"
-            value={claimedAbv !== null ? `${claimedAbv.toFixed(1)}%` : "—"}
-            sub={`≈${computed.abv.toFixed(1)}%`}
+            value={`${(claimedAbv ?? computed.abv).toFixed(1)}%`}
+            sub={claimedAbv !== null ? `≈${computed.abv.toFixed(1)}%` : undefined}
             warn={
               claimedAbv !== null && Math.abs(computed.abv - claimedAbv) > 0.5
             }
@@ -271,8 +277,8 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
           />
           <Tile
             label="Color"
-            value={claimedColorDisplay ?? "—"}
-            sub={`≈${computedColorDisplay}`}
+            value={claimedColorDisplay ?? computedColorDisplay}
+            sub={claimedColorDisplay !== null ? `≈${computedColorDisplay}` : undefined}
             warn={
               claimedSrm !== null && Math.abs(computed.color.srm - claimedSrm) > 3
             }
