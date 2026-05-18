@@ -8,5 +8,11 @@ export { computeScale } from "./scale.js";
 export { computeStrikeTemp } from "./strike-temp.js";
 export { computeCarbonation } from "./carbonation.js";
 export { computeYeastPitch } from "./yeast-pitch.js";
+export {
+  computeYeastStarter,
+  type StarterAeration,
+  type YeastStarterInput,
+  type YeastStarterOutput,
+} from "./yeast-starter.js";
 export { computeWaterAdditions } from "./water-additions.js";
 export { computeEquipmentSuggest } from "./equipment-suggest.js";

@@ -634,6 +634,32 @@ const STRINGS: Record<string, Entry> = {
     en: "{count} pack{s} covers the target",
     fr: "{count} sachet{s} couvre{s} la cible",
   },
+  "recipe.yeast.starter_title": {
+    en: "Suggested starter",
+    fr: "Pied de cuve suggéré",
+  },
+  "recipe.yeast.starter_volume": { en: "Volume", fr: "Volume" },
+  "recipe.yeast.starter_dme": { en: "DME", fr: "Extrait sec" },
+  "recipe.yeast.starter_dme_sub": {
+    en: "100 g/L · OG ≈ 1.036",
+    fr: "100 g/L · OG ≈ 1,036",
+  },
+  "recipe.yeast.starter_predicted": { en: "Predicted", fr: "Prévu" },
+  "recipe.yeast.starter_growth": {
+    en: "{factor}× growth",
+    fr: "croissance ×{factor}",
+  },
+  "recipe.yeast.starter_aeration": { en: "Aeration", fr: "Aération" },
+  "recipe.yeast.starter_aeration_stir": { en: "Stir plate", fr: "Agitateur" },
+  "recipe.yeast.starter_aeration_shake": {
+    en: "Manual shake",
+    fr: "Agitation manuelle",
+  },
+  "recipe.yeast.starter_aeration_none": { en: "Still", fr: "Sans agitation" },
+  "recipe.yeast.starter_step_up": {
+    en: "Single 4 L step falls short — consider a 2-step starter (pitch, decant, restart).",
+    fr: "Une seule étape de 4 L ne suffit pas — envisagez un pied en 2 étapes (ensemencer, décanter, recommencer).",
+  },
 
   // ─── Recipe screen — cost ─────────────────────────────────────
   "recipe.cost.note_default": {

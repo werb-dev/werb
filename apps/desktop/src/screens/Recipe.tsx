@@ -28,6 +28,8 @@ import {
   computeScale,
   computeCarbonation,
   computeYeastPitch,
+  computeYeastStarter,
+  type StarterAeration,
   computeWaterAdditions,
 } from "@werb/calc";
 import type {
@@ -594,6 +596,7 @@ const YEAST_PITCH_STORAGE_PREFIX = "werb.yeastpitch.";
 interface YeastPitchFormState {
   yeast_pack_count: number;
   viability_pct: number;
+  starter_aeration: StarterAeration;
 }
 
 function defaultViability(form: YeastPitchInput["yeast_form"]): number {
@@ -612,6 +615,7 @@ function YeastPitchSection({ recipe }: { recipe: BeerJsonRecipe }) {
     {
       yeast_pack_count: 1,
       viability_pct: defaultViability(yeastForm),
+      starter_aeration: "stir_plate",
     },
   );
 
@@ -728,8 +732,107 @@ function YeastPitchSection({ recipe }: { recipe: BeerJsonRecipe }) {
             </p>
           </div>
         </div>
+
+        {needStarter && (
+          <StarterRecommendation
+            availableCellsBillion={
+              out.cells_per_pack_effective_billion * form.yeast_pack_count
+            }
+            targetCellsBillion={out.target_cells_billion}
+            aeration={form.starter_aeration}
+            onAerationChange={(v) => update("starter_aeration", v)}
+          />
+        )}
       </div>
     </Section>
+  );
+}
+
+function StarterRecommendation({
+  availableCellsBillion,
+  targetCellsBillion,
+  aeration,
+  onAerationChange,
+}: {
+  availableCellsBillion: number;
+  targetCellsBillion: number;
+  aeration: StarterAeration;
+  onAerationChange: (v: StarterAeration) => void;
+}) {
+  const tt = useT();
+  const starter = computeYeastStarter({
+    available_cells_billion: availableCellsBillion,
+    target_cells_billion: targetCellsBillion,
+    aeration,
+  });
+  return (
+    <div className="mt-5 rounded-lg bg-bg border border-border p-4">
+      <p className="text-caption uppercase tracking-widest text-text-muted mb-3">
+        {tt("recipe.yeast.starter_title")}
+      </p>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-border rounded-lg overflow-hidden">
+        <div className="bg-surface px-3 py-3">
+          <p className="text-[10px] sm:text-caption uppercase tracking-widest text-text-muted">
+            {tt("recipe.yeast.starter_volume")}
+          </p>
+          <p className="font-mono text-h3 mt-1 text-accent">
+            {starter.starter_volume_l.toFixed(2)}{" "}
+            <span className="text-body-sm text-text-muted">L</span>
+          </p>
+        </div>
+        <div className="bg-surface px-3 py-3">
+          <p className="text-[10px] sm:text-caption uppercase tracking-widest text-text-muted">
+            {tt("recipe.yeast.starter_dme")}
+          </p>
+          <p className="font-mono text-h3 mt-1">
+            {starter.dme_g}
+            <span className="text-body-sm text-text-muted"> g</span>
+          </p>
+          <p className="font-mono text-caption mt-1 text-text-muted">
+            {tt("recipe.yeast.starter_dme_sub")}
+          </p>
+        </div>
+        <div className="bg-surface px-3 py-3">
+          <p className="text-[10px] sm:text-caption uppercase tracking-widest text-text-muted">
+            {tt("recipe.yeast.starter_predicted")}
+          </p>
+          <p
+            className={`font-mono text-h3 mt-1 ${
+              starter.needs_step_up ? "text-warning" : "text-success"
+            }`}
+          >
+            {starter.predicted_cells_billion.toFixed(0)}{" "}
+            <span className="text-body-sm text-text-muted">B</span>
+          </p>
+          <p className="font-mono text-caption mt-1 text-text-muted">
+            {tt("recipe.yeast.starter_growth", {
+              factor: starter.growth_factor.toFixed(1),
+            })}
+          </p>
+        </div>
+        <label className="bg-surface px-3 py-3 block">
+          <p className="text-[10px] sm:text-caption uppercase tracking-widest text-text-muted">
+            {tt("recipe.yeast.starter_aeration")}
+          </p>
+          <select
+            value={aeration}
+            onChange={(e) => onAerationChange(e.target.value as StarterAeration)}
+            className="mt-1 w-full bg-bg border border-border rounded-md px-2 py-1 text-body-sm text-text focus:outline-none focus:border-accent"
+          >
+            <option value="stir_plate">
+              {tt("recipe.yeast.starter_aeration_stir")}
+            </option>
+            <option value="shake">{tt("recipe.yeast.starter_aeration_shake")}</option>
+            <option value="none">{tt("recipe.yeast.starter_aeration_none")}</option>
+          </select>
+        </label>
+      </div>
+      {starter.needs_step_up && (
+        <p className="font-mono text-caption text-warning mt-3">
+          {tt("recipe.yeast.starter_step_up")}
+        </p>
+      )}
+    </div>
   );
 }
 
