@@ -18,6 +18,11 @@ import {
   formatMassLarge,
   type UnitPreferences,
 } from "../data/units-format.ts";
+import {
+  cultureFormLabel,
+  cultureTypeLabel,
+  fermentableTypeLabel,
+} from "../data/enum-labels.ts";
 import { HopSchedule } from "./Brew/HopSchedule.tsx";
 import { MeasurementsSection } from "./Brew/MeasurementsSection.tsx";
 import { Section } from "./Brew/Section.tsx";
@@ -642,7 +647,7 @@ function MashInList({
           <li key={i} className="flex items-baseline justify-between gap-4">
             <div className="min-w-0">
               <p className="text-body-sm font-medium truncate">{f.name}</p>
-              <p className="text-caption text-text-muted capitalize">{f.type}</p>
+              <p className="text-caption text-text-muted capitalize">{fermentableTypeLabel(t, f.type)}</p>
             </div>
             <p className="font-mono text-mono-lg shrink-0 tabular-nums">
               {formatMassLarge({ value: f.amount_kg, unit: "kg" }, prefs).display}
@@ -677,7 +682,7 @@ function CultureList({
             <div>
               <p className="text-body-sm font-medium">{c.name}</p>
               <p className="text-caption text-text-muted">
-                {c.form} · {c.type}
+                {cultureFormLabel(t, c.form)} · {cultureTypeLabel(t, c.type)}
                 {c.producer && ` · ${c.producer}`}
                 {c.product_id && ` · ${c.product_id}`}
                 {c.attenuation && ` · ${t("brew.culture.atten", { pct: c.attenuation.value })}`}

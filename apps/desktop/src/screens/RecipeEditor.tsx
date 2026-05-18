@@ -25,6 +25,13 @@ import {
   type StyleEntry,
 } from "../data/catalog/index.ts";
 import { useT, useUnits } from "../data/preferences.tsx";
+import {
+  cultureFormLabel,
+  cultureTypeLabel,
+  fermentableTypeLabel,
+  hopFormLabel,
+  miscTypeLabel,
+} from "../data/enum-labels.ts";
 import { litersToUserVolume, userVolumeToLiters, volumeUnitLabel } from "../data/units-format.ts";
 import {
   AddRowButton,
@@ -247,7 +254,7 @@ function FermentablesSection({
                 <div>
                   <p className="text-body-sm font-medium text-text">{entry.name}</p>
                   <p className="font-mono text-caption text-text-muted mt-0.5">
-                    <span className="capitalize">{entry.type}</span>
+                    <span className="capitalize">{fermentableTypeLabel(t, entry.type)}</span>
                     {" · "}
                     {entry.color_ebc} EBC · {entry.yield_pct}% yield
                     {entry.producer && ` · ${entry.producer}`}
@@ -262,6 +269,9 @@ function FermentablesSection({
               onChange={(v) =>
                 updateRow(i, { ...f, type: v as FermentableAddition["type"] })
               }
+              labels={Object.fromEntries(
+                FERMENTABLE_TYPES.map((ty) => [ty, fermentableTypeLabel(t, ty)]),
+              )}
               options={FERMENTABLE_TYPES}
             />
             <MassLargeInlineInput
@@ -430,6 +440,9 @@ function HopsSection({
                 updateRow(i, { ...h, form: v as (typeof HOP_FORMS)[number] })
               }
               options={[...HOP_FORMS]}
+              labels={Object.fromEntries(
+                HOP_FORMS.map((f) => [f, hopFormLabel(t, f)]),
+              )}
             />
             <div className="col-span-1 flex justify-end">
               <InlineDeleteButton onClick={() => removeRow(i)} />
@@ -523,9 +536,9 @@ function CulturesSection({
                     )}
                   </p>
                   <p className="font-mono text-caption text-text-muted mt-0.5">
-                    <span className="capitalize">{entry.type}</span>
+                    <span className="capitalize">{cultureTypeLabel(t, entry.type)}</span>
                     {" · "}
-                    <span className="capitalize">{entry.form}</span>
+                    <span className="capitalize">{cultureFormLabel(t, entry.form)}</span>
                     {" · "}
                     {entry.attenuation_pct}% atten
                     {entry.temp_min_c !== undefined &&
@@ -542,12 +555,18 @@ function CulturesSection({
               value={c.type}
               onChange={(v) => updateRow(i, { ...c, type: v as CultureType })}
               options={CULTURE_TYPES}
+              labels={Object.fromEntries(
+                CULTURE_TYPES.map((ty) => [ty, cultureTypeLabel(t, ty)]),
+              )}
             />
             <InlineSelect
               className="col-span-2"
               value={c.form}
               onChange={(v) => updateRow(i, { ...c, form: v as CultureAddition["form"] })}
               options={CULTURE_FORMS}
+              labels={Object.fromEntries(
+                CULTURE_FORMS.map((f) => [f, cultureFormLabel(t, f)]),
+              )}
             />
             <InlineNumber
               className="col-span-2"
@@ -941,7 +960,7 @@ function MiscsSection({
                 <div>
                   <p className="text-body-sm font-medium text-text">{entry.name}</p>
                   <p className="font-mono text-caption text-text-muted mt-0.5">
-                    {entry.type.replace("_", " ")}
+                    {miscTypeLabel(t, entry.type)}
                     {" · "}
                     {miscUseLabels[entry.default_use]}
                     {entry.default_time_min !== undefined && ` · ${entry.default_time_min} min`}
@@ -956,6 +975,9 @@ function MiscsSection({
               value={m.type ?? "other"}
               onChange={(v) => updateRow(i, { ...m, type: v })}
               options={MISC_TYPES}
+              labels={Object.fromEntries(
+                MISC_TYPES.map((ty) => [ty, miscTypeLabel(t, ty)]),
+              )}
             />
             <InlineSelect
               className="col-span-2"

@@ -30,6 +30,13 @@ import { translateError, type WerbError } from "../data/errors.ts";
 import { useBrewSessionExists } from "../hooks/useBrewSession.ts";
 import { useT, useUnits } from "../data/preferences.tsx";
 import {
+  cultureFormLabel,
+  cultureTypeLabel,
+  fermentableTypeLabel,
+  hopFormLabel,
+  miscTypeLabel,
+} from "../data/enum-labels.ts";
+import {
   formatColor,
   formatLiters,
   formatMassLarge,
@@ -313,7 +320,7 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
                   <div className="min-w-0">
                     <p className="text-body font-medium truncate">{f.name}</p>
                     <p className="text-body-sm text-text-muted mt-1">
-                      <span className="capitalize">{f.type}</span>
+                      <span className="capitalize">{fermentableTypeLabel(t, f.type)}</span>
                       {f.producer && ` · ${f.producer}`}
                       {colorDisplay && ` · ${colorDisplay}`}
                       {f.yield?.fine_grind && ` · yield ${f.yield.fine_grind.value}%`}
@@ -363,7 +370,7 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
                             : t("recipe.time.minutes", { n: time.toFixed(0) })}
                         </>
                       )}
-                      {h.form && ` · ${h.form}`}
+                      {h.form && ` · ${hopFormLabel(t, h.form)}`}
                       {h.notes && ` · ${h.notes}`}
                     </p>
                   </div>
@@ -400,7 +407,7 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
                       <div className="min-w-0">
                         <p className="text-body font-medium truncate">{m.name}</p>
                         <p className="text-body-sm text-text-muted mt-1">
-                          {m.type && <span className="capitalize">{m.type}</span>}
+                          {m.type && <span className="capitalize">{miscTypeLabel(t, m.type)}</span>}
                           {useLabel && ` · ${useLabel}`}
                           {time > 0 && ` · ${t("recipe.time.minutes", { n: time.toFixed(0) })}`}
                           {m.notes && ` · ${m.notes}`}
@@ -457,7 +464,7 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
                       <p className="text-body font-medium">{c.name}</p>
                       <p className="text-body-sm text-text-muted mt-1">
                         <span className="capitalize">
-                          {c.form} · {c.type}
+                          {cultureFormLabel(t, c.form)} · {cultureTypeLabel(t, c.type)}
                         </span>
                         {c.producer && ` · ${c.producer}`}
                         {c.product_id && ` · ${c.product_id}`}
