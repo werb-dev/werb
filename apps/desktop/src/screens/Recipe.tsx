@@ -5,12 +5,10 @@ import {
   recipeToColorInput,
   recipeToGravityInput,
   recipeToScaleInput,
-  recipeToCarbonationInput,
   applyScale,
   fitMashToTun,
   toLiters,
   toMinutes,
-  toCelsius,
   toSrm,
   isMass,
   isVolume,
@@ -25,24 +23,17 @@ import {
   computeFg,
   computeGravity,
   computeScale,
-  computeCarbonation,
 } from "@werb/calc";
 import { profileToWaterOverrides, type ProfileWithId } from "../data/equipment.ts";
 import { exportBeerJson, exportBeerXml, exportRecipeHtml } from "../data/recipe-export.ts";
 import { translateError, type WerbError } from "../data/errors.ts";
 import { useBrewSessionExists } from "../hooks/useBrewSession.ts";
-import { useRecipeTastings } from "../hooks/useBrewLog.ts";
-import { computeRecipeCost, type CostLine } from "../data/cost.ts";
-import { SensoryRadar } from "../components/SensoryRadar.tsx";
-import { usePersistedJson } from "../storage/index.ts";
 import { useT, useUnits } from "../data/preferences.tsx";
 import {
-  formatCelsius,
   formatColor,
   formatLiters,
   formatMassLarge,
   formatMassSmall,
-  formatMoney,
   formatSpecificGravity,
   formatSrm,
   formatTemperature,
@@ -51,8 +42,10 @@ import {
 } from "../data/units-format.ts";
 import { Section } from "./Recipe/Section.tsx";
 import { Tile, rangeHint } from "./Recipe/Tile.tsx";
-import { CarbField, CarbStat, CarbResult } from "./Recipe/CarbFields.tsx";
 import { YeastPitchSection } from "./Recipe/YeastPitchSection.tsx";
+import { CarbonationSection } from "./Recipe/CarbonationSection.tsx";
+import { CostSection } from "./Recipe/CostSection.tsx";
+import { TastingCard } from "./Recipe/TastingCard.tsx";
 import { WaterChemistrySection } from "./Recipe/WaterChemistrySection.tsx";
 
 const TIMING_LABEL: Record<string, string> = {
@@ -589,324 +582,6 @@ function ExportMenu({ recipe, prefs }: { recipe: BeerJsonRecipe; prefs: UnitPref
 
 
 
-// ─── Carbonation ───────────────────────────────────────────────────────
-
-const CARBONATION_STORAGE_PREFIX = "werb.carbonation.";
-
-interface CarbonationFormState {
-  target_volumes_co2: number;
-  package_temp_c: number;
-  serving_temp_c: number;
-  beer_volume_l_override: number | null;
-}
-
-function defaultPackageTemp(recipe: BeerJsonRecipe): number {
-  // Use the active culture's max fermentation temp as a starting point —
-  // that's the highest temp the beer reached, which sets residual CO2.
-  const cultures = recipe.ingredients.culture_additions ?? [];
-  for (const c of cultures) {
-    const max = c.temperature_range?.maximum;
-    if (max) return toCelsius(max);
-  }
-  return 20;
-}
-
-function CarbonationSection({ recipe }: { recipe: BeerJsonRecipe }) {
-  const tt = useT();
-  const prefs = useUnits();
-  const [form, setForm] = usePersistedJson<CarbonationFormState>(
-    `${CARBONATION_STORAGE_PREFIX}${recipe.name}`,
-    {
-      target_volumes_co2: 2.4,
-      package_temp_c: defaultPackageTemp(recipe),
-      serving_temp_c: 4,
-      beer_volume_l_override: null,
-    },
-  );
-
-  const update = <K extends keyof CarbonationFormState>(
-    key: K,
-    value: CarbonationFormState[K],
-  ) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
-  };
-
-  const out = useMemo(
-    () =>
-      computeCarbonation(
-        recipeToCarbonationInput(recipe, {
-          target_volumes_co2: form.target_volumes_co2,
-          package_temp_c: form.package_temp_c,
-          serving_temp_c: form.serving_temp_c,
-          ...(form.beer_volume_l_override !== null && {
-            beer_volume_l: form.beer_volume_l_override,
-          }),
-        }),
-      ),
-    [recipe, form],
-  );
-
-  const overCarbed = out.volumes_to_add < 0;
-  const beerVolume = form.beer_volume_l_override ?? toLiters(recipe.batch_size);
-
-  const servingTempDisplay = formatCelsius(form.serving_temp_c, prefs).display;
-  return (
-    <Section
-      title={tt("recipe.section.carbonation")}
-      subtitle={tt("recipe.carb.subtitle")}
-    >
-      <div className="rounded-xl bg-surface border border-border p-4 sm:p-6">
-        {/* Input row */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <CarbField
-            label={tt("recipe.carb.target")}
-            unit="vols"
-            value={form.target_volumes_co2}
-            step={0.1}
-            onChange={(v) => update("target_volumes_co2", v)}
-            hint={tt("recipe.carb.target_hint")}
-          />
-          <CarbField
-            label={tt("recipe.carb.package_temp")}
-            unit="°C"
-            value={form.package_temp_c}
-            step={0.5}
-            onChange={(v) => update("package_temp_c", v)}
-            hint={tt("recipe.carb.package_temp_hint")}
-          />
-          <CarbField
-            label={tt("recipe.carb.beer_volume")}
-            unit="L"
-            value={beerVolume}
-            step={0.5}
-            onChange={(v) =>
-              update(
-                "beer_volume_l_override",
-                Math.abs(v - toLiters(recipe.batch_size)) < 0.01 ? null : v,
-              )
-            }
-            hint={tt("recipe.carb.beer_volume_hint", { volume: toLiters(recipe.batch_size).toFixed(1) })}
-          />
-          <CarbField
-            label={tt("recipe.carb.serving_temp")}
-            unit="°C"
-            value={form.serving_temp_c}
-            step={0.5}
-            onChange={(v) => update("serving_temp_c", v)}
-            hint={tt("recipe.carb.serving_temp_hint")}
-          />
-        </div>
-
-        {/* Residual + needed strip */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <CarbStat
-            label={tt("recipe.carb.residual")}
-            value={`${out.residual_volumes_co2.toFixed(2)} vols`}
-            sub={tt("recipe.carb.residual_sub", {
-              temp: formatCelsius(form.package_temp_c, prefs).display,
-            })}
-          />
-          <CarbStat
-            label={tt("recipe.carb.to_add")}
-            value={`${out.volumes_to_add.toFixed(2)} vols`}
-            sub={
-              overCarbed
-                ? tt("recipe.carb.over_warn")
-                : tt("recipe.carb.to_add_sub", { delta: out.volumes_to_add.toFixed(2) })
-            }
-            warn={overCarbed}
-          />
-        </div>
-
-        {/* Priming sugar grid */}
-        <div className="mb-6">
-          <p className="text-caption uppercase tracking-widest text-text-muted mb-3">
-            {tt("recipe.carb.priming")}
-          </p>
-          <div className="grid grid-cols-3 gap-px bg-border rounded-xl overflow-hidden">
-            <CarbResult label={tt("recipe.carb.corn_sugar")} value={out.priming.dextrose_g} note={tt("recipe.carb.corn_sugar_note")} />
-            <CarbResult label={tt("recipe.carb.sucrose")} value={out.priming.sucrose_g} note={tt("recipe.carb.sucrose_note")} />
-            <CarbResult label={tt("recipe.carb.dme")} value={out.priming.dme_g} note={tt("recipe.carb.dme_note")} />
-          </div>
-        </div>
-
-        {/* Force carb */}
-        <div>
-          <p className="text-caption uppercase tracking-widest text-text-muted mb-3">
-            {tt("recipe.carb.force")}
-          </p>
-          <div className="grid grid-cols-2 gap-px bg-border rounded-xl overflow-hidden">
-            <div className="bg-surface px-3 py-3 sm:px-5 sm:py-4">
-              <p className="text-[10px] sm:text-caption uppercase tracking-widest text-text-muted">{tt("recipe.carb.psi")}</p>
-              <p className="font-mono text-h3 sm:text-h2 mt-1 text-accent">
-                {out.force_pressure_psi.toFixed(1)}
-              </p>
-              <p className="font-mono text-caption mt-1 text-text-muted">
-                {tt("recipe.carb.psi_sub", { temp: servingTempDisplay })}
-              </p>
-            </div>
-            <div className="bg-surface px-3 py-3 sm:px-5 sm:py-4">
-              <p className="text-[10px] sm:text-caption uppercase tracking-widest text-text-muted">{tt("recipe.carb.bar")}</p>
-              <p className="font-mono text-h3 sm:text-h2 mt-1">{out.force_pressure_bar.toFixed(2)}</p>
-              <p className="font-mono text-caption mt-1 text-text-muted">{tt("recipe.carb.bar_sub")}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </Section>
-  );
-}
-
-// ─── Cost estimator ────────────────────────────────────────────────────────
-//
-// Approximate batch cost from the bundled default price table. Brewers
-// adjust the global "Cost adjustment" coefficient in Settings to match
-// their local market — single knob, no per-ingredient maintenance.
-
-const CATEGORY_KEY: Record<CostLine["category"], string> = {
-  fermentable: "recipe.cost.category.fermentable",
-  hop: "recipe.cost.category.hop",
-  culture: "recipe.cost.category.culture",
-  misc: "recipe.cost.category.misc",
-};
-
-function CostSection({ recipe }: { recipe: BeerJsonRecipe }) {
-  const prefs = useUnits();
-  const tt = useT();
-  const breakdown = useMemo(
-    () => computeRecipeCost(recipe, prefs.cost_inflation_pct),
-    [recipe, prefs.cost_inflation_pct],
-  );
-
-  if (breakdown.total_count === 0) return null;
-
-  const inflationNote =
-    prefs.cost_inflation_pct === 100
-      ? tt("recipe.cost.note_default")
-      : tt("recipe.cost.note_inflated", { pct: prefs.cost_inflation_pct });
-
-  return (
-    <Section title={tt("recipe.section.cost")} subtitle={inflationNote}>
-      <div className="rounded-xl bg-surface border border-border">
-        <ul className="divide-y divide-border">
-          {breakdown.lines.map((line, i) => (
-            <CostLineRow
-              key={`${line.category}-${line.name}-${i}`}
-              line={line}
-              prefs={prefs}
-            />
-          ))}
-        </ul>
-
-        <div className="px-4 py-4 sm:px-6 sm:py-5 border-t border-border grid grid-cols-2 sm:grid-cols-3 gap-px bg-border">
-          <CostStat
-            label={tt("recipe.cost.batch_total")}
-            value={formatMoney(breakdown.total, prefs)}
-            tone="highlight"
-          />
-          <CostStat
-            label={tt("recipe.cost.per_unit", { unit: formatLiters(1, prefs).unit })}
-            value={formatMoney(breakdown.per_liter, prefs)}
-          />
-          <CostStat
-            label={tt("recipe.cost.per_bottle")}
-            value={formatMoney(breakdown.per_bottle_330, prefs)}
-          />
-        </div>
-      </div>
-    </Section>
-  );
-}
-
-/**
- * Render the (summed) quantity of a cost line in the user's preferred
- * units. Returns null when the line couldn't be priced (no convertible
- * amount) so the UI can omit it cleanly.
- */
-function formatCostAmount(line: CostLine, prefs: UnitPreferences): string | null {
-  if (line.amount_in_natural_unit === null || line.natural_unit === null) {
-    return null;
-  }
-  const v = line.amount_in_natural_unit;
-  switch (line.natural_unit) {
-    case "g":
-      return formatMassSmall({ value: v, unit: "g" }, prefs).display;
-    case "kg":
-      return formatMassLarge({ value: v, unit: "kg" }, prefs).display;
-    case "L":
-      return formatVolume({ value: v, unit: "l" }, prefs).display;
-    case "pack": {
-      const rounded = Math.round(v * 100) / 100;
-      return `${rounded} pack${rounded === 1 ? "" : "s"}`;
-    }
-  }
-}
-
-function CostLineRow({
-  line,
-  prefs,
-}: {
-  line: CostLine;
-  prefs: UnitPreferences;
-}) {
-  const t = useT();
-  const amountDisplay = formatCostAmount(line, prefs);
-  return (
-    <li className="px-4 py-3 sm:px-6 sm:py-4 flex items-baseline justify-between gap-3 sm:gap-4">
-      <div className="min-w-0">
-        <p className="text-body-sm font-medium truncate">
-          {line.name}
-          {amountDisplay && (
-            <span className="text-text-muted font-mono ml-2">
-              {amountDisplay}
-            </span>
-          )}
-        </p>
-        <p className="text-caption text-text-muted mt-0.5">
-          {t(CATEGORY_KEY[line.category])}
-          {line.default_unit_price !== null && line.natural_unit && (
-            <>
-              {" · "}
-              {formatMoney(line.default_unit_price, prefs)}/{line.natural_unit}
-            </>
-          )}
-        </p>
-      </div>
-      <p
-        className={`font-mono text-body tabular-nums shrink-0 ${
-          line.line_cost !== null ? "text-text" : "text-text-muted"
-        }`}
-      >
-        {line.line_cost !== null ? formatMoney(line.line_cost, prefs) : "—"}
-      </p>
-    </li>
-  );
-}
-
-function CostStat({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: string;
-  tone?: "highlight";
-}) {
-  return (
-    <div className="bg-surface px-4 py-3">
-      <p className="text-caption uppercase tracking-widest text-text-muted">
-        {label}
-      </p>
-      <p
-        className={`font-mono text-body sm:text-h3 mt-1 tabular-nums ${
-          tone === "highlight" ? "text-accent" : "text-text"
-        }`}
-      >
-        {value}
-      </p>
-    </div>
-  );
-}
 
 function ScaleButton({
   onApply,
@@ -995,73 +670,4 @@ function ScaleButton({
  * Stays hidden when no tasting exists yet — empty state would just be
  * noise on a recipe that hasn't been brewed-and-tasted.
  */
-function TastingCard({ recipeId }: { recipeId: string }) {
-  const { tastings, loading } = useRecipeTastings(recipeId);
-  if (loading) return null;
-  if (tastings.length === 0) return null;
-  const latest = tastings[0]!;
-
-  return (
-    <Section
-      title="Last tasting"
-      subtitle={
-        tastings.length > 1
-          ? `Most recent of ${tastings.length} tastings across this recipe`
-          : undefined
-      }
-    >
-      <div className="rounded-xl bg-surface border border-border p-5 sm:p-6">
-        <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-6 items-start">
-          <div className="min-w-0">
-            <div className="flex items-baseline justify-between gap-3 flex-wrap">
-              <div className="flex gap-1" aria-label={`${latest.tasting.overall_rating} of 5 stars`}>
-                {[1, 2, 3, 4, 5].map((n) => (
-                  <span
-                    key={n}
-                    aria-hidden
-                    className={`text-h3 leading-none ${
-                      n <= latest.tasting.overall_rating ? "text-accent" : "text-text-muted"
-                    }`}
-                  >
-                    ★
-                  </span>
-                ))}
-              </div>
-              <p className="font-mono text-caption text-text-muted">
-                {new Date(latest.tasting.tasted_at).toLocaleDateString(undefined, {
-                  year: "numeric",
-                  month: "short",
-                  day: "numeric",
-                })}
-              </p>
-            </div>
-
-            {latest.tasting.tags && latest.tasting.tags.length > 0 && (
-              <div className="mt-4 flex flex-wrap gap-2">
-                {latest.tasting.tags.map((t) => (
-                  <span
-                    key={t}
-                    className="px-3 py-1 rounded-pill bg-accent/15 text-accent text-caption font-medium"
-                  >
-                    {t}
-                  </span>
-                ))}
-              </div>
-            )}
-
-            {latest.tasting.notes && (
-              <p className="mt-4 text-body-sm text-text whitespace-pre-wrap">
-                {latest.tasting.notes}
-              </p>
-            )}
-          </div>
-
-          <div className="flex justify-center md:justify-end">
-            <SensoryRadar axes={latest.tasting.axes} size={200} />
-          </div>
-        </div>
-      </div>
-    </Section>
-  );
-}
 
