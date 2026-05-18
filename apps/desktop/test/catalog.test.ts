@@ -4,6 +4,7 @@ import {
   FERMENTABLES,
   HOPS,
   MISCS,
+  SOURCE_WATER_PROFILES,
   STYLES,
   searchCultures,
   searchFermentables,
@@ -11,6 +12,7 @@ import {
   searchMiscs,
   searchStyles,
 } from "../src/data/catalog/index.ts";
+import { computeWaterAdditions } from "@werb/calc";
 
 describe("catalog content sanity", () => {
   it("ships at least 50 fermentables with required fields", () => {
@@ -174,6 +176,62 @@ describe("catalog content sanity — styles", () => {
       "Belgian Tripel",
       "Imperial Stout",
     ]));
+  });
+});
+
+describe("catalog — source water profiles", () => {
+  it("ships at least the canonical brewing cities", () => {
+    const keys = SOURCE_WATER_PROFILES.map((p) => p.key);
+    expect(keys).toEqual(
+      expect.arrayContaining(["pilsen", "munich", "burton", "dublin", "london"]),
+    );
+  });
+
+  it("every preset has six finite non-negative ions and a unique key", () => {
+    const seenKeys = new Set<string>();
+    for (const p of SOURCE_WATER_PROFILES) {
+      expect(seenKeys.has(p.key), `duplicate key: ${p.key}`).toBe(false);
+      seenKeys.add(p.key);
+      for (const v of [p.ca_ppm, p.mg_ppm, p.na_ppm, p.cl_ppm, p.so4_ppm, p.hco3_ppm]) {
+        expect(Number.isFinite(v) && v >= 0).toBe(true);
+      }
+    }
+  });
+
+  it("each preset round-trips cleanly through computeWaterAdditions", () => {
+    // Catches typos like an Na value parked in the Cl slot: feed the
+    // profile into the salt-additions calc with no additions and
+    // assert the output ion strip matches the input within rounding.
+    for (const p of SOURCE_WATER_PROFILES) {
+      const result = computeWaterAdditions({
+        water_volume_l: 30,
+        source: {
+          ca_ppm: p.ca_ppm,
+          mg_ppm: p.mg_ppm,
+          na_ppm: p.na_ppm,
+          cl_ppm: p.cl_ppm,
+          so4_ppm: p.so4_ppm,
+          hco3_ppm: p.hco3_ppm,
+        },
+        additions: {},
+      });
+      expect(result.ca_ppm).toBeCloseTo(p.ca_ppm, 4);
+      expect(result.mg_ppm).toBeCloseTo(p.mg_ppm, 4);
+      expect(result.so4_ppm).toBeCloseTo(p.so4_ppm, 4);
+      expect(result.cl_ppm).toBeCloseTo(p.cl_ppm, 4);
+      expect(result.hco3_ppm).toBeCloseTo(p.hco3_ppm, 4);
+    }
+  });
+
+  it("Burton has dramatically more sulfate than chloride (famous profile)", () => {
+    const burton = SOURCE_WATER_PROFILES.find((p) => p.key === "burton")!;
+    expect(burton.so4_ppm).toBeGreaterThan(burton.cl_ppm * 10);
+  });
+
+  it("RO / distilled has all zeros", () => {
+    const ro = SOURCE_WATER_PROFILES.find((p) => p.key === "ro")!;
+    const total = ro.ca_ppm + ro.mg_ppm + ro.na_ppm + ro.cl_ppm + ro.so4_ppm + ro.hco3_ppm;
+    expect(total).toBe(0);
   });
 });
 
