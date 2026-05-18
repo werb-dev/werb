@@ -315,7 +315,7 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
         {/* ─── Hop additions ───────────────────────────────────────────── */}
         <Section
           title={t("recipe.section.hops")}
-          subtitle="Boil hops contribute IBU. Dry hops are listed for reference."
+          subtitle={t("recipe.section.hops_subtitle")}
         >
           <ul className="rounded-xl bg-surface border border-border divide-y divide-border">
             {(recipe.ingredients.hop_additions ?? []).map((h, i) => {

@@ -10,7 +10,7 @@ import type {
   MiscAddition,
   TimeType,
 } from "@werb/adapters";
-import { isMass, toCelsius, toGrams, toKilograms, toLiters, toSrm } from "@werb/adapters";
+import { isMass, isVolume, toCelsius, toGrams, toKilograms, toLiters, toSrm } from "@werb/adapters";
 import {
   searchCultures,
   searchFermentables,
@@ -572,17 +572,11 @@ function CulturesSection({
             />
             <InlineNumber
               className="col-span-2"
-              value={c.amount && "value" in c.amount ? c.amount.value : 0}
-              unit={c.amount && "unit" in c.amount ? c.amount.unit : "g"}
-              step={0.1}
+              value={cultureAmountAsGrams(c.amount, c.form)}
+              unit="g"
+              step={1}
               onChange={(v) =>
-                updateRow(i, {
-                  ...c,
-                  amount:
-                    c.amount && "unit" in c.amount
-                      ? { ...c.amount, value: v }
-                      : { value: v, unit: "g" },
-                })
+                updateRow(i, { ...c, amount: { value: v, unit: "g" } })
               }
             />
             <InlineNumber
@@ -1112,16 +1106,44 @@ function applyHopEntry(h: HopAddition, e: HopEntry): HopAddition {
   };
 }
 
+/**
+ * Read any historical CultureAddition.amount (Mass / Volume / UnitCount)
+ * back as grams for the editor's grams-only number field. Volumes are
+ * converted assuming yeast-slurry density ≈ 1 g/ml; packs (`pkg`) are
+ * estimated from form (liquid pkg ≈ 100 g vial mass, dry pkg ≈ 11 g).
+ * The user re-enters a real number after picking; this is just so the
+ * field never displays a misleading number under a "g" label.
+ */
+function cultureAmountAsGrams(
+  amount: CultureAddition["amount"] | undefined,
+  form: CultureAddition["form"] | undefined,
+): number {
+  if (!amount) return 0;
+  if (isMass(amount as Parameters<typeof isMass>[0])) {
+    return toGrams(amount as Parameters<typeof toGrams>[0]);
+  }
+  if (isVolume(amount as Parameters<typeof isVolume>[0])) {
+    return toLiters(amount as Parameters<typeof toLiters>[0]) * 1000;
+  }
+  const gramsPerPkg = form === "liquid" ? 100 : 11;
+  return ("value" in amount ? amount.value : 0) * gramsPerPkg;
+}
+
 function cultureAmountFromEntry(
   e: CultureEntry,
 ): NonNullable<CultureAddition["amount"]> {
+  // Werb standardises culture amounts on grams. Convert the catalog
+  // unit: g preserved, ml mapped 1:1 (slurry density ≈ 1 g/ml),
+  // pkg estimated by form (liquid pkg ≈ 100 g vial/smack-pack mass,
+  // dry pkg ≈ 11 g — the brewer scales after picking).
   if (e.default_amount_unit === "g") {
     return { value: e.default_amount, unit: "g" };
   }
   if (e.default_amount_unit === "ml") {
-    return { value: e.default_amount, unit: "ml" };
+    return { value: e.default_amount, unit: "g" };
   }
-  return { value: e.default_amount, unit: "pkg" };
+  const gramsPerPkg = e.form === "liquid" ? 100 : 11;
+  return { value: e.default_amount * gramsPerPkg, unit: "g" };
 }
 
 function applyCultureEntry(c: CultureAddition, e: CultureEntry): CultureAddition {
@@ -1446,9 +1468,10 @@ function TempInlineInput({
 
 // Hop additions track time in BeerJSON as { value, unit }. Boil and
 // mash additions are minutes; dry-hop and packaging additions are
-// days. The editor exposes whatever the data says and switches the
-// unit when the use is changed so a typed "3" reads as days for a
-// dry hop, minutes for the boil.
+// days. The editor enforces the canonical unit for each use — files
+// imported from sources that store everything in minutes (BeerXML
+// joliebulle v3) get a "3 day" display instead of "4320 min" for a
+// 3-day dry hop. Any onChange writes back in canonical unit.
 function hopTimeUnitForUse(
   use: (typeof HOP_USES)[number],
 ): TimeType["unit"] {
@@ -1456,15 +1479,32 @@ function hopTimeUnitForUse(
   return "min";
 }
 
+const MIN_PER_DAY = 1440;
+
+function toCanonicalHopTime(
+  time: TimeType | undefined,
+  use: (typeof HOP_USES)[number],
+): TimeType {
+  const want = hopTimeUnitForUse(use);
+  if (!time) {
+    // Default new-unit value: boil = 60 min, dry hop = 3 days.
+    return { value: want === "day" ? 3 : 60, unit: want };
+  }
+  if (time.unit === want) return time;
+  if (want === "day" && time.unit === "min") {
+    return { value: Math.max(1, Math.round(time.value / MIN_PER_DAY)), unit: "day" };
+  }
+  if (want === "min" && time.unit === "day") {
+    return { value: time.value * MIN_PER_DAY, unit: "min" };
+  }
+  return time;
+}
+
 function retimeForUse(
   use: (typeof HOP_USES)[number],
   current: TimeType | undefined,
 ): TimeType {
-  const want = hopTimeUnitForUse(use);
-  if (current && current.unit === want) return current;
-  // Default new-unit value: boil = 60 min, dry hop = 3 days.
-  const defaultValue = want === "day" ? 3 : 60;
-  return { value: defaultValue, unit: want };
+  return toCanonicalHopTime(current, use);
 }
 
 function HopTimeInlineInput({
@@ -1478,14 +1518,14 @@ function HopTimeInlineInput({
   onChange: (time: TimeType) => void;
   className?: string;
 }) {
-  const unit = time?.unit ?? hopTimeUnitForUse(use);
+  const display = toCanonicalHopTime(time, use);
   return (
     <InlineNumber
       {...(className !== undefined && { className })}
-      value={time?.value ?? 0}
-      unit={unit}
+      value={display.value}
+      unit={display.unit}
       step={1}
-      onChange={(v) => onChange({ value: v, unit })}
+      onChange={(v) => onChange({ value: v, unit: display.unit })}
     />
   );
 }

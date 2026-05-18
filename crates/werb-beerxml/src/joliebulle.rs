@@ -500,18 +500,17 @@ impl From<JbHop> for Hop {
 
 impl From<JbYeast> for Yeast {
     fn from(y: JbYeast) -> Self {
-        // Joliebulle yeast amounts (when set) are also in grams for
-        // dry, and in milliliters for liquid. We don't know which
-        // here, so we default amount_is_weight to false (liters /
-        // milliliters), matching how the BeerXML→BeerJSON converter
-        // already handles untagged amounts. Empty amounts stay 0.0.
+        // Joliebulle stores yeast amount in grams (dry) or millilitres
+        // (liquid). The internal Yeast model follows BeerXML's
+        // convention — kg or L — so divide by 1000 here. The downstream
+        // BeerJSON converter then multiplies back up to grams.
         let form = y.form.as_deref().and_then(yeast_form_from_str);
         Yeast {
             name: y.name,
             version: 1,
             yeast_type: y.type_.as_deref().and_then(yeast_type_from_str),
             form,
-            amount: y.amount,
+            amount: y.amount / 1000.0,
             amount_is_weight: None,
             laboratory: nonempty(y.laboratory),
             product_id: nonempty(y.product_id),

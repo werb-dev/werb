@@ -655,12 +655,39 @@ function HopSchedule({
   // already due or coming up — once you've marked it added, the highlight
   // moves to the next one.
   const nextIdx = events.findIndex((e) => !added.has(e.originalIndex));
+  const nextEvent = nextIdx >= 0 ? events[nextIdx] : undefined;
+  const nextRemainingSec = nextEvent ? nextEvent.additionAtMin * 60 - elapsedSec : 0;
+  const nextDue = nextEvent !== undefined && nextRemainingSec <= 0;
 
   return (
     <div className="rounded-lg bg-bg border border-border p-4">
       <p className="text-caption uppercase tracking-widest text-text-muted mb-3">
         {t("brew.hops.title")}
       </p>
+      {nextEvent && (
+        <div
+          className={`mb-3 px-3 py-3 rounded-lg border ${
+            nextDue
+              ? "bg-accent/15 border-accent/60"
+              : "bg-accent/5 border-accent/30"
+          }`}
+        >
+          <p className="text-caption uppercase tracking-widest text-accent mb-1">
+            {t("brew.hops.next_label")}
+          </p>
+          <p className="text-body font-medium">
+            {formatMassSmall({ value: nextEvent.amount_g, unit: "g" }, prefs).display}{" "}
+            {nextEvent.name}
+          </p>
+          <p className="font-mono text-caption text-text-muted mt-0.5">
+            {nextDue
+              ? t("brew.hops.add_now")
+              : t("brew.hops.in_duration", { duration: formatDuration(nextRemainingSec) })}
+            {" · "}
+            {t("brew.hops.at_min", { min: nextEvent.additionAtMin })}
+          </p>
+        </div>
+      )}
       <ul className="space-y-2">
         {events.map((h, i) => {
           const isAdded = added.has(h.originalIndex);

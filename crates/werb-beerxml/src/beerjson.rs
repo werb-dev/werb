@@ -236,6 +236,14 @@ fn fermentable_kind(t: &FermentableType) -> FermentableKind {
 }
 
 fn hop_to_beerjson(h: &Hop) -> HopAddition {
+    // HopAdditionType requires `timing`. Default to a boil addition
+    // when the source omits USE.
+    let use_ = h.hop_use.as_ref().map(hop_use).unwrap_or(TimingUse::AddToBoil);
+    // BeerXML stores hop time uniformly in minutes. For dry-hop and
+    // packaging additions the user thinks in days; we rewrite the
+    // unit so the editor and brew screens show "3 day" instead of
+    // "4320 min" for a 3-day dry hop.
+    let time = h.time.map(|min| time_for_use(min, use_));
     HopAddition {
         name: h.name.clone(),
         alpha_acid: percent(h.alpha),
@@ -246,16 +254,27 @@ fn hop_to_beerjson(h: &Hop) -> HopAddition {
         producer: None,
         product_id: None,
         year: None,
-        // HopAdditionType requires `timing`. Default to a boil
-        // addition when the source omits USE.
         timing: Timing {
-            use_: Some(h.hop_use.as_ref().map(hop_use).unwrap_or(TimingUse::AddToBoil)),
-            time: h.time.map(minutes),
+            use_: Some(use_),
+            time,
             duration: None,
             continuous: None,
             specific_gravity: None,
             p_h: None,
             step: None,
+        },
+    }
+}
+
+fn time_for_use(minutes_value: f64, use_: TimingUse) -> Time {
+    match use_ {
+        TimingUse::AddToFermentation | TimingUse::AddToPackage => Time {
+            value: (minutes_value / 1440.0).round() as i64,
+            unit: TimeUnit::Day,
+        },
+        _ => Time {
+            value: minutes_value.round() as i64,
+            unit: TimeUnit::Min,
         },
     }
 }
@@ -277,11 +296,15 @@ fn hop_form(f: &HopFormX) -> HopForm {
 }
 
 fn yeast_to_beerjson(y: &Yeast) -> CultureAddition {
-    let amount = if y.amount_is_weight.unwrap_or(false) {
-        CultureAmount::MassType(mass_kg(y.amount))
-    } else {
-        CultureAmount::VolumeType(volume_l(y.amount))
-    };
+    // Werb standardises culture amounts on grams: brewers weigh
+    // pitches on a kitchen scale. BeerXML AMOUNT is kg (weight) or
+    // L (volume) — both small decimals like 0.011. We multiply by
+    // 1000 to land on grams, treating 1 L of slurry as ≈ 1000 g
+    // (density ≈ 1, close enough for the vial mass a brewer sees).
+    let amount = CultureAmount::MassType(Mass {
+        value: y.amount * 1000.0,
+        unit: MassUnit::G,
+    });
 
     CultureAddition {
         name: y.name.clone(),
