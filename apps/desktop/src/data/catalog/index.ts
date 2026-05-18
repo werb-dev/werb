@@ -9,6 +9,7 @@ import { HOPS } from "./hops.ts";
 import { CULTURES } from "./cultures.ts";
 import { MISCS } from "./miscs.ts";
 import { STYLES } from "./styles.ts";
+import { SOURCE_WATER_PROFILES } from "./water-profiles.ts";
 import type {
   FermentableEntry,
   HopEntry,
@@ -17,7 +18,8 @@ import type {
   StyleEntry,
 } from "./types.ts";
 
-export { FERMENTABLES, HOPS, CULTURES, MISCS, STYLES };
+export { FERMENTABLES, HOPS, CULTURES, MISCS, STYLES, SOURCE_WATER_PROFILES };
+export type { SourceWaterProfile } from "./water-profiles.ts";
 export type {
   FermentableEntry,
   HopEntry,

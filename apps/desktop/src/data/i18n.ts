@@ -497,6 +497,11 @@ const STRINGS: Record<string, Entry> = {
 
   // ─── Recipe screen — water chemistry ──────────────────────────
   "recipe.water.source_ppm": { en: "Source water (ppm)", fr: "Eau source (ppm)" },
+  "recipe.water.source_profile": {
+    en: "Source water profile",
+    fr: "Profil d'eau source",
+  },
+  "recipe.water.source_custom": { en: "Custom", fr: "Personnalisé" },
   "recipe.water.save_default": { en: "Save as default", fr: "Enregistrer par défaut" },
   "recipe.water.saved_default": { en: "✓ saved as default", fr: "✓ enregistré par défaut" },
   "recipe.water.total": { en: "Total water", fr: "Eau totale" },

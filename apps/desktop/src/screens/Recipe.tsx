@@ -41,6 +41,7 @@ import { translateError, type WerbError } from "../data/errors.ts";
 import { useBrewSessionExists } from "../hooks/useBrewSession.ts";
 import { useRecipeTastings } from "../hooks/useBrewLog.ts";
 import { computeRecipeCost, type CostLine } from "../data/cost.ts";
+import { SOURCE_WATER_PROFILES, type SourceWaterProfile } from "../data/catalog/index.ts";
 import { SensoryRadar } from "../components/SensoryRadar.tsx";
 import { usePersistedJson } from "../storage/index.ts";
 import { useT, useUnits } from "../data/preferences.tsx";
@@ -956,6 +957,32 @@ function WaterChemistrySection({ recipe }: { recipe: BeerJsonRecipe }) {
   );
 }
 
+/** Picks a preset whose six ions match the current source. Lets the
+ *  dropdown stay in sync after a manual tweak: switch back to the
+ *  exact preset numbers and the matching name shows up again. */
+function matchingProfileKey(source: IonProfile): string | "" {
+  const hit = SOURCE_WATER_PROFILES.find((p) =>
+    p.ca_ppm === source.ca_ppm &&
+    p.mg_ppm === source.mg_ppm &&
+    p.na_ppm === source.na_ppm &&
+    p.cl_ppm === source.cl_ppm &&
+    p.so4_ppm === source.so4_ppm &&
+    p.hco3_ppm === source.hco3_ppm,
+  );
+  return hit?.key ?? "";
+}
+
+function profileToIons(p: SourceWaterProfile): IonProfile {
+  return {
+    ca_ppm: p.ca_ppm,
+    mg_ppm: p.mg_ppm,
+    na_ppm: p.na_ppm,
+    cl_ppm: p.cl_ppm,
+    so4_ppm: p.so4_ppm,
+    hco3_ppm: p.hco3_ppm,
+  };
+}
+
 function SourceWaterRow({
   source,
   onChange,
@@ -968,6 +995,7 @@ function SourceWaterRow({
   savedMatches: boolean;
 }) {
   const t = useT();
+  const currentProfileKey = matchingProfileKey(source);
   return (
     <>
       <div className="flex items-baseline justify-between gap-3 mb-3">
@@ -983,6 +1011,29 @@ function SourceWaterRow({
           {savedMatches ? t("recipe.water.saved_default") : t("recipe.water.save_default")}
         </button>
       </div>
+      <label className="block mb-3">
+        <span className="block text-caption uppercase tracking-widest text-text-muted mb-1">
+          {t("recipe.water.source_profile")}
+        </span>
+        <select
+          value={currentProfileKey}
+          onChange={(e) => {
+            const picked = SOURCE_WATER_PROFILES.find((p) => p.key === e.target.value);
+            if (picked) onChange(profileToIons(picked));
+          }}
+          className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-body text-text focus:outline-none focus:border-accent"
+        >
+          {currentProfileKey === "" && (
+            <option value="">{t("recipe.water.source_custom")}</option>
+          )}
+          {SOURCE_WATER_PROFILES.map((p) => (
+            <option key={p.key} value={p.key}>
+              {p.name}
+              {p.notes ? ` — ${p.notes}` : ""}
+            </option>
+          ))}
+        </select>
+      </label>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
         <IonField label="Ca²⁺" value={source.ca_ppm} onChange={(v) => onChange({ ...source, ca_ppm: v })} />
         <IonField label="Mg²⁺" value={source.mg_ppm} onChange={(v) => onChange({ ...source, mg_ppm: v })} />
