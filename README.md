@@ -1,5 +1,10 @@
 # Werb
 
+[![CI](https://img.shields.io/github/actions/workflow/status/werb-dev/werb/ci.yml?branch=main&label=CI)](https://github.com/werb-dev/werb/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/werb-dev/werb?color=e84a1f)](https://github.com/werb-dev/werb/releases/latest)
+[![License: MIT](https://img.shields.io/github/license/werb-dev/werb)](./LICENSE)
+[![PWA](https://img.shields.io/badge/PWA-werb--dev.github.io%2Fwerb-555?logo=pwa)](https://werb-dev.github.io/werb/)
+
 **File-driven homebrewing tool.** Recipes in, brew sessions out — everything as plain JSON you can read, version, share, and round-trip with the tools you already use.
 
 Werb sits at the intersection of [BeerSmith](https://beersmith.com/) (calculation depth) and [Docusaurus](https://docusaurus.io/) (file-first, your data is yours). One recipe is one BeerJSON file. One brew is one session file. Every calculation has a JSON Schema.
@@ -114,7 +119,7 @@ Install: download the binary for your platform from the [latest release](https:/
 
 ## Status
 
-v0.2 — public alpha. The brewing math is well-tested and matches reference tables; UI is responsive (tablet-first, phone-usable), localised in English and French, and ships in both Cassis dark and warm-cream light. Cost estimator uses approximate EUR baseline prices — calibrate via Settings → Cost adjustment.
+v0.3 — public alpha. The brewing math is well-tested and matches reference tables (Tinseth + Rager IBU, Morey + Daniels color, classic + BIAB water, yeast pitch + starter sizing, FG from attenuation); UI is responsive (tablet-first, phone-usable), localised in English and French, and ships in both Cassis dark and warm-cream light. Cost estimator uses approximate EUR baseline prices — calibrate via Settings → Cost adjustment.
 
 Tested against an iPad Air 2 (iOS 15.8.4) for the PWA path including the older Safari file-picker quirks.
 
@@ -139,3 +144,9 @@ Issues and PRs welcome. The contract-first workflow makes contributions easy to 
 5. `pnpm lint && pnpm typecheck && pnpm test && pnpm build` should stay green.
 
 Before tagging a release, walk through [docs/SMOKE_TEST.md](./docs/SMOKE_TEST.md) on a clean profile.
+
+## Buy me a beer
+
+Werb is built in the evenings between brew days. If it helped you ship a batch you're proud of, [sponsor me on GitHub](https://github.com/sponsors/ndreno) — every contribution lands as a few more hours per month on the roadmap (PDF brew sheet, inventory module, mash profile library …), the Apple developer + signing fees that keep the desktop builds landing without scary OS warnings, and the occasional sack of pale malt that becomes a regression-test brew.
+
+Cheers, and good brewing. 🍺
