@@ -1,6 +1,6 @@
 import type { BeerJsonRecipe } from "@werb/adapters";
-import { recipeToYeastPitchInput } from "@werb/adapters";
-import { computeYeastPitch, computeYeastStarter, type StarterAeration } from "@werb/calc";
+import { recipeToGravityInput, recipeToYeastPitchInput, toLiters } from "@werb/adapters";
+import { computeGravity, computeYeastPitch, computeYeastStarter, type StarterAeration } from "@werb/calc";
 import type { YeastPitchInput } from "@werb/types";
 import { useT } from "../../data/preferences.tsx";
 import { usePersistedJson } from "../../storage/index.ts";
@@ -21,7 +21,13 @@ function defaultViability(form: YeastPitchInput["yeast_form"]): number {
 
 export function YeastPitchSection({ recipe }: { recipe: BeerJsonRecipe }) {
   const tt = useT();
-  const input = recipeToYeastPitchInput(recipe);
+  // Recipes built in-app don't carry a stored `original_gravity` — only
+  // imports from BeerSmith/Brewfather typically do. Compute OG from the
+  // grain bill as a fallback so the pitch calc works in both cases.
+  const computedOg = computeGravity(recipeToGravityInput(recipe)).og;
+  const input = recipeToYeastPitchInput(recipe, {
+    ...(computedOg > 1.001 && { og_sg: computedOg }),
+  });
   // Default form depends on the first culture; falls back to "liquid"
   // when the recipe has no cultures yet.
   const yeastForm = input?.yeast_form ?? "liquid";
@@ -40,13 +46,23 @@ export function YeastPitchSection({ recipe }: { recipe: BeerJsonRecipe }) {
     value: YeastPitchFormState[K],
   ) => setForm((prev) => ({ ...prev, [key]: value }));
 
-  // The recipe might not have an OG yet — show a placeholder rather
-  // than zero numbers if so.
+  // No usable OG → name the real missing input. The previous message
+  // told the brewer to "set an original gravity," but OG is derived
+  // from the grain bill, so there's no field to set.
   if (!input) {
+    const missing: string[] = [];
+    if ((recipe.ingredients.fermentable_additions ?? []).length === 0) {
+      missing.push(tt("recipe.yeast.missing.fermentables"));
+    }
+    if (toLiters(recipe.batch_size) <= 0) {
+      missing.push(tt("recipe.yeast.missing.batch_size"));
+    }
     return (
       <Section title={tt("recipe.section.yeast")}>
         <p className="text-body-sm text-text-muted">
-          {tt("recipe.yeast.no_og")}
+          {missing.length > 0
+            ? tt("recipe.yeast.cannot_compute_missing", { items: missing.join(", ") })
+            : tt("recipe.yeast.cannot_compute")}
         </p>
       </Section>
     );
