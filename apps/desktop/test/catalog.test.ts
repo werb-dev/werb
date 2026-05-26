@@ -89,9 +89,23 @@ describe("catalog search — fermentables", () => {
     expect(searchFermentables("zzzzzzzz")).toEqual([]);
   });
 
-  it("caps results at 10", () => {
-    // Lots of grain entries; query "malt" matches ~30+. Should still be capped.
-    expect(searchFermentables("malt").length).toBeLessThanOrEqual(10);
+  it("returns every match, not a 10-item cap", () => {
+    // Lots of grain entries match "malt". Brewers were losing matches
+    // past row 10; the dropdown is scrollable, so return the full set.
+    const out = searchFermentables("malt");
+    expect(out.length).toBeGreaterThan(10);
+    expect(out.every((f) => /malt/i.test(f.name) || /malt/i.test(f.producer ?? ""))).toBe(true);
+  });
+
+  it("ranks prefix matches above interior matches", () => {
+    // "ext" should put fermentables whose name starts with "Ext…"
+    // ahead of those that merely contain "…ext…".
+    const out = searchFermentables("ext");
+    const firstStarts = out.findIndex((f) => /^ext/i.test(f.name));
+    const firstContains = out.findIndex((f) => /^(?!ext).*ext/i.test(f.name));
+    if (firstStarts !== -1 && firstContains !== -1) {
+      expect(firstStarts).toBeLessThan(firstContains);
+    }
   });
 });
 
@@ -127,8 +141,8 @@ describe("catalog search — cultures", () => {
     expect(out.every((c) => c.producer === "Wyeast")).toBe(true);
   });
 
-  it("respects max-results cap", () => {
-    expect(searchCultures("e").length).toBeLessThanOrEqual(10);
+  it("returns every match (no hard cap)", () => {
+    expect(searchCultures("e").length).toBeGreaterThan(10);
   });
 });
 
@@ -256,7 +270,7 @@ describe("catalog search — styles", () => {
     expect(searchStyles("zzzzzzz")).toEqual([]);
   });
 
-  it("respects the max-results cap", () => {
-    expect(searchStyles("ale").length).toBeLessThanOrEqual(10);
+  it("returns every match (no hard cap)", () => {
+    expect(searchStyles("ale").length).toBeGreaterThan(10);
   });
 });

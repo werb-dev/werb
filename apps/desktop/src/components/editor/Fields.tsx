@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useT, useUnits } from "../../data/preferences.tsx";
 import {
   celsiusToUserTemp,
@@ -346,15 +347,44 @@ export function Combobox<T>({
   autoFocus?: boolean;
   className?: string;
 }) {
+  const inputRef = useRef<HTMLInputElement>(null);
   const [focused, setFocused] = useState(false);
+  // Anchor coords (viewport-relative) for the portalled popup. Updated
+  // on focus + on scroll/resize so the menu tracks the input even when
+  // an ancestor scrolls. Rendering the menu as a child of <body> via
+  // a portal sidesteps section cards' `overflow-hidden`/rounded
+  // corners that used to clip the popup on small screens.
+  const [anchor, setAnchor] = useState<{ top: number; left: number; width: number } | null>(null);
+
   // Suggest on focus regardless of whether the field has text yet —
-  // catalog search returns the top N for an empty query, giving the
-  // brewer a browse list when they don't know what to type yet.
+  // catalog search returns the full list for an empty query, giving
+  // the brewer a scrollable browse list when they don't know what to
+  // type yet.
   const items = focused ? suggest(value) : [];
+
+  useLayoutEffect(() => {
+    if (!focused) return;
+    const update = () => {
+      const el = inputRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      setAnchor({ top: r.bottom + 4, left: r.left, width: r.width });
+    };
+    update();
+    // Capture phase catches scrolls inside any ancestor — passive for
+    // touch perf since we only read coordinates, never preventDefault.
+    window.addEventListener("scroll", update, { capture: true, passive: true });
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update, { capture: true });
+      window.removeEventListener("resize", update);
+    };
+  }, [focused]);
 
   return (
     <div className={`relative ${className ?? ""}`}>
       <input
+        ref={inputRef}
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -364,24 +394,40 @@ export function Combobox<T>({
         {...(autoFocus && { autoFocus: true })}
         className="w-full bg-transparent border-b border-transparent px-1 py-1 text-body text-text placeholder:text-text-muted focus:outline-none focus:border-accent hover:border-border transition-colors min-w-0"
       />
-      {items.length > 0 && (
-        <div className="absolute top-full left-0 z-50 min-w-[22rem] max-h-80 overflow-auto bg-surface-raised border border-border rounded-lg shadow-xl mt-1">
-          {items.map((item, i) => (
-            <button
-              key={i}
-              type="button"
-              onMouseDown={(e) => {
-                e.preventDefault();
-                onPick(item);
-                setFocused(false);
-              }}
-              className="block w-full text-left px-3 py-2 hover:bg-surface focus:bg-surface border-b border-border last:border-b-0"
-            >
-              {renderItem(item)}
-            </button>
-          ))}
-        </div>
-      )}
+      {focused &&
+        items.length > 0 &&
+        anchor &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            data-testid="combobox-menu"
+            style={{
+              position: "fixed",
+              top: anchor.top,
+              left: anchor.left,
+              width: Math.max(anchor.width, 280),
+              maxHeight: "20rem",
+              zIndex: 60,
+            }}
+            className="overflow-auto bg-surface-raised border border-border rounded-lg shadow-xl"
+          >
+            {items.map((item, i) => (
+              <button
+                key={i}
+                type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  onPick(item);
+                  setFocused(false);
+                }}
+                className="block w-full text-left px-3 py-2 hover:bg-surface focus:bg-surface border-b border-border last:border-b-0"
+              >
+                {renderItem(item)}
+              </button>
+            ))}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

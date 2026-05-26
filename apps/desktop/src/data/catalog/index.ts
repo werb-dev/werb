@@ -29,54 +29,79 @@ export type {
 } from "./types.ts";
 
 /**
- * Case-insensitive substring search with light scoring: a prefix match
- * (e.g. "casc" → "Cascade") ranks above an internal match (e.g. "casc"
- * → "Mt Cascadia"). Producer / origin / product_id are also indexed so
- * "fermentis" or "1056" finds the right item.
+ * Tiered case-insensitive search. Filtering is supposed to *narrow*
+ * the list as the brewer types, not surface a different 10 because
+ * "casc" happens to live inside "Mt Cascadia" or in the producer
+ * field of an unrelated yeast. The score function enforces clean
+ * tiers so prefix matches on the displayed name always dominate.
+ *
+ *   Tier A (200+): name starts with the query  →  "casc" → "Cascade"
+ *   Tier B (100+): name contains the query elsewhere
+ *   Tier C    (1+): a secondary field (producer / origin / product_id
+ *                   / type / category) contains the query — kept so
+ *                   "fermentis" still finds Fermentis yeasts, but
+ *                   ranked below every name-side match.
+ *
+ *  Within each tier, shorter haystacks score higher so "Cascade"
+ *  beats "Cascade Cryo" when both prefix-match.
  */
-function score(query: string, ...haystacks: (string | undefined)[]): number {
+function scoreTiered(
+  query: string,
+  name: string,
+  ...secondary: (string | undefined)[]
+): number {
   if (!query) return 0;
   const q = query.toLowerCase();
-  let best = -1;
-  for (const h of haystacks) {
-    if (!h) continue;
-    const idx = h.toLowerCase().indexOf(q);
-    if (idx < 0) continue;
-    const s = idx === 0 ? 100 - h.length : 50 - idx;
-    if (s > best) best = s;
+  const lowName = name.toLowerCase();
+  const nameIdx = lowName.indexOf(q);
+  if (nameIdx === 0) return 200 + (100 - Math.min(name.length, 100));
+  if (nameIdx > 0) return 100 + (100 - Math.min(name.length, 100));
+  for (const h of secondary) {
+    if (h && h.toLowerCase().includes(q)) {
+      return 1 + (100 - Math.min(h.length, 100));
+    }
   }
-  return best;
+  return -1;
 }
 
-const MAX_SUGGESTIONS = 10;
-
 export function searchFermentables(query: string): FermentableEntry[] {
-  return rank(FERMENTABLES, (e) => score(query, e.name, e.producer));
+  return rank(FERMENTABLES, (e) => scoreTiered(query, e.name, e.producer));
 }
 
 export function searchHops(query: string): HopEntry[] {
-  return rank(HOPS, (e) => score(query, e.name, e.origin));
+  return rank(HOPS, (e) => scoreTiered(query, e.name, e.origin));
 }
 
 export function searchCultures(query: string): CultureEntry[] {
-  return rank(CULTURES, (e) => score(query, e.name, e.producer, e.product_id));
+  return rank(CULTURES, (e) =>
+    scoreTiered(query, e.name, e.producer, e.product_id),
+  );
 }
 
 export function searchMiscs(query: string): MiscEntry[] {
-  return rank(MISCS, (e) => score(query, e.name, e.type));
+  return rank(MISCS, (e) => scoreTiered(query, e.name, e.type));
 }
 
 export function searchStyles(query: string): StyleEntry[] {
   return rank(STYLES, (e) =>
-    score(query, e.name, e.category, `${e.category_number}${e.style_letter}`),
+    scoreTiered(
+      query,
+      e.name,
+      e.category,
+      `${e.category_number}${e.style_letter}`,
+    ),
   );
 }
 
+/**
+ * No hard cap on results — the dropdown is scrollable. Returning the
+ * full ranked list lets the brewer see the count is exhaustive (and
+ * scroll past the top-10 if their target is further down).
+ */
 function rank<T>(items: readonly T[], scoreFn: (item: T) => number): T[] {
   return items
     .map((item) => ({ item, score: scoreFn(item) }))
     .filter(({ score }) => score >= 0)
     .sort((a, b) => b.score - a.score)
-    .slice(0, MAX_SUGGESTIONS)
     .map(({ item }) => item);
 }

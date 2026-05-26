@@ -130,6 +130,12 @@ class LibraryPage {
     await this.page.waitForSelector('[data-testid="water-volumes"]', { timeout: 10000 });
   }
 
+  /** Open the new-recipe editor and stay there. */
+  async openNewRecipeEditor() {
+    await this.page.getByRole("button", { name: /\+\s*New recipe/i }).click();
+    await this.page.getByRole("button", { name: /\+\s*Add fermentable/i }).waitFor();
+  }
+
   /** Open the first recipe card. */
   async openFirstRecipe() {
     await this.page.locator("li h2").first().click();
