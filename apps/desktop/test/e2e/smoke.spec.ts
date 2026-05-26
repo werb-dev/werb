@@ -216,6 +216,28 @@ test.describe("Recipe editor — ingredient picker", () => {
   });
 });
 
+test.describe("Recipe editor — live targets banner", () => {
+  test("banner re-computes when the grain bill changes", async ({ page }) => {
+    const app = new App(page);
+    await app.go("Library");
+    await app.library.openNewRecipeEditor();
+
+    const banner = page.locator('[data-testid="editor-targets-banner"]');
+    await banner.waitFor();
+    const ogBefore = await page.locator('[data-testid="targets-og"]').innerText();
+    // Fresh recipe with no fermentables → OG sits at 1.000.
+    expect(ogBefore).toMatch(/1[.,]000/);
+
+    // Add a row with the default 1 kg amount. That alone bumps OG.
+    await page.getByRole("button", { name: /\+\s*Add fermentable/i }).click();
+    await page.waitForTimeout(300);
+
+    const ogAfter = await page.locator('[data-testid="targets-og"]').innerText();
+    expect(ogAfter).not.toBe(ogBefore);
+    expect(ogAfter).not.toMatch(/1[.,]000/);
+  });
+});
+
 test.describe("Discoverability", () => {
   test("Library onboarding mentions local storage + GitHub sync", async ({ page }) => {
     const app = new App(page);

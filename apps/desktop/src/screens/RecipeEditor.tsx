@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useIngredientRows } from "../hooks/useIngredientRows.ts";
 import type {
   BeerJsonRecipe,
@@ -11,7 +11,30 @@ import type {
   MiscAddition,
   TimeType,
 } from "@werb/adapters";
-import { isMass, isVolume, toCelsius, toGrams, toKilograms, toLiters, toSrm } from "@werb/adapters";
+import {
+  isMass,
+  isVolume,
+  recipeApparentAttenuationPct,
+  recipeToColorInput,
+  recipeToGravityInput,
+  recipeToIbuInput,
+  toCelsius,
+  toGrams,
+  toKilograms,
+  toLiters,
+  toSrm,
+} from "@werb/adapters";
+import {
+  computeAbv,
+  computeColor,
+  computeFg,
+  computeGravity,
+  computeIbu,
+} from "@werb/calc";
+import {
+  formatSpecificGravity,
+  formatSrm,
+} from "../data/units-format.ts";
 import {
   searchCultures,
   searchFermentables,
@@ -99,9 +122,11 @@ export function RecipeEditor({ recipe, onClose, onSave }: RecipeEditorProps) {
         </header>
 
         <h1 className="text-h2 sm:text-h1 font-semibold mb-2">{t("editor.title")}</h1>
-        <p className="text-body text-text-muted mb-8 sm:mb-10">
+        <p className="text-body text-text-muted mb-6 sm:mb-8">
           {t("editor.intro")}
         </p>
+
+        <TargetsBanner draft={draft} />
 
         <MetadataSection draft={draft} update={update} />
         <FermentablesSection
@@ -113,6 +138,96 @@ export function RecipeEditor({ recipe, onClose, onSave }: RecipeEditorProps) {
         <MiscsSection draft={draft} updateIngredients={updateIngredients} />
         <MashSection draft={draft} update={update} />
       </main>
+    </div>
+  );
+}
+
+// ─── Live targets banner ─────────────────────────────────────────────────
+
+/**
+ * Sticky strip at the top of the editor showing the same OG / FG /
+ * IBU / ABV / SRM numbers the read-only Recipe screen surfaces, but
+ * recomputed from the in-progress draft on every render. Brewers used
+ * to have to toggle out of edit mode to see the effect of a grain-bill
+ * tweak; now the numbers update under their thumb.
+ *
+ * No equipment profile is threaded in — the editor focuses on the
+ * recipe itself, and the calc engine falls back to its built-in
+ * defaults (75 % efficiency, 0.96 L/kg grain absorption, etc.) when
+ * none is provided. Equipment-aware numbers are still authoritative
+ * on the read-only Recipe screen.
+ */
+function TargetsBanner({ draft }: { draft: BeerJsonRecipe }) {
+  const prefs = useUnits();
+  const targets = useMemo(() => {
+    const gravity = computeGravity(recipeToGravityInput(draft));
+    const ibu = computeIbu({
+      ...recipeToIbuInput(draft),
+      method: prefs.ibu_method,
+    });
+    const color = computeColor({
+      ...recipeToColorInput(draft),
+      method: prefs.color_method,
+    });
+    const attenuation = recipeApparentAttenuationPct(draft);
+    const fg = computeFg(gravity.og, attenuation);
+    const abv = computeAbv(gravity.og, fg);
+    return { og: gravity.og, fg, ibu: ibu.total_ibu, abv, srm: color.srm };
+  }, [draft, prefs.ibu_method, prefs.color_method]);
+
+  return (
+    <div
+      data-testid="editor-targets-banner"
+      className="sticky top-0 z-30 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-3 mb-6 sm:mb-8 bg-bg/95 backdrop-blur border-b border-border"
+    >
+      {/* Labels stay English — OG / FG / IBU / ABV / Color are the
+          shared brewer vocabulary, same as Recipe.tsx's hero strip. */}
+      <div className="grid grid-cols-5 gap-px bg-border rounded-xl overflow-hidden">
+        <Cell
+          label="OG"
+          value={formatSpecificGravity(targets.og, prefs).display}
+          testId="targets-og"
+        />
+        <Cell
+          label="FG"
+          value={formatSpecificGravity(targets.fg, prefs).display}
+          testId="targets-fg"
+        />
+        <Cell
+          label="IBU"
+          value={targets.ibu > 0 ? targets.ibu.toFixed(0) : "—"}
+          testId="targets-ibu"
+        />
+        <Cell
+          label="ABV"
+          value={`${targets.abv.toFixed(1)}%`}
+          testId="targets-abv"
+        />
+        <Cell
+          label="Color"
+          value={formatSrm(targets.srm, prefs).display}
+          testId="targets-color"
+        />
+      </div>
+    </div>
+  );
+}
+
+function Cell({
+  label,
+  value,
+  testId,
+}: {
+  label: string;
+  value: string;
+  testId: string;
+}) {
+  return (
+    <div className="bg-surface px-2 py-2 sm:px-4 sm:py-3" data-testid={testId}>
+      <p className="text-[10px] sm:text-caption uppercase tracking-widest text-text-muted">
+        {label}
+      </p>
+      <p className="font-mono text-body sm:text-h3 mt-1 tabular-nums">{value}</p>
     </div>
   );
 }
