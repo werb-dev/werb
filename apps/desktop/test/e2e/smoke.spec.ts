@@ -147,6 +147,52 @@ test.describe("Water chemistry — source = target reports no delta", () => {
   });
 });
 
+test.describe("Recipe editor — ingredient picker", () => {
+  test("ingredient dropdown is uncapped and prefix-ranks first", async ({ page }) => {
+    const app = new App(page);
+    await app.go("Library");
+    await app.library.openNewRecipeEditor();
+
+    // Add a fermentable row and focus the catalog picker.
+    await page.getByRole("button", { name: /\+\s*Add fermentable/i }).click();
+    const picker = page.getByPlaceholder(/Pick a fermentable…/i).first();
+    await picker.click();
+    await picker.fill("malt");
+
+    const menu = page.locator('[data-testid="combobox-menu"]');
+    await menu.waitFor();
+
+    // Old behaviour capped at 10. The catalog has many more "malt" matches.
+    const count = await menu.locator("button").count();
+    expect(count).toBeGreaterThan(10);
+
+    // Menu lives outside the field's section and uses fixed positioning,
+    // so an ancestor's `overflow-hidden` can't clip it on small screens.
+    const position = await menu.evaluate((el) => getComputedStyle(el).position);
+    expect(position).toBe("fixed");
+  });
+
+  test("typing narrows toward prefix matches (malt → Malt…)", async ({ page }) => {
+    const app = new App(page);
+    await app.go("Library");
+    await app.library.openNewRecipeEditor();
+
+    await page.getByRole("button", { name: /\+\s*Add fermentable/i }).click();
+    const picker = page.getByPlaceholder(/Pick a fermentable…/i).first();
+    await picker.click();
+    await picker.fill("malt");
+
+    const menu = page.locator('[data-testid="combobox-menu"]');
+    await menu.waitFor();
+    const firstLabel = await menu.locator("button").first().innerText();
+    // The top match for "malt" should be a fermentable whose name
+    // starts with "Malt…" (e.g. "Maltodextrin"), not one of the many
+    // entries that merely contain "Malt" mid-name ("Pilsen Liquid
+    // Malt Extract" etc.).
+    expect(firstLabel.trimStart().toLowerCase()).toMatch(/^malt/);
+  });
+});
+
 test.describe("Yeast pitch — message gating", () => {
   test("recipe with no fermentables names the missing input", async ({ page }) => {
     const app = new App(page);
