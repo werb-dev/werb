@@ -164,6 +164,11 @@ const STRINGS: Record<string, Entry> = {
     en: "Tap Start brewing on a recipe for a live timeline with countdowns and measurement logging. Once complete, score the result on the radar so the next brew of the same recipe learns from it.",
     fr: "Touchez « Démarrer le brassage » sur une recette pour une chronologie en direct avec comptes à rebours et relevés. Une fois terminé, notez le résultat sur le radar pour que le prochain brassage en tire les leçons.",
   },
+  "library.onboarding.step4.title": { en: "Your recipes stay local", fr: "Vos recettes restent locales" },
+  "library.onboarding.step4.body": {
+    en: "They live on this device. Open Settings → Sync to push them to a private GitHub repo if you want them across devices — your token never leaves the browser.",
+    fr: "Elles vivent sur cet appareil. Ouvrez Paramètres → Sync pour les pousser vers un dépôt GitHub privé si vous voulez les retrouver sur plusieurs appareils — votre jeton ne quitte jamais le navigateur.",
+  },
 
   // ─── Brew ──────────────────────────────────────────────────────
   "brew.session_label": { en: "Brew session · {status}", fr: "Session de brassage · {status}" },
@@ -191,6 +196,7 @@ const STRINGS: Record<string, Entry> = {
     fr: "Annuler cette session de brassage ? Toute la progression et les notes seront perdues.",
   },
   "brew.session_completed": { en: "Brew session completed.", fr: "Session de brassage terminée." },
+  "brew.view_in_journal": { en: "View in Journal", fr: "Voir dans le Journal" },
   "brew.no_session.heading": { en: "Ready to brew?", fr: "Prêt à brasser ?" },
   "brew.no_session.body": {
     en: "A new session will start now and the screen will stay awake until you finish.",
@@ -481,6 +487,14 @@ const STRINGS: Record<string, Entry> = {
 
   // ─── Recipe — export menu ────────────────────────────────────
   "recipe.export.button": { en: "Export", fr: "Exporter" },
+  "recipe.export.button_formats": {
+    en: "BeerJSON · BeerXML · HTML",
+    fr: "BeerJSON · BeerXML · HTML",
+  },
+  "recipe.export.button_hint": {
+    en: "Export this recipe as BeerJSON, BeerXML, or a printable HTML.",
+    fr: "Exporter cette recette en BeerJSON, BeerXML ou HTML imprimable.",
+  },
   "recipe.export.beerjson_label": { en: "BeerJSON (.beerjson)", fr: "BeerJSON (.beerjson)" },
   "recipe.export.beerjson_sub": { en: "Modern JSON format — round-trips cleanly with most tools.", fr: "Format JSON moderne — compatible avec la plupart des outils." },
   "recipe.export.beerxml_label": { en: "BeerXML (.xml)", fr: "BeerXML (.xml)" },

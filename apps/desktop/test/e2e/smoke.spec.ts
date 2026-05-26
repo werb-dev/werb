@@ -216,6 +216,71 @@ test.describe("Recipe editor — ingredient picker", () => {
   });
 });
 
+test.describe("Discoverability", () => {
+  test("Library onboarding mentions local storage + GitHub sync", async ({ page }) => {
+    const app = new App(page);
+    await app.go("Library");
+    // Empty-state onboarding card.
+    const onboarding = page.locator("ol").filter({ hasText: /Add a recipe|Brew \+ reflect/i });
+    await onboarding.waitFor();
+    const text = await onboarding.innerText();
+    // Brewers asking "where do my recipes live?" should land here:
+    // a hint about local storage + the GitHub sync path.
+    expect(text).toMatch(/local|locale/i);
+    expect(text).toMatch(/GitHub/);
+    expect(text).toMatch(/Settings|Paramètres/);
+  });
+
+  test("Completed brew session offers a View in Journal CTA", async ({ page }) => {
+    const app = new App(page);
+    await app.go("Library");
+    await app.library.importSamples();
+    await app.library.openFirstRecipe();
+
+    // Recipe → click Start brewing.
+    await page.getByRole("button", { name: /^Start brewing/i }).first().click();
+    await page.waitForTimeout(400);
+    // Brew screen's NoSession state may have a second Start brewing
+    // button. If it's there, click it; otherwise the live session is
+    // already up.
+    const startAgain = page.getByRole("button", { name: /^Start brewing/i }).first();
+    if (await startAgain.isVisible().catch(() => false)) {
+      await startAgain.click();
+      await page.waitForTimeout(400);
+    }
+
+    // Complete the session.
+    const complete = page.getByRole("button", { name: /^Complete session$/i });
+    await complete.waitFor({ timeout: 10_000 });
+    await complete.click();
+    await page.waitForTimeout(300);
+
+    // CTA replaces the quiet "session completed" label.
+    const cta = page.locator('[data-testid="view-in-journal"]');
+    await cta.waitFor();
+    await cta.click();
+
+    await page.waitForSelector("h1:has-text('Journal')", { timeout: 5000 });
+  });
+
+  test("Export button surfaces the format names on a recipe", async ({ page }) => {
+    const app = new App(page);
+    await app.go("Library");
+    await app.library.importSamples();
+    await app.library.openFirstRecipe();
+
+    const toggle = page.locator('[data-testid="export-menu-toggle"]');
+    await toggle.waitFor();
+    const label = await toggle.innerText();
+    // The button used to say only "Export". Now it carries the
+    // format hint so a brewer scanning for BeerXML notices it without
+    // clicking through.
+    expect(label).toMatch(/BeerJSON/);
+    expect(label).toMatch(/BeerXML/);
+    expect(label).toMatch(/HTML/);
+  });
+});
+
 test.describe("Yeast pitch — message gating", () => {
   test("recipe with no fermentables names the missing input", async ({ page }) => {
     const app = new App(page);

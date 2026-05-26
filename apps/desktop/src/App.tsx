@@ -123,6 +123,7 @@ export function App() {
           activeProfile={equipmentApi.activeProfile}
           onBack={() => (state.sessionId ? goJournal() : goRecipe(state.recipeId))}
           backLabel={state.sessionId ? t("brew.back_journal") : t("brew.back_recipe")}
+          onViewJournal={goJournal}
         />
       );
     }
