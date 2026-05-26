@@ -58,7 +58,7 @@ export function YeastPitchSection({ recipe }: { recipe: BeerJsonRecipe }) {
       missing.push(tt("recipe.yeast.missing.batch_size"));
     }
     return (
-      <Section title={tt("recipe.section.yeast")}>
+      <Section title={tt("recipe.section.yeast")} testId="yeast-pitch">
         <p className="text-body-sm text-text-muted">
           {missing.length > 0
             ? tt("recipe.yeast.cannot_compute_missing", { items: missing.join(", ") })
@@ -85,6 +85,7 @@ export function YeastPitchSection({ recipe }: { recipe: BeerJsonRecipe }) {
     <Section
       title={tt("recipe.section.yeast")}
       subtitle={tt("recipe.yeast.subtitle", { form: formLabel })}
+      testId="yeast-pitch"
     >
       <div className="rounded-xl bg-surface border border-border p-4 sm:p-6">
         {/* Input row */}
