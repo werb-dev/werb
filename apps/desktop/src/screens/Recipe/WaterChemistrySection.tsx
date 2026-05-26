@@ -49,6 +49,25 @@ const ZERO_SALTS: SaltAmounts = {
   gypsum_g: 0, calcium_chloride_g: 0, epsom_g: 0, table_salt_g: 0, baking_soda_g: 0,
 };
 
+// City-named targets pull from the source-water catalog so picking the
+// same name on both sides reports a real match (e.g. source Burton +
+// target Burton → no additions needed). Separate hand-rolled numbers
+// drift over time, which is exactly the bug this prevents.
+function sourceAsTarget(key: string): IonProfile {
+  const src = SOURCE_WATER_PROFILES.find((p) => p.key === key);
+  if (!src) {
+    throw new Error(`sourceAsTarget: no source profile for "${key}"`);
+  }
+  return {
+    ca_ppm: src.ca_ppm,
+    mg_ppm: src.mg_ppm,
+    na_ppm: src.na_ppm,
+    cl_ppm: src.cl_ppm,
+    so4_ppm: src.so4_ppm,
+    hco3_ppm: src.hco3_ppm,
+  };
+}
+
 // Style-aligned target ion profiles. Round-numbered, drawn from Palmer
 // and Bru'n Water common-target tables. "off" disables comparison —
 // useful when the brewer just wants the resulting strip. The `key`
@@ -59,8 +78,8 @@ const TARGETS: Array<{ key: string; profile: IonProfile | null }> = [
   { key: "pilsner", profile: { ca_ppm: 50, mg_ppm: 5, na_ppm: 5, cl_ppm: 25, so4_ppm: 25, hco3_ppm: 0 } },
   { key: "pale_ale", profile: { ca_ppm: 100, mg_ppm: 10, na_ppm: 15, cl_ppm: 60, so4_ppm: 150, hco3_ppm: 0 } },
   { key: "american_ipa", profile: { ca_ppm: 110, mg_ppm: 10, na_ppm: 15, cl_ppm: 50, so4_ppm: 250, hco3_ppm: 0 } },
-  { key: "burton", profile: { ca_ppm: 270, mg_ppm: 60, na_ppm: 35, cl_ppm: 65, so4_ppm: 600, hco3_ppm: 200 } },
-  { key: "munich", profile: { ca_ppm: 80, mg_ppm: 20, na_ppm: 10, cl_ppm: 70, so4_ppm: 60, hco3_ppm: 150 } },
+  { key: "burton", profile: sourceAsTarget("burton") },
+  { key: "munich", profile: sourceAsTarget("munich") },
   { key: "dublin_stout", profile: { ca_ppm: 120, mg_ppm: 10, na_ppm: 15, cl_ppm: 70, so4_ppm: 60, hco3_ppm: 250 } },
 ];
 
