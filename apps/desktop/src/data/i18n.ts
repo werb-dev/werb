@@ -709,10 +709,16 @@ const STRINGS: Record<string, Entry> = {
 
   // ─── Recipe screen — yeast pitch ──────────────────────────────
   "recipe.section.yeast": { en: "Yeast pitch", fr: "Ensemencement" },
-  "recipe.yeast.no_og": {
-    en: "Set an original gravity on the recipe to compute pitch rate.",
-    fr: "Définissez une densité initiale (OG) sur la recette pour calculer le taux d'ensemencement.",
+  "recipe.yeast.cannot_compute": {
+    en: "Can't compute pitch rate yet — the recipe is missing a grain bill or a batch size.",
+    fr: "Calcul d'ensemencement impossible — la recette n'a pas encore de céréales ou de volume de brassée.",
   },
+  "recipe.yeast.cannot_compute_missing": {
+    en: "Can't compute pitch rate yet — add {items} to the recipe.",
+    fr: "Calcul d'ensemencement impossible — ajoutez {items} à la recette.",
+  },
+  "recipe.yeast.missing.fermentables": { en: "fermentables", fr: "des fermentescibles" },
+  "recipe.yeast.missing.batch_size": { en: "a batch size", fr: "un volume de brassée" },
   "recipe.yeast.subtitle": {
     en: "Target cell count for {form}. Adjust pack count and viability to match what you have on hand.",
     fr: "Compte de cellules cible pour {form}. Ajustez le nombre de sachets et la viabilité selon votre stock.",
