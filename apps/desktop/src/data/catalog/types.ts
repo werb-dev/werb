@@ -24,6 +24,14 @@ export interface FermentableEntry {
   producer?: string;
   origin?: string;
   notes?: string;
+  /**
+   * Alternate search terms the picker should match against. Per
+   * SPEC.md i18n rules the canonical `name` stays verbatim (English /
+   * German / commercial), but aliases let a FR brewer find "Wheat
+   * Malt" by typing "blé". Aliases score at the same tier as the
+   * name — prefix-on-alias beats contains-on-name.
+   */
+  aliases?: string[];
 }
 
 export type HopCategory = "bittering" | "aroma" | "dual";
@@ -35,6 +43,8 @@ export interface HopEntry {
   hop_type?: HopCategory;
   origin?: string;
   notes?: string;
+  /** See {@link FermentableEntry.aliases}. */
+  aliases?: string[];
 }
 
 export interface CultureEntry {
@@ -58,6 +68,8 @@ export interface CultureEntry {
   default_amount: number;
   default_amount_unit: "g" | "ml" | "pkg";
   notes?: string;
+  /** See {@link FermentableEntry.aliases}. */
+  aliases?: string[];
 }
 
 export type MiscCategory =
@@ -127,4 +139,6 @@ export interface MiscEntry {
   /** "g", "kg", "ml", or "l". */
   default_amount_unit: "g" | "kg" | "ml" | "l";
   notes?: string;
+  /** See {@link FermentableEntry.aliases}. */
+  aliases?: string[];
 }

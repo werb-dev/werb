@@ -35,27 +35,41 @@ export type {
  * field of an unrelated yeast. The score function enforces clean
  * tiers so prefix matches on the displayed name always dominate.
  *
- *   Tier A (200+): name starts with the query  →  "casc" → "Cascade"
- *   Tier B (100+): name contains the query elsewhere
+ *   Tier A (200+): a primary string starts with the query.
+ *                  Primary strings are the entry's `name` plus any
+ *                  per-locale aliases (e.g. "blé" → Wheat malts).
+ *                  Prefix-on-alias beats contains-on-name.
+ *   Tier B (100+): a primary string contains the query elsewhere
  *   Tier C    (1+): a secondary field (producer / origin / product_id
  *                   / type / category) contains the query — kept so
  *                   "fermentis" still finds Fermentis yeasts, but
- *                   ranked below every name-side match.
+ *                   ranked below every primary-side match.
  *
  *  Within each tier, shorter haystacks score higher so "Cascade"
  *  beats "Cascade Cryo" when both prefix-match.
  */
 function scoreTiered(
   query: string,
-  name: string,
+  primary: { name: string; aliases?: string[] | undefined },
   ...secondary: (string | undefined)[]
 ): number {
   if (!query) return 0;
   const q = query.toLowerCase();
-  const lowName = name.toLowerCase();
-  const nameIdx = lowName.indexOf(q);
-  if (nameIdx === 0) return 200 + (100 - Math.min(name.length, 100));
-  if (nameIdx > 0) return 100 + (100 - Math.min(name.length, 100));
+  const primaries = [primary.name, ...(primary.aliases ?? [])];
+  let bestPrefix = -1;
+  let bestContain = -1;
+  for (const p of primaries) {
+    const idx = p.toLowerCase().indexOf(q);
+    if (idx < 0) continue;
+    const lenScore = 100 - Math.min(p.length, 100);
+    if (idx === 0) {
+      if (lenScore > bestPrefix) bestPrefix = lenScore;
+    } else if (lenScore > bestContain) {
+      bestContain = lenScore;
+    }
+  }
+  if (bestPrefix >= 0) return 200 + bestPrefix;
+  if (bestContain >= 0) return 100 + bestContain;
   for (const h of secondary) {
     if (h && h.toLowerCase().includes(q)) {
       return 1 + (100 - Math.min(h.length, 100));
@@ -65,28 +79,39 @@ function scoreTiered(
 }
 
 export function searchFermentables(query: string): FermentableEntry[] {
-  return rank(FERMENTABLES, (e) => scoreTiered(query, e.name, e.producer));
+  return rank(FERMENTABLES, (e) =>
+    scoreTiered(query, { name: e.name, aliases: e.aliases }, e.producer),
+  );
 }
 
 export function searchHops(query: string): HopEntry[] {
-  return rank(HOPS, (e) => scoreTiered(query, e.name, e.origin));
+  return rank(HOPS, (e) =>
+    scoreTiered(query, { name: e.name, aliases: e.aliases }, e.origin),
+  );
 }
 
 export function searchCultures(query: string): CultureEntry[] {
   return rank(CULTURES, (e) =>
-    scoreTiered(query, e.name, e.producer, e.product_id),
+    scoreTiered(
+      query,
+      { name: e.name, aliases: e.aliases },
+      e.producer,
+      e.product_id,
+    ),
   );
 }
 
 export function searchMiscs(query: string): MiscEntry[] {
-  return rank(MISCS, (e) => scoreTiered(query, e.name, e.type));
+  return rank(MISCS, (e) =>
+    scoreTiered(query, { name: e.name, aliases: e.aliases }, e.type),
+  );
 }
 
 export function searchStyles(query: string): StyleEntry[] {
   return rank(STYLES, (e) =>
     scoreTiered(
       query,
-      e.name,
+      { name: e.name },
       e.category,
       `${e.category_number}${e.style_letter}`,
     ),
