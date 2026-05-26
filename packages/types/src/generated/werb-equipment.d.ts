@@ -35,6 +35,10 @@ export interface WerbEquipmentProfile {
      * Liters of water absorbed per kg of grain. Typical: 0.8-1.0 L/kg.
      */
     grain_absorption_l_per_kg?: number;
+    /**
+     * Strike-water-to-grain ratio for the mash, in L/kg. The recipe's first mash-step infusion still wins when present; this is the brewer's default for recipes that don't carry their own mash schedule. Typical range: 2.5–4 L/kg.
+     */
+    mash_thickness_l_per_kg?: number;
   };
   kettle?: {
     capacity_l: number;

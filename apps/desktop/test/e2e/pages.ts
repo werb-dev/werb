@@ -78,6 +78,35 @@ class EquipmentPage {
       await this.page.waitForTimeout(200);
     }
   }
+
+  hltSection() {
+    return this.page.locator('[data-testid="equipment-section-hlt"]');
+  }
+
+  mashTunSection() {
+    return this.page.locator('[data-testid="equipment-section-mash-tun"]');
+  }
+
+  mashThicknessField() {
+    // The mash-tun fieldset's L/kg input next to "Mash thickness". We
+    // resolve by label rather than a dedicated test-id since the field
+    // is a generic NumberField primitive.
+    return this.page
+      .locator('[data-testid="equipment-section-mash-tun"]')
+      .locator("label", { hasText: /Mash thickness|Épaisseur d'empâtage/i })
+      .locator("input");
+  }
+
+  async setMashThickness(value: string) {
+    const field = this.mashThicknessField();
+    await field.fill(value);
+    await field.blur();
+    await this.page.waitForTimeout(200);
+  }
+
+  async getMashThickness(): Promise<string> {
+    return this.mashThicknessField().inputValue();
+  }
 }
 
 class LibraryPage {
