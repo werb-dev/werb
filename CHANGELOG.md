@@ -6,6 +6,141 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-05-26
+
+Feedback-driven release. Two batches of forum tester feedback (issues
+[#1–#19](https://github.com/werb-dev/werb/issues?q=is%3Aissue+milestone%3Av0.4.0))
+got triaged into the [ROADMAP](docs/ROADMAP.md) and worked through in
+order. Twelve issues closed; Phases 1, 2, and 3 of the roadmap are done.
+
+Headline: the recipe editor is no longer a write-only screen. Targets
+update live, hopstand finally bitters something sensible, sub-boil
+hops have a real kinetic model behind them, and ingredient pickers
+work in French.
+
+### Added
+
+- **Live targets banner in the recipe editor.** Sticky strip at the
+  top of edit mode showing OG / FG / IBU / ABV / Color, recomputed on
+  every draft change. Shares the calc engine + unit formatters with
+  the read-only Recipe screen so the numbers don't drift across
+  views. Tester confirmation that direction A (banner) is enough was
+  what closed [#6](https://github.com/werb-dev/werb/issues/6) — the
+  bigger "merge edit + view into one screen" rework stays open in
+  case the banner doesn't go far enough.
+- **Whirlpool / hopstand hop additions.** `add_to_whirlpool` joins
+  the hop USE picker (a Werb extension of BeerJSON's enum). Picking
+  it surfaces a °C input next to the time field, defaulting to 80 °C.
+  The IBU calc routes sub-boil additions to a **Malowicki kinetic
+  path** — two-step Arrhenius with the published constants
+  (`k1 = 7.9·10¹¹ · exp(-11858/T_K)`,
+  `k2 = 4.1·10¹² · exp(-12994/T_K)`), scaled to finished-beer yield
+  by a single calibration constant anchored on Tinseth at 100 °C ×
+  60 min. Closes [#16](https://github.com/werb-dev/werb/issues/16);
+  the full SMPH model (oAAs + pH + clarity + krausen + age + …) is
+  tracked under [#27](https://github.com/werb-dev/werb/issues/27)
+  with a hard prerequisite: upstream the new fields to BeerJSON
+  first.
+- **Mash thickness ratio on equipment profiles.** New
+  `mash_tun.mash_thickness_l_per_kg` field with a 3 L/kg default —
+  the brewer's per-rig default when a recipe doesn't carry its own
+  mash schedule. Recipe-level mash-step amounts still win. Closes
+  [#15](https://github.com/werb-dev/werb/issues/15).
+- **French aliases on ingredient picker.** Each catalog entry gains
+  an optional `aliases: string[]` field the search treats as
+  primary — prefix-on-alias beats contains-on-name. Populated FR
+  aliases for the grain types tester feedback called out (blé,
+  avoine, orge, seigle, maïs, riz, miel) plus brewing salts
+  (gypse, chlorure de calcium, bicarbonate), spices (coriandre,
+  cannelle, vanille), and oak (chêne). Canonical names stay
+  verbatim per SPEC §i18n. Closes
+  [#14](https://github.com/werb-dev/werb/issues/14).
+- **Discoverability sweep.** Three "feature exists, brewer can't
+  find it" affordance tweaks (closes
+  [#13](https://github.com/werb-dev/werb/issues/13),
+  [#17](https://github.com/werb-dev/werb/issues/17),
+  [#18](https://github.com/werb-dev/werb/issues/18)):
+  - Completing a brew session now offers a **View in Journal →**
+    CTA where the quiet "session completed" label used to sit.
+  - Library onboarding gains a 4th step: *"Your recipes stay local.
+    Open Settings → Sync to push them to a private GitHub repo if
+    you want them across devices — your token never leaves the
+    browser."*
+  - Recipe screen's Export button now reads
+    **"Export · BeerJSON · BeerXML · HTML ▾"** on desktop widths,
+    with a `title=` tooltip on every width.
+- **Behavioral e2e smoke suite.** New
+  `apps/desktop/test/e2e/smoke.spec.ts` (19 cases, Playwright +
+  Chromium against `vite preview`) layered on top of the existing
+  screenshot capture step. Catches the bug class unit tests can't
+  reach — stale-closure persistence, cross-section state coupling,
+  message-text gating. The `Section` + `Tile` shared components
+  gained an opt-in `testId` prop; key screens were sprinkled with
+  `data-testid` attributes so smokes don't drown in selector noise.
+  CI uploads the Playwright HTML report as an artifact on failure.
+
+### Changed
+
+- **BIAB mash mode persists across navigation, and Quick start
+  layouts auto-set it.** The Equipment editor's `<select>` was
+  reading stale closure state — flipping to BIAB silently reverted
+  on the next render. `update()` now supports immediate-commit for
+  onChange handlers that don't get a follow-up `onBlur`. Picking
+  BIAB in the Quick start wizard also auto-flips `mash_mode = biab`
+  (symmetric for the three / two-vessel buttons). Closes
+  [#4](https://github.com/werb-dev/werb/issues/4) +
+  [#5](https://github.com/werb-dev/werb/issues/5). Equipment
+  editor's HLT and mash-tun sections also **hide when
+  `mash_mode === "biab"`** — closes
+  [#3](https://github.com/werb-dev/werb/issues/3).
+- **Editor ingredient pickers no longer cap at 10 results, no
+  longer surface contains-matches above name prefixes, no longer
+  get clipped on small screens.** Score function rewritten into
+  three explicit tiers (name prefix > name contains > secondary
+  fields like producer / origin); cap removed (the dropdown is
+  already scrollable); popup portals to `document.body` with fixed
+  positioning so ancestor `overflow-hidden` can't clip it. Closes
+  [#7](https://github.com/werb-dev/werb/issues/7).
+- **Yeast-pitch placeholder names the real missing input.** When
+  the section can't compute a pitch rate, it now reads "Can't
+  compute pitch rate yet — add fermentables to the recipe" (or
+  batch size, or both) instead of pointing at a phantom OG field.
+  Section also derives OG from the grain bill when the recipe
+  doesn't carry one, so the placeholder fires far less often.
+  Closes [#8](https://github.com/werb-dev/werb/issues/8).
+- **Water-chemistry city targets pull from the source-water
+  catalog.** Burton-source vs. Burton-target used to disagree by
+  hand-rolled ppm — picking the same name on both sides now reports
+  a true match for every bundled preset. Closes
+  [#11](https://github.com/werb-dev/werb/issues/11).
+
+### Fixed
+
+- **i18n leaks in the brew session + recipe enums.** Step titles,
+  mash step type, recipe type, and BeerJSON enum values
+  (fermentable / hop / culture / misc / form / type) were rendering
+  English under the French locale. Now translated end-to-end.
+
+### Internal
+
+- New `docs/ROADMAP.md` capturing the implementation sequence for
+  the v0.3-feedback issues — refreshed twice during the cycle as
+  the picture clarified.
+- `happy-dom` bumped to ^20. Earlier versions collided with Node
+  22+'s experimental built-in `localStorage` and broke the test
+  environment.
+- README quick-start now spells out the `rustup` + `wasm32-unknown
+  -unknown` + `wasm-pack` chain — Homebrew's `rust` formula omits
+  the WASM target and a fresh clone was failing on
+  `pnpm -F @werb/desktop build:wasm` without the missing setup.
+- Two BeerJSON extensions (Werb-internal): `timing.use` accepts
+  `"add_to_whirlpool"`, and `timing.temperature` carries the
+  hopstand setpoint. Round-trip behaviour is documented in
+  [packages/adapters/src/beerjson.ts](packages/adapters/src/beerjson.ts).
+  Issue [#27](https://github.com/werb-dev/werb/issues/27) tracks
+  upstreaming these (and the rest of the SMPH inputs) to the
+  BeerJSON spec.
+
 ## [0.3.0] — 2026-05-18
 
 Brewing-math + brew-day polish, plus a focused refactor pass that
