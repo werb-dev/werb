@@ -963,6 +963,7 @@ const STRINGS: Record<string, Entry> = {
   "editor.style.clear_title": { en: "Clear style", fr: "Effacer le style" },
   "editor.style.clear": { en: "Clear", fr: "Effacer" },
   "editor.hop.use.boil": { en: "Boil", fr: "Ébullition" },
+  "editor.hop.use.whirlpool": { en: "Whirlpool / Hopstand", fr: "Whirlpool / Hopstand" },
   "editor.hop.use.dry_hop": { en: "Dry hop", fr: "Dry-hop" },
   "editor.hop.use.mash": { en: "Mash", fr: "Empâtage" },
   "editor.hop.use.package": { en: "Package", fr: "Conditionnement" },

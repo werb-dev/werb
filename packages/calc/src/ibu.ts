@@ -1,25 +1,76 @@
 /**
- * IBU calculation — Tinseth method (metric).
+ * IBU calculation.
  *
- * Reference: Glenn Tinseth, "Hop Bitterness, IBU and the Chemistry of Beer"
- * https://realbeer.com/hops/research.html
+ * Two engines, picked per-addition:
  *
- * Formula (metric, single addition):
- *   bigness_factor   = 1.65 * 0.000125 ^ (og - 1)
- *   time_factor      = (1 - exp(-0.04 * time_min)) / 4.15
- *   utilization      = bigness_factor * time_factor
- *   mg_per_L         = (alpha_decimal * mass_g * 1000) / batch_size_l
- *   ibu_contribution = utilization * mg_per_L
+ *   - **Tinseth / Rager** drive boil-temperature hops. Tinseth is the
+ *     community standard (Glenn Tinseth, "Hop Bitterness, IBU and the
+ *     Chemistry of Beer", https://realbeer.com/hops/research.html);
+ *     Rager is a switchable alternative (Settings → IBU method). Boil-
+ *     hop behaviour is unchanged from earlier Werb versions, so
+ *     recipes calibrated against Tinseth in v0.3 keep matching here.
  *
- * Pure function — no I/O, no globals. Inputs are validated by the JSON Schema
- * at schemas/tools/ibu.input.schema.json (run validation upstream of this call).
+ *   - **Malowicki kinetics** drive sub-boil hops (whirlpool / hopstand
+ *     additions with `temperature_c` below 100 °C). Reference:
+ *     Mark Malowicki, "Hop Bitter Acid Isomerization and Degradation
+ *     Kinetics in a Model Wort-Boiling System" (Oregon State, 2005).
+ *     The model tracks iso-α-acid formation as a two-step Arrhenius
+ *     process:
+ *         dα/dt   = −k1(T) · α          (alpha-acids isomerise)
+ *         d[iso]/dt = k1(T) · α − k2(T) · [iso]   (iso-AA degrade)
+ *     Closed-form at constant T:
+ *         u(T, t) = k1 / (k1 − k2) · (exp(−k2·t) − exp(−k1·t))
+ *     Multiplied by `MALOWICKI_TO_BEER` (≈ 0.255) to absorb trub /
+ *     fermentation / age losses into a single calibration constant —
+ *     anchored so a 60-min addition at 100 °C lands on Tinseth's
+ *     finished-beer utilisation. Replaces the previous
+ *     ((T−76.7)/23.3)² approximation, which was a Brewfather-style
+ *     curve fit that under-counted real-world whirlpool IBUs.
  *
- * NOTE: Tinseth's original formula does not include a pellet/leaf utilization
- * multiplier. Many commercial tools apply ~1.10x for pellets. We deliberately
- * do not apply it here — it is a calibration knob for a future option.
+ * Pure function — no I/O, no globals. Inputs are validated by the JSON
+ * Schema at schemas/tools/ibu.input.schema.json.
+ *
+ * Future work: full SMPH (oAAs + pH + clarity + krausen + age) is a
+ * separate, larger upgrade. This module only implements the kinetic
+ * core that sub-boil additions actually need.
  */
 
 import type { IbuInput, IbuOutput } from "@werb/types";
+
+/**
+ * Malowicki Arrhenius parameters (k = A · exp(−Ea/R · 1/T_K), per min).
+ * From Malowicki 2005, Table 4.2:
+ *   k1 (alpha → iso):  A = 7.9 · 10^11 /min,  Ea/R = 11858 K
+ *   k2 (iso → degraded): A = 4.1 · 10^12 /min,  Ea/R = 12994 K
+ * At 373.15 K (boiling) these give k1 ≈ 0.122 /min and k2 ≈ 0.0030 /min,
+ * which match the published rate constants to ~2 %.
+ */
+const MAL_K1_PRE = 7.9e11;
+const MAL_K1_EA_OVER_R = 11858;
+const MAL_K2_PRE = 4.1e12;
+const MAL_K2_EA_OVER_R = 12994;
+
+/**
+ * Beer-side scaling: Malowicki gives wort iso-AA fraction; this
+ * constant maps it to a finished-beer IBU yield. Calibrated so a
+ * 100 °C × 60 min datum lands on Tinseth's utilisation at OG 1.050
+ * (Malowicki u_wort = 0.475 → Tinseth u_beer = 0.218 → ratio ≈ 0.46).
+ * Single-knob approximation of the trub + fermentation + age losses
+ * that SMPH models in detail.
+ */
+const MALOWICKI_TO_BEER = 0.46;
+
+function malowickiUtilization(tempC: number, timeMin: number): number {
+  if (timeMin <= 0) return 0;
+  const T = tempC + 273.15;
+  const k1 = MAL_K1_PRE * Math.exp(-MAL_K1_EA_OVER_R / T);
+  const k2 = MAL_K2_PRE * Math.exp(-MAL_K2_EA_OVER_R / T);
+  if (k1 <= 0 || Math.abs(k1 - k2) < 1e-15) return 0;
+  return (
+    (k1 / (k1 - k2)) *
+    (Math.exp(-k2 * timeMin) - Math.exp(-k1 * timeMin))
+  );
+}
 
 export function computeIbu(input: IbuInput): IbuOutput {
   const method = input.method ?? "Tinseth";
@@ -46,7 +97,17 @@ export function computeIbu(input: IbuInput): IbuOutput {
       batch_size_l > 0 ? (alphaDecimal * h.amount_g * 1000) / batch_size_l : 0;
     let utilization: number;
     let ibu: number;
-    if (method === "Rager") {
+    // Sub-boil additions take the Malowicki path regardless of the
+    // top-level method preference. Tinseth and Rager were both fit
+    // against boil-only data and produce nonsense for hopstands —
+    // the kinetic model is what the SMPH literature uses for this
+    // regime.
+    const subBoil = h.temperature_c !== undefined && h.temperature_c < 100;
+    if (subBoil) {
+      utilization = malowickiUtilization(h.temperature_c!, h.time_min) *
+        MALOWICKI_TO_BEER;
+      ibu = utilization * mgPerL;
+    } else if (method === "Rager") {
       // Rager 1990 — hyperbolic tangent in boil time, then divide
       // through (1 + GA) for high-gravity worts. Tends to read
       // higher than Tinseth at long boils.

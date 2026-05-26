@@ -54,13 +54,19 @@
         "time_min": {
           "type": "number",
           "minimum": 0,
-          "description": "Boil contact time in minutes. 0 for flameout/whirlpool/dry hop additions (which contribute 0 IBU under standard Tinseth)."
+          "description": "Contact time at the addition's temperature, in minutes. For boil hops this is the standard boil time; for whirlpool / hopstand additions it's the hold time at `temperature_c` before chilling."
         },
         "form": {
           "type": "string",
           "enum": ["pellet", "leaf", "leaf (wet)", "plug", "extract", "powder"],
           "default": "pellet",
           "description": "Hop form. Used by some methods to apply a utilization multiplier (e.g. pellet ~1.10x leaf)."
+        },
+        "temperature_c": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 110,
+          "description": "Optional contact temperature in °C. Omit (or set ≥ 100) for boiling-temp additions. Whirlpool / hopstand additions held below 100 °C get their utilization derated by the calc — at ~77 °C the contribution effectively drops to zero."
         }
       }
     }
