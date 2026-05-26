@@ -14,5 +14,10 @@ export default defineConfig({
     // start from a known empty state in each `it`.
     restoreMocks: true,
     setupFiles: ["./test/setup.ts"],
+    // `test/e2e/` holds the Playwright behavioural smoke suite. Its
+    // .spec.ts files match vitest's default pattern but import
+    // `@playwright/test`, which only works under the playwright runner.
+    // Excluding the directory keeps vitest off them.
+    exclude: ["**/node_modules/**", "**/dist/**", "test/e2e/**"],
   },
 });
