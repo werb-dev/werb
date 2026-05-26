@@ -17,7 +17,7 @@ export default defineConfig({
   workers: 1,
   reporter: process.env.CI ? "line" : "list",
   use: {
-    baseURL: "http://localhost:4173/",
+    baseURL: "http://localhost:4174/",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video: "off",
@@ -28,8 +28,12 @@ export default defineConfig({
     // `e2e` package script chains `pnpm build` before invoking
     // `playwright test`. Saves ~20 s on each run vs. building inside
     // the webServer hook.
-    command: "pnpm preview --port 4173 --strictPort",
-    url: "http://localhost:4173/",
+    //
+    // Port 4174 deliberately differs from vite preview's default 4173 —
+    // the existing `pnpm screenshots` step uses 4173 and may leave the
+    // port bound briefly after it exits in CI, racing with our launch.
+    command: "pnpm preview --port 4174 --strictPort",
+    url: "http://localhost:4174/",
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,
   },
