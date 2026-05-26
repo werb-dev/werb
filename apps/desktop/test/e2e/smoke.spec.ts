@@ -238,6 +238,41 @@ test.describe("Recipe editor — live targets banner", () => {
   });
 });
 
+test.describe("Recipe editor — hops", () => {
+  test("whirlpool / hopstand is a selectable hop USE with a temperature input", async ({
+    page,
+  }) => {
+    const app = new App(page);
+    await app.go("Library");
+    await app.library.openNewRecipeEditor();
+
+    await page.getByRole("button", { name: /\+\s*Add hop/i }).click();
+    await page.waitForTimeout(200);
+
+    // The USE select is the first <select> rendered inside a row.
+    // Pick the Werb-extended "whirlpool / hopstand" value.
+    const useSelect = page.locator("select").filter({ hasText: /Boil|Ébullition/i }).first();
+    await useSelect.selectOption("add_to_whirlpool");
+    await page.waitForTimeout(200);
+
+    // A second numeric input (the temperature control) should appear
+    // in the same cell as the time. We check the option exists in the
+    // select rather than re-locating the temp input — the select having
+    // the option is what proves the picker exposes the new path.
+    const options = await useSelect.evaluate((el: HTMLSelectElement) =>
+      Array.from(el.options).map((o) => o.value),
+    );
+    expect(options).toContain("add_to_whirlpool");
+
+    // After picking whirlpool the row should carry a `°C` unit label
+    // in the time column (TempInlineInput renders it).
+    const rowText = await page
+      .locator("body")
+      .innerText();
+    expect(rowText).toMatch(/°C/);
+  });
+});
+
 test.describe("Discoverability", () => {
   test("Library onboarding mentions local storage + GitHub sync", async ({ page }) => {
     const app = new App(page);

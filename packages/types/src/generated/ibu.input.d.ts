@@ -39,11 +39,15 @@ export interface HopAddition {
    */
   alpha_acid_pct: number;
   /**
-   * Boil contact time in minutes. 0 for flameout/whirlpool/dry hop additions (which contribute 0 IBU under standard Tinseth).
+   * Contact time at the addition's temperature, in minutes. For boil hops this is the standard boil time; for whirlpool / hopstand additions it's the hold time at `temperature_c` before chilling.
    */
   time_min: number;
   /**
    * Hop form. Used by some methods to apply a utilization multiplier (e.g. pellet ~1.10x leaf).
    */
   form?: "pellet" | "leaf" | "leaf (wet)" | "plug" | "extract" | "powder";
+  /**
+   * Optional contact temperature in °C. Omit (or set ≥ 100) for boiling-temp additions. Whirlpool / hopstand additions held below 100 °C get their utilization derated by the calc — at ~77 °C the contribution effectively drops to zero.
+   */
+  temperature_c?: number;
 }

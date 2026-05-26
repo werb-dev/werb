@@ -89,10 +89,31 @@ export interface HopAddition {
 }
 
 export interface TimingType {
-  use?: "add_to_mash" | "add_to_boil" | "add_to_fermentation" | "add_to_package";
+  /**
+   * Werb extends BeerJSON's UseType enum with `add_to_whirlpool` —
+   * hops added during a sub-boil hopstand. BeerJSON 2.x has no native
+   * representation for whirlpool timing (the spec defers it to a free-
+   * text BoilStep), but the round-trip cost of carrying a 5th enum
+   * value is lower than threading boil-step references through every
+   * tool. Other BeerJSON consumers will see an unknown `use` value
+   * and either ignore the hop or fall back to their default — both
+   * acceptable.
+   */
+  use?:
+    | "add_to_mash"
+    | "add_to_boil"
+    | "add_to_fermentation"
+    | "add_to_package"
+    | "add_to_whirlpool";
   time?: TimeType;
   duration?: TimeType;
   step?: number;
+  /**
+   * Contact temperature for whirlpool / hopstand additions. Ignored
+   * outside the whirlpool flow — boil hops are assumed to be at
+   * 100 °C and `add_to_fermentation` hops are at ambient.
+   */
+  temperature?: TempType;
 }
 
 export type CultureType =

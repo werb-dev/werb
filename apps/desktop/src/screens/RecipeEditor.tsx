@@ -433,13 +433,22 @@ function FermentablesSection({
 // ─── Hops ─────────────────────────────────────────────────────────────────
 
 const HOP_FORMS = ["pellet", "leaf", "leaf (wet)", "plug", "extract", "powder"] as const;
-const HOP_USES = ["add_to_boil", "add_to_fermentation", "add_to_mash", "add_to_package"] as const;
+const HOP_USES = [
+  "add_to_boil",
+  "add_to_whirlpool",
+  "add_to_fermentation",
+  "add_to_mash",
+  "add_to_package",
+] as const;
 const HOP_USE_KEYS: Record<(typeof HOP_USES)[number], string> = {
   add_to_boil: "editor.hop.use.boil",
+  add_to_whirlpool: "editor.hop.use.whirlpool",
   add_to_fermentation: "editor.hop.use.dry_hop",
   add_to_mash: "editor.hop.use.mash",
   add_to_package: "editor.hop.use.package",
 };
+/** Default hopstand temperature when the brewer doesn't override it. */
+const DEFAULT_WHIRLPOOL_TEMP_C = 80;
 
 function HopsSection({
   draft,
@@ -517,21 +526,51 @@ function HopsSection({
                 // package (days) needs the time unit to follow — a "60"
                 // typed for boil isn't "60 days" in the fermenter.
                 const time = retimeForUse(next, h.timing.time);
-                updateRow(i, { ...h, timing: { ...h.timing, use: next, time } });
+                const timing: typeof h.timing = { ...h.timing, use: next, time };
+                // Whirlpool / hopstand additions need a hold temperature
+                // to drive the kinetic IBU calc. Seed a sensible default
+                // when none is set so the brewer can pick the row and
+                // see numbers immediately, even before tweaking.
+                if (next === "add_to_whirlpool" && !timing.temperature) {
+                  timing.temperature = {
+                    value: DEFAULT_WHIRLPOOL_TEMP_C,
+                    unit: "C",
+                  };
+                }
+                updateRow(i, { ...h, timing });
               }}
               options={[...HOP_USES]}
               labels={Object.fromEntries(
                 HOP_USES.map((u) => [u, t(HOP_USE_KEYS[u])]),
               )}
             />
-            <HopTimeInlineInput
-              className="col-span-1"
-              use={h.timing.use ?? "add_to_boil"}
-              time={h.timing.time}
-              onChange={(time) =>
-                updateRow(i, { ...h, timing: { ...h.timing, time } })
-              }
-            />
+            <div className="col-span-1 flex flex-col gap-1">
+              <HopTimeInlineInput
+                use={h.timing.use ?? "add_to_boil"}
+                time={h.timing.time}
+                onChange={(time) =>
+                  updateRow(i, { ...h, timing: { ...h.timing, time } })
+                }
+              />
+              {h.timing.use === "add_to_whirlpool" && (
+                <TempInlineInput
+                  valueC={
+                    h.timing.temperature
+                      ? toCelsius(h.timing.temperature)
+                      : DEFAULT_WHIRLPOOL_TEMP_C
+                  }
+                  onChangeC={(c) =>
+                    updateRow(i, {
+                      ...h,
+                      timing: {
+                        ...h.timing,
+                        temperature: { value: c, unit: "C" },
+                      },
+                    })
+                  }
+                />
+              )}
+            </div>
             <InlineNumber
               className="col-span-1"
               value={h.alpha_acid?.value ?? 0}
