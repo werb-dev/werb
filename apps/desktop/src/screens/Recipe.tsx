@@ -565,10 +565,23 @@ function ExportMenu({ recipe, prefs }: { recipe: BeerJsonRecipe; prefs: UnitPref
   return (
     <div className="relative">
       <button
+        data-testid="export-menu-toggle"
         onClick={() => setOpen((v) => !v)}
-        className="px-4 py-3 rounded-xl bg-surface-raised border border-border text-body-sm font-medium hover:border-accent hover:text-accent transition-colors flex items-center gap-2"
+        title={t("recipe.export.button_hint")}
+        className="px-4 py-3 rounded-xl bg-surface-raised border border-border hover:border-accent hover:text-accent transition-colors flex items-center gap-2"
       >
-        {t("recipe.export.button")}
+        <span className="text-body-sm font-medium">{t("recipe.export.button")}</span>
+        {/*
+          A barely-there format hint solves the discoverability bug
+          flagged in #18 — the "Export" button was generic enough that
+          a brewer technical enough to want BeerXML missed it. Naming
+          the formats inline makes the menu's contents obvious before
+          it's opened. Hidden on the narrowest widths so the header
+          still fits on a phone.
+        */}
+        <span className="hidden sm:inline text-caption text-text-muted font-mono">
+          {t("recipe.export.button_formats")}
+        </span>
         <span aria-hidden className="text-caption">▾</span>
       </button>
       {open && (

@@ -48,6 +48,13 @@ interface BrewScreenProps {
    * needs to match.
    */
   backLabel: string;
+  /**
+   * Navigate to the Journal. Used by the post-completion CTA so the
+   * brewer can immediately see their finished session in the list of
+   * past brews — the Journal screen was hard to find from anywhere
+   * else in the app (#13).
+   */
+  onViewJournal: () => void;
 }
 
 export interface BoilHop {
@@ -112,7 +119,7 @@ function checkKettleFit(water: WaterOutput, profile: ProfileWithId | undefined):
   return { kind: "ok" };
 }
 
-export function BrewScreen({ recipeId, recipe, sessionId, activeProfile, onBack, backLabel }: BrewScreenProps) {
+export function BrewScreen({ recipeId, recipe, sessionId, activeProfile, onBack, backLabel, onViewJournal }: BrewScreenProps) {
   const brew = useBrewSession(recipeId, recipe, sessionId);
   const tick = useTick(1000);
   const wakeLockHeld = useScreenWakeLock(brew.session?.status === "in_progress");
@@ -235,9 +242,18 @@ export function BrewScreen({ recipeId, recipe, sessionId, activeProfile, onBack,
               {t("brew.complete_session")}
             </button>
           ) : (
-            <span className="text-body-sm text-text-muted">
-              {t("brew.session_completed")}
-            </span>
+            // Completed sessions used to fall off into a quiet
+            // "session completed" label with no obvious next step.
+            // Surface the Journal directly so the brewer doesn't have
+            // to go hunting for their just-finished brew (#13).
+            <button
+              data-testid="view-in-journal"
+              onClick={onViewJournal}
+              className="px-5 py-3 rounded-lg bg-accent text-bg text-body-sm font-medium hover:opacity-90 transition-opacity min-h-[44px] inline-flex items-center gap-2"
+            >
+              <span>{t("brew.view_in_journal")}</span>
+              <span aria-hidden>→</span>
+            </button>
           )}
           <button
             onClick={() => {

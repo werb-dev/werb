@@ -421,6 +421,11 @@ function EmptyState() {
           title={t("library.onboarding.step3.title")}
           body={t("library.onboarding.step3.body")}
         />
+        <OnboardingStep
+          n={4}
+          title={t("library.onboarding.step4.title")}
+          body={t("library.onboarding.step4.body")}
+        />
       </ol>
     </div>
   );
