@@ -26,6 +26,7 @@ export function Tile({
   highlight,
   warn,
   styleHint,
+  testId,
 }: {
   label: string;
   value: string;
@@ -33,6 +34,7 @@ export function Tile({
   highlight?: boolean | undefined;
   warn?: boolean | undefined;
   styleHint?: RangeHint | null | undefined;
+  testId?: string | undefined;
 }) {
   const t = useT();
   const valueColor = warn
@@ -47,7 +49,10 @@ export function Tile({
       : "text-danger"
     : "text-text";
   return (
-    <div className="bg-surface px-3 py-3 sm:px-5 sm:py-4">
+    <div
+      className="bg-surface px-3 py-3 sm:px-5 sm:py-4"
+      {...(testId && { "data-testid": testId })}
+    >
       <p className="text-[10px] sm:text-caption uppercase tracking-widest text-text-muted">{label}</p>
       <p className={`font-mono text-h3 sm:text-h2 mt-1 ${valueColor}`}>{value}</p>
       {sub && (

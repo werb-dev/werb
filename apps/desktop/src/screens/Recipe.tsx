@@ -293,13 +293,18 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
         {/* ─── Computed water strip ────────────────────────────────────── */}
         <Section
           title={t("recipe.section.water")}
+          testId="water-volumes"
           {...(activeProfile?.mash_mode === "biab" && {
             subtitle: t("recipe.water.biab_hint"),
           })}
         >
           <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-border rounded-xl overflow-hidden">
             <Tile label="Mash" value={formatLiters(computed.water.mash_water_l, prefs).display} />
-            <Tile label="Sparge" value={formatLiters(computed.water.sparge_water_l, prefs).display} />
+            <Tile
+              label="Sparge"
+              value={formatLiters(computed.water.sparge_water_l, prefs).display}
+              testId="water-volume-sparge"
+            />
             <Tile label="Pre-boil" value={formatLiters(computed.water.pre_boil_volume_l, prefs).display} />
             <Tile label="Total water" value={formatLiters(computed.water.total_water_l, prefs).display} highlight />
           </div>

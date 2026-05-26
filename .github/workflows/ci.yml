@@ -85,3 +85,20 @@ jobs:
 
       - name: UI smoke (screenshot capture)
         run: pnpm screenshots
+
+      # Behavioral smoke: assert on interaction outcomes (mash-mode
+      # persists, water source == target reports a match, yeast pitch
+      # message gates on missing input). Catches the bug class that
+      # unit tests can't — stale closures, cross-section state coupling,
+      # message-text regressions. Runs against the same `dist/` the
+      # screenshot step already built, so the marginal cost is ~30 s.
+      - name: UI smoke (behavioral)
+        run: pnpm --filter @werb/desktop e2e:only
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: playwright-report
+          path: apps/desktop/playwright-report/
+          retention-days: 7

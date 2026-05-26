@@ -147,6 +147,7 @@ export function WaterChemistrySection({ recipe }: { recipe: BeerJsonRecipe }) {
     <Section
       title={tt("recipe.water.section_title")}
       subtitle={tt("recipe.water.subtitle")}
+      testId="water-chemistry"
     >
       <div className="rounded-xl bg-surface border border-border p-4 sm:p-6">
         <SourceWaterRow
@@ -175,6 +176,7 @@ export function WaterChemistrySection({ recipe }: { recipe: BeerJsonRecipe }) {
               {tt("recipe.water.target_profile")}
             </span>
             <select
+              data-testid="water-target-select"
               value={form.target_key}
               onChange={(e) => setForm((p) => ({ ...p, target_key: e.target.value }))}
               className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-body text-text focus:outline-none focus:border-accent"
@@ -276,6 +278,7 @@ function SourceWaterRow({
           {t("recipe.water.source_profile")}
         </span>
         <select
+          data-testid="water-source-select"
           value={currentProfileKey}
           onChange={(e) => {
             const picked = SOURCE_WATER_PROFILES.find((p) => p.key === e.target.value);
@@ -338,16 +341,19 @@ function ResultStrip({
   target: IonProfile | null;
 }) {
   const t = useT();
-  const ions: Array<{ label: string; value: number; targetVal: number | undefined }> = [
-    { label: "Ca²⁺", value: result.ca_ppm, targetVal: target?.ca_ppm },
-    { label: "Mg²⁺", value: result.mg_ppm, targetVal: target?.mg_ppm },
-    { label: "Na⁺", value: result.na_ppm, targetVal: target?.na_ppm },
-    { label: "Cl⁻", value: result.cl_ppm, targetVal: target?.cl_ppm },
-    { label: "SO₄²⁻", value: result.so4_ppm, targetVal: target?.so4_ppm },
-    { label: "HCO₃⁻", value: result.hco3_ppm, targetVal: target?.hco3_ppm },
+  const ions: Array<{ label: string; key: string; value: number; targetVal: number | undefined }> = [
+    { label: "Ca²⁺", key: "ca", value: result.ca_ppm, targetVal: target?.ca_ppm },
+    { label: "Mg²⁺", key: "mg", value: result.mg_ppm, targetVal: target?.mg_ppm },
+    { label: "Na⁺", key: "na", value: result.na_ppm, targetVal: target?.na_ppm },
+    { label: "Cl⁻", key: "cl", value: result.cl_ppm, targetVal: target?.cl_ppm },
+    { label: "SO₄²⁻", key: "so4", value: result.so4_ppm, targetVal: target?.so4_ppm },
+    { label: "HCO₃⁻", key: "hco3", value: result.hco3_ppm, targetVal: target?.hco3_ppm },
   ];
   return (
-    <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-px bg-border rounded-xl overflow-hidden">
+    <div
+      data-testid="water-result-strip"
+      className="mt-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-px bg-border rounded-xl overflow-hidden"
+    >
       {ions.map((ion) => {
         const delta = ion.targetVal !== undefined ? ion.value - ion.targetVal : null;
         // Tolerance is generous — water chemistry isn't a precision
@@ -355,7 +361,12 @@ function ResultStrip({
         const tolerance = ion.targetVal !== undefined ? Math.max(15, ion.targetVal * 0.2) : 0;
         const offTarget = delta !== null && Math.abs(delta) > tolerance;
         return (
-          <div key={ion.label} className="bg-surface px-3 py-3 sm:px-4">
+          <div
+            key={ion.label}
+            data-testid={`water-ion-${ion.key}`}
+            data-off-target={offTarget ? "true" : "false"}
+            className="bg-surface px-3 py-3 sm:px-4"
+          >
             <p className="text-[10px] sm:text-caption uppercase tracking-widest text-text-muted">{ion.label}</p>
             <p className={`font-mono text-body sm:text-h3 mt-1 ${offTarget ? "text-warning" : "text-text"}`}>
               {ion.value.toFixed(0)}

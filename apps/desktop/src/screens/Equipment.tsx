@@ -383,6 +383,7 @@ function ProfileForm({
           {t("equipment.field.mash_mode")}
         </span>
         <select
+          data-testid="mash-mode-select"
           value={draft.mash_mode ?? "classic"}
           onChange={(e) =>
             update("mash_mode", e.target.value as "classic" | "biab", true)
@@ -470,7 +471,10 @@ function SuggestPanel({
   );
 
   return (
-    <details className="rounded-xl bg-surface-raised border border-border border-dashed group">
+    <details
+      data-testid="quick-start"
+      className="rounded-xl bg-surface-raised border border-border border-dashed group"
+    >
       <summary className="cursor-pointer px-4 py-3 sm:px-5 sm:py-4 list-none flex items-center justify-between gap-4 select-none">
         <div className="min-w-0">
           <p className="text-caption uppercase tracking-widest text-text-muted">
@@ -512,6 +516,7 @@ function SuggestPanel({
           <DerivedPreview preview={preview} />
           <button
             type="button"
+            data-testid="quick-start-apply"
             onClick={() => onApply(preview, setupType)}
             disabled={!Number.isFinite(batchSize) || batchSize <= 0}
             className="px-5 py-2.5 rounded-lg bg-accent text-bg text-body-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity min-h-[40px]"
@@ -572,6 +577,7 @@ function SetupTypePicker({
             <button
               key={opt.value}
               type="button"
+              data-testid={`setup-type-${opt.value}`}
               onClick={() => onChange(opt.value)}
               className={`px-3 py-2 rounded-lg text-body-sm font-medium transition-colors ${
                 isActive

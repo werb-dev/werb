@@ -12,14 +12,19 @@ import type { ReactNode } from "react";
 export function Section({
   title,
   subtitle,
+  testId,
   children,
 }: {
   title: string;
   subtitle?: string | undefined;
+  testId?: string | undefined;
   children: ReactNode;
 }) {
   return (
-    <section className="mb-8 sm:mb-10 lg:mb-12">
+    <section
+      className="mb-8 sm:mb-10 lg:mb-12"
+      {...(testId && { "data-testid": testId })}
+    >
       <h2 className="text-h3 font-semibold mb-1">{title}</h2>
       {subtitle && <p className="text-body-sm text-text-muted mb-4">{subtitle}</p>}
       {!subtitle && <div className="mb-4" />}

@@ -4,6 +4,10 @@ build/
 .turbo/
 coverage/
 
+# Playwright (behavioral smoke suite — apps/desktop/test/e2e/)
+playwright-report/
+test-results/
+
 # Cargo workspace
 /target/
 
