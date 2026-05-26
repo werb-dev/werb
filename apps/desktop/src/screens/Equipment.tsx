@@ -159,9 +159,21 @@ function ProfileForm({
   // Local working copy. Saved on blur.
   const [draft, setDraft] = useState(profile);
 
-  const update = <K extends keyof typeof draft>(key: K, value: (typeof draft)[K]) => {
+  const update = <K extends keyof typeof draft>(
+    key: K,
+    value: (typeof draft)[K],
+    immediate = false,
+  ) => {
     const next = { ...draft, [key]: value };
     setDraft(next);
+    // `commit()` reads `draft` from the current closure, so calling it right
+    // after `setDraft` would persist the *previous* value. Inputs that don't
+    // get a follow-up onBlur (e.g. <select>) must opt in to immediate commit
+    // so the new value reaches onSave.
+    if (immediate) {
+      const { id: _id, ...patch } = next;
+      onSave(patch);
+    }
   };
 
   const updateNested = <
@@ -181,7 +193,10 @@ function ProfileForm({
     onSave(patch);
   };
 
-  const applySuggestion = (out: EquipmentSuggestOutput) => {
+  const applySuggestion = (
+    out: EquipmentSuggestOutput,
+    setupType: EquipmentSuggestInput["setup_type"],
+  ) => {
     // Replace every sizing field but preserve identity + free-form text:
     // name, description, and notes are user-authored and shouldn't be
     // overwritten by the wizard.
@@ -194,6 +209,7 @@ function ProfileForm({
       kettle: out.kettle,
       fermenter: out.fermenter,
       transfer_loss_l: out.transfer_loss_l,
+      mash_mode: setupType === "biab" ? "biab" : "classic",
     };
     setDraft(next);
     const { id: _id, ...patch } = next;
@@ -368,10 +384,9 @@ function ProfileForm({
         </span>
         <select
           value={draft.mash_mode ?? "classic"}
-          onChange={(e) => {
-            update("mash_mode", e.target.value as "classic" | "biab");
-            commit();
-          }}
+          onChange={(e) =>
+            update("mash_mode", e.target.value as "classic" | "biab", true)
+          }
           className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-body text-text focus:outline-none focus:border-accent"
         >
           <option value="classic">{t("equipment.opt.mash_classic")}</option>
@@ -433,7 +448,10 @@ function SuggestPanel({
   onApply,
 }: {
   initialBatchSize: number;
-  onApply: (out: EquipmentSuggestOutput) => void;
+  onApply: (
+    out: EquipmentSuggestOutput,
+    setupType: EquipmentSuggestInput["setup_type"],
+  ) => void;
 }) {
   const t = useT();
   const [setupType, setSetupType] =
@@ -494,7 +512,7 @@ function SuggestPanel({
           <DerivedPreview preview={preview} />
           <button
             type="button"
-            onClick={() => onApply(preview)}
+            onClick={() => onApply(preview, setupType)}
             disabled={!Number.isFinite(batchSize) || batchSize <= 0}
             className="px-5 py-2.5 rounded-lg bg-accent text-bg text-body-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity min-h-[40px]"
           >
