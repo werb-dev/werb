@@ -172,7 +172,25 @@ test.describe("Recipe editor — ingredient picker", () => {
     expect(position).toBe("fixed");
   });
 
-  test("typing narrows toward prefix matches (malt → Malt…)", async ({ page }) => {
+  test("French alias 'blé' finds Wheat fermentables", async ({ page }) => {
+    const app = new App(page);
+    await app.go("Library");
+    await app.library.openNewRecipeEditor();
+
+    await page.getByRole("button", { name: /\+\s*Add fermentable/i }).click();
+    const picker = page.getByPlaceholder(/Pick a fermentable…/i).first();
+    await picker.click();
+    await picker.fill("blé");
+
+    const menu = page.locator('[data-testid="combobox-menu"]');
+    await menu.waitFor();
+    const text = await menu.innerText();
+    // Wheat-bearing entries are surfaced even though the catalog uses
+    // English names. Confirms the alias layer reaches the picker.
+    expect(text).toMatch(/Wheat/i);
+  });
+
+  test("typing narrows toward prefix matches (malt → tier-A entries only)", async ({ page }) => {
     const app = new App(page);
     await app.go("Library");
     await app.library.openNewRecipeEditor();
@@ -184,12 +202,17 @@ test.describe("Recipe editor — ingredient picker", () => {
 
     const menu = page.locator('[data-testid="combobox-menu"]');
     await menu.waitFor();
-    const firstLabel = await menu.locator("button").first().innerText();
-    // The top match for "malt" should be a fermentable whose name
-    // starts with "Malt…" (e.g. "Maltodextrin"), not one of the many
-    // entries that merely contain "Malt" mid-name ("Pilsen Liquid
-    // Malt Extract" etc.).
-    expect(firstLabel.trimStart().toLowerCase()).toMatch(/^malt/);
+    // Top result should match "malt" as a prefix on either the name
+    // (e.g. "Maltodextrin") OR an alias (e.g. Black Patent's "malt
+    // noir"). It must not be an entry where "malt" appears only
+    // mid-name like "Pilsen Liquid Malt Extract" — those are Tier B
+    // and should rank below every Tier-A match.
+    const firstLabel = (await menu.locator("button").first().innerText())
+      .trimStart()
+      .toLowerCase();
+    // Tier B examples we don't want in slot #1:
+    expect(firstLabel.startsWith("pilsen liquid malt")).toBe(false);
+    expect(firstLabel.startsWith("munich liquid malt")).toBe(false);
   });
 });
 

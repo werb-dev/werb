@@ -94,7 +94,14 @@ describe("catalog search — fermentables", () => {
     // past row 10; the dropdown is scrollable, so return the full set.
     const out = searchFermentables("malt");
     expect(out.length).toBeGreaterThan(10);
-    expect(out.every((f) => /malt/i.test(f.name) || /malt/i.test(f.producer ?? ""))).toBe(true);
+    expect(
+      out.every(
+        (f) =>
+          /malt/i.test(f.name) ||
+          /malt/i.test(f.producer ?? "") ||
+          (f.aliases ?? []).some((a) => /malt/i.test(a)),
+      ),
+    ).toBe(true);
   });
 
   it("ranks prefix matches above interior matches", () => {
@@ -106,6 +113,29 @@ describe("catalog search — fermentables", () => {
     if (firstStarts !== -1 && firstContains !== -1) {
       expect(firstStarts).toBeLessThan(firstContains);
     }
+  });
+
+  it("matches French aliases — 'blé' finds Wheat entries", () => {
+    const out = searchFermentables("blé");
+    expect(out.length).toBeGreaterThan(0);
+    expect(out.every((f) => (f.aliases ?? []).some((a) => /^blé/i.test(a))))
+      .toBe(true);
+    // The set should include both the malted and flaked wheat entries.
+    expect(out.some((f) => /Wheat Malt/i.test(f.name))).toBe(true);
+    expect(out.some((f) => /Flaked Wheat/i.test(f.name))).toBe(true);
+  });
+
+  it("matches French aliases — 'avoine' finds Oats", () => {
+    const out = searchFermentables("avoine");
+    expect(out.some((f) => /Oats/i.test(f.name))).toBe(true);
+  });
+
+  it("prefix-on-alias beats contains-on-name", () => {
+    // "miel" is the FR alias for Honey. The name "Honey Malt" doesn't
+    // contain "miel" — the only path to a match is via alias. Confirms
+    // aliases are first-class search keys, not just a noisy fallback.
+    const out = searchFermentables("miel");
+    expect(out.some((f) => /Honey/i.test(f.name))).toBe(true);
   });
 });
 
