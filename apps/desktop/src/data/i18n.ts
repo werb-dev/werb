@@ -835,6 +835,7 @@ const STRINGS: Record<string, Entry> = {
   "equipment.field.capacity": { en: "Capacity", fr: "Capacité" },
   "equipment.field.dead_space": { en: "Dead space", fr: "Volume mort" },
   "equipment.field.grain_absorption": { en: "Grain absorption", fr: "Absorption du grain" },
+  "equipment.field.mash_thickness": { en: "Mash thickness", fr: "Épaisseur d'empâtage" },
   "equipment.field.boil_off": { en: "Boil-off rate", fr: "Taux d'évaporation" },
   "equipment.field.post_boil_shrink": { en: "Post-boil shrink", fr: "Retrait après ébullition" },
   "equipment.field.trub_loss": { en: "Trub loss", fr: "Perte au trub" },

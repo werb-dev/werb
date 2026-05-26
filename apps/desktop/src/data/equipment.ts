@@ -96,6 +96,9 @@ export function profileToWaterOverrides(profile: ProfileWithId | undefined): Equ
   if (profile.mash_tun?.grain_absorption_l_per_kg !== undefined) {
     overrides.grain_absorption_l_per_kg = profile.mash_tun.grain_absorption_l_per_kg;
   }
+  if (profile.mash_tun?.mash_thickness_l_per_kg !== undefined) {
+    overrides.mash_thickness_l_per_kg = profile.mash_tun.mash_thickness_l_per_kg;
+  }
   if (profile.mash_tun?.dead_space_l !== undefined) {
     overrides.mash_dead_space_l = profile.mash_tun.dead_space_l;
   }
@@ -134,6 +137,7 @@ export const DEFAULT_PROFILE_VALUES = {
     capacity_l: 50,
     dead_space_l: 0,
     grain_absorption_l_per_kg: 0.96,
+    mash_thickness_l_per_kg: 3,
   },
   kettle: {
     capacity_l: 72,

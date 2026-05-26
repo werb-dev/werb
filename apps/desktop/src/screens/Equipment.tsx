@@ -259,27 +259,37 @@ function ProfileForm({
         />
       </div>
 
-      <Section title={t("equipment.section.hlt")}>
-        <div className="grid grid-cols-2 gap-4">
-          <NumberField
-            label={t("equipment.field.capacity")}
-            unit="L"
-            value={draft.hlt?.capacity_l ?? DEFAULT_PROFILE_VALUES.hlt.capacity_l}
-            onChange={(v) => updateNested("hlt", "capacity_l", v)}
-            onBlur={commit}
-          />
-          <NumberField
-            label={t("equipment.field.dead_space")}
-            unit="L"
-            value={draft.hlt?.dead_space_l ?? DEFAULT_PROFILE_VALUES.hlt.dead_space_l}
-            onChange={(v) => updateNested("hlt", "dead_space_l", v)}
-            onBlur={commit}
-          />
-        </div>
-      </Section>
+      {/*
+        BIAB does the mash in the kettle and uses no separate HLT —
+        hide both sections so the form reflects the layout the brewer
+        actually has. The mash mode is still editable below, so a
+        brewer who picked BIAB by mistake can flip back to "classic"
+        and the vessels reappear.
+      */}
+      {draft.mash_mode !== "biab" && (
+        <Section title={t("equipment.section.hlt")} testId="equipment-section-hlt">
+          <div className="grid grid-cols-2 gap-4">
+            <NumberField
+              label={t("equipment.field.capacity")}
+              unit="L"
+              value={draft.hlt?.capacity_l ?? DEFAULT_PROFILE_VALUES.hlt.capacity_l}
+              onChange={(v) => updateNested("hlt", "capacity_l", v)}
+              onBlur={commit}
+            />
+            <NumberField
+              label={t("equipment.field.dead_space")}
+              unit="L"
+              value={draft.hlt?.dead_space_l ?? DEFAULT_PROFILE_VALUES.hlt.dead_space_l}
+              onChange={(v) => updateNested("hlt", "dead_space_l", v)}
+              onBlur={commit}
+            />
+          </div>
+        </Section>
+      )}
 
-      <Section title={t("equipment.section.mash_tun")}>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+      {draft.mash_mode !== "biab" && (
+      <Section title={t("equipment.section.mash_tun")} testId="equipment-section-mash-tun">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <NumberField
             label={t("equipment.field.capacity")}
             unit="L"
@@ -305,8 +315,20 @@ function ProfileForm({
             onBlur={commit}
             step={0.01}
           />
+          <NumberField
+            label={t("equipment.field.mash_thickness")}
+            unit="L/kg"
+            value={
+              draft.mash_tun?.mash_thickness_l_per_kg ??
+              DEFAULT_PROFILE_VALUES.mash_tun.mash_thickness_l_per_kg
+            }
+            onChange={(v) => updateNested("mash_tun", "mash_thickness_l_per_kg", v)}
+            onBlur={commit}
+            step={0.1}
+          />
         </div>
       </Section>
+      )}
 
       <Section title={t("equipment.section.kettle")}>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -627,9 +649,17 @@ function DerivedPreview({ preview }: { preview: EquipmentSuggestOutput }) {
 
 // ─── Form primitives ──────────────────────────────────────────────────────
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({
+  title,
+  testId,
+  children,
+}: {
+  title: string;
+  testId?: string;
+  children: React.ReactNode;
+}) {
   return (
-    <fieldset>
+    <fieldset {...(testId && { "data-testid": testId })}>
       <legend className="text-caption uppercase tracking-widest text-text-muted mb-3">
         {title}
       </legend>

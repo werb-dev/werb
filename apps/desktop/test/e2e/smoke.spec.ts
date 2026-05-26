@@ -55,6 +55,40 @@ test.describe("Equipment — BIAB mash mode", () => {
     expect(await app.equipment.getMashMode()).toBe("classic");
   });
 
+  test("BIAB hides HLT + mash-tun sections; classic shows them", async ({ page }) => {
+    const app = new App(page);
+    await app.go("Equipment");
+    await app.equipment.createFirstProfile();
+
+    // Start in classic — both sections visible.
+    await app.equipment.setMashMode("classic");
+    await expect(app.equipment.hltSection()).toBeVisible();
+    await expect(app.equipment.mashTunSection()).toBeVisible();
+
+    // Flip to BIAB — both hide.
+    await app.equipment.setMashMode("biab");
+    await expect(app.equipment.hltSection()).toBeHidden();
+    await expect(app.equipment.mashTunSection()).toBeHidden();
+
+    // Flip back — they reappear.
+    await app.equipment.setMashMode("classic");
+    await expect(app.equipment.hltSection()).toBeVisible();
+    await expect(app.equipment.mashTunSection()).toBeVisible();
+  });
+
+  test("mash thickness persists across navigation", async ({ page }) => {
+    const app = new App(page);
+    await app.go("Equipment");
+    await app.equipment.createFirstProfile();
+    await app.equipment.setMashThickness("3.5");
+
+    await app.go("Library");
+    await app.go("Equipment");
+    await app.equipment.openFirstProfile();
+
+    expect(await app.equipment.getMashThickness()).toBe("3.5");
+  });
+
   test("active BIAB profile → recipe shows zero sparge", async ({ page }) => {
     const app = new App(page);
     await app.go("Equipment");
