@@ -141,6 +141,15 @@ class LibraryPage {
     await this.page.locator("li h2").first().click();
     await this.page.waitForSelector('[data-testid="water-volumes"]', { timeout: 10000 });
   }
+
+  /** Open a specific recipe card by (case-insensitive) name. */
+  async openRecipeByName(name: string) {
+    await this.page
+      .locator("li h2", { hasText: new RegExp(name, "i") })
+      .first()
+      .click();
+    await this.page.waitForSelector('[data-testid="water-volumes"]', { timeout: 10000 });
+  }
 }
 
 class RecipePage {
@@ -170,5 +179,18 @@ class RecipePage {
 
   yeastText() {
     return this.page.locator('[data-testid="yeast-pitch"]').innerText();
+  }
+
+  /** Recipe view → open the in-app editor (waits for the targets banner). */
+  async edit() {
+    await this.page
+      .getByRole("button", { name: /Edit recipe|Modifier la recette/i })
+      .click();
+    await this.page.locator('[data-testid="editor-targets-banner"]').waitFor();
+  }
+
+  /** All style-fit gauges rendered on the current screen. */
+  styleGauges() {
+    return this.page.locator('[data-testid="style-gauge"]');
   }
 }

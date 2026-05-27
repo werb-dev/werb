@@ -48,7 +48,8 @@ import {
   type UnitPreferences,
 } from "../data/units-format.ts";
 import { Section } from "./Recipe/Section.tsx";
-import { Tile, rangeHint } from "./Recipe/Tile.tsx";
+import { Tile } from "./Recipe/Tile.tsx";
+import { computeStyleHints } from "./Recipe/styleFit.ts";
 import { YeastPitchSection } from "./Recipe/YeastPitchSection.tsx";
 import { CarbonationSection } from "./Recipe/CarbonationSection.tsx";
 import { CostSection } from "./Recipe/CostSection.tsx";
@@ -131,42 +132,16 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
 
   // BJCP range hints. `current` prefers the recipe's claimed value and falls
   // back to our computed estimate so the indicator works on bare imports.
-  const styleHints = {
-    og: rangeHint({
-      current: claimedOgSg ?? computed.gravity.og,
-      min: recipe.style?.original_gravity?.minimum?.value,
-      max: recipe.style?.original_gravity?.maximum?.value,
-      format: (v) => formatSpecificGravity(v, prefs).display,
-    }),
-    fg: rangeHint({
-      current: claimedFgSg ?? computed.fg,
-      min: recipe.style?.final_gravity?.minimum?.value,
-      max: recipe.style?.final_gravity?.maximum?.value,
-      format: (v) => formatSpecificGravity(v, prefs).display,
-    }),
-    ibu: rangeHint({
-      current: claimedIbu ?? computed.ibu.total_ibu,
-      min: recipe.style?.international_bitterness_units?.minimum?.value,
-      max: recipe.style?.international_bitterness_units?.maximum?.value,
-      format: (v) => `${v.toFixed(0)} IBU`,
-    }),
-    abv: rangeHint({
-      current: claimedAbv ?? computed.abv,
-      min: recipe.style?.alcohol_by_volume?.minimum?.value,
-      max: recipe.style?.alcohol_by_volume?.maximum?.value,
-      format: (v) => `${v.toFixed(1)}%`,
-    }),
-    color: rangeHint({
-      current: claimedSrm ?? computed.color.srm,
-      min: recipe.style?.color?.minimum
-        ? toSrm(recipe.style.color.minimum)
-        : undefined,
-      max: recipe.style?.color?.maximum
-        ? toSrm(recipe.style.color.maximum)
-        : undefined,
-      format: (srm) => formatSrm(srm, prefs).display,
-    }),
-  };
+  // Same helper drives the editor's live banner, so the two views agree.
+  const styleHints = computeStyleHints({
+    og: claimedOgSg ?? computed.gravity.og,
+    fg: claimedFgSg ?? computed.fg,
+    ibu: claimedIbu ?? computed.ibu.total_ibu,
+    abv: claimedAbv ?? computed.abv,
+    srm: claimedSrm ?? computed.color.srm,
+    style: recipe.style,
+    prefs,
+  });
 
   return (
     <div className="min-h-dvh bg-bg text-text">

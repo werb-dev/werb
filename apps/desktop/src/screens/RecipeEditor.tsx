@@ -73,6 +73,8 @@ import {
   parseLocaleNumber,
   roundForStep,
 } from "../components/editor/Fields.tsx";
+import { computeStyleHints } from "./Recipe/styleFit.ts";
+import { Tile } from "./Recipe/Tile.tsx";
 
 /**
  * Pareto in-app recipe editor. Edits metadata + ingredients + mash schedule
@@ -175,59 +177,59 @@ function TargetsBanner({ draft }: { draft: BeerJsonRecipe }) {
     return { og: gravity.og, fg, ibu: ibu.total_ibu, abv, srm: color.srm };
   }, [draft, prefs.ibu_method, prefs.color_method]);
 
+  // Same BJCP-fit helper the read-only Recipe screen uses, so "in style"
+  // means the same thing whether you're editing or viewing.
+  const styleHints = computeStyleHints({
+    og: targets.og,
+    fg: targets.fg,
+    ibu: targets.ibu,
+    abv: targets.abv,
+    srm: targets.srm,
+    style: draft.style,
+    prefs,
+  });
+
   return (
     <div
       data-testid="editor-targets-banner"
       className="sticky top-0 z-30 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-3 mb-6 sm:mb-8 bg-bg/95 backdrop-blur border-b border-border"
     >
       {/* Labels stay English — OG / FG / IBU / ABV / Color are the
-          shared brewer vocabulary, same as Recipe.tsx's hero strip. */}
+          shared brewer vocabulary. Same Tile component as the read-only
+          Recipe screen, so the two strips can't drift in size or fit
+          colouring. */}
       <div className="grid grid-cols-5 gap-px bg-border rounded-xl overflow-hidden">
-        <Cell
+        <Tile
           label="OG"
           value={formatSpecificGravity(targets.og, prefs).display}
+          styleHint={styleHints.og}
           testId="targets-og"
         />
-        <Cell
+        <Tile
           label="FG"
           value={formatSpecificGravity(targets.fg, prefs).display}
+          styleHint={styleHints.fg}
           testId="targets-fg"
         />
-        <Cell
+        <Tile
           label="IBU"
           value={targets.ibu > 0 ? targets.ibu.toFixed(0) : "—"}
+          styleHint={targets.ibu > 0 ? styleHints.ibu : null}
           testId="targets-ibu"
         />
-        <Cell
+        <Tile
           label="ABV"
           value={`${targets.abv.toFixed(1)}%`}
+          styleHint={styleHints.abv}
           testId="targets-abv"
         />
-        <Cell
+        <Tile
           label="Color"
           value={formatSrm(targets.srm, prefs).display}
+          styleHint={styleHints.color}
           testId="targets-color"
         />
       </div>
-    </div>
-  );
-}
-
-function Cell({
-  label,
-  value,
-  testId,
-}: {
-  label: string;
-  value: string;
-  testId: string;
-}) {
-  return (
-    <div className="bg-surface px-2 py-2 sm:px-4 sm:py-3" data-testid={testId}>
-      <p className="text-[10px] sm:text-caption uppercase tracking-widest text-text-muted">
-        {label}
-      </p>
-      <p className="font-mono text-body sm:text-h3 mt-1 tabular-nums">{value}</p>
     </div>
   );
 }

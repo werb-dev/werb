@@ -338,6 +338,39 @@ test.describe("Discoverability", () => {
   });
 });
 
+test.describe("Style fit — in-range indicators", () => {
+  test("a styled recipe shows the same gauge on the recipe view and the editor banner", async ({
+    page,
+  }) => {
+    const app = new App(page);
+    await app.go("Library");
+    await app.library.importSamples();
+
+    // Cascade Pale Ale ships a full BJCP 18B envelope (OG/FG/IBU/colour/ABV
+    // ranges) and its declared numbers all sit inside it.
+    await app.library.openRecipeByName("Cascade Pale Ale");
+
+    // Read-only view: one gauge per metric, and the declared values land
+    // in style — so the gauges read "in".
+    const viewGauges = app.recipe.styleGauges();
+    await viewGauges.first().waitFor();
+    expect(await viewGauges.count()).toBeGreaterThanOrEqual(4);
+    const inOnView = await page
+      .locator('[data-testid="style-gauge"][data-status="in"]')
+      .count();
+    expect(inOnView).toBeGreaterThanOrEqual(4);
+
+    // The port: the same fit gauges now live in the editor's live banner,
+    // recomputed from the draft (no longer a bare value strip).
+    await app.recipe.edit();
+    const bannerGauges = page.locator(
+      '[data-testid="editor-targets-banner"] [data-testid="style-gauge"]',
+    );
+    await bannerGauges.first().waitFor();
+    expect(await bannerGauges.count()).toBeGreaterThanOrEqual(4);
+  });
+});
+
 test.describe("Yeast pitch — message gating", () => {
   test("recipe with no fermentables names the missing input", async ({ page }) => {
     const app = new App(page);
