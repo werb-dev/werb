@@ -209,7 +209,14 @@ export function BrewScreen({ recipeId, recipe, sessionId, activeProfile, onBack,
                 now={tick}
                 isActive={step.id === activeStep?.id}
                 ctx={ctx}
-                onStart={() => brew.startStep(step.id)}
+                onStart={() => {
+                  if (
+                    brew.isStepOutOfOrder(step.id) &&
+                    !window.confirm(t("brew.step.out_of_order_confirm"))
+                  )
+                    return;
+                  brew.startStep(step.id);
+                }}
                 onFinish={() => brew.finishStep(step.id)}
                 onNotes={(notes) => brew.setStepNotes(step.id, notes)}
                 disabled={session.status === "completed"}

@@ -194,6 +194,19 @@ export function useBrewSession(
     [update],
   );
 
+  // True when an earlier step in the plan is still pending — i.e. the brewer
+  // is jumping ahead. A soft signal for the UI to confirm against; the brew
+  // itself never blocks (real brew days legitimately skip / reorder steps).
+  const isStepOutOfOrder = useCallback(
+    (stepId: string): boolean => {
+      if (!session) return false;
+      const idx = session.steps.findIndex((st) => st.id === stepId);
+      if (idx <= 0) return false;
+      return session.steps.slice(0, idx).some((st) => st.status === "pending");
+    },
+    [session],
+  );
+
   const finishStep = useCallback(
     (stepId: string) => {
       update((s) => {
@@ -283,6 +296,7 @@ export function useBrewSession(
     activeStep: session?.steps.find((s) => s.status === "active") ?? null,
     start,
     startStep,
+    isStepOutOfOrder,
     finishStep,
     setStepNotes,
     completeSession,

@@ -44,6 +44,14 @@ export interface UnitPreferences {
    */
   cost_inflation_pct: number;
   /**
+   * Personal per-ingredient price overrides, keyed by "category:name"
+   * (see `priceKey` in cost.ts). Value is the price per the ingredient's
+   * natural unit (€/kg grain, €/g hop, €/pack yeast). Per-install — lives
+   * under `local.prefs.*`, never synced — and overrides the bundled
+   * baseline (and the inflation coefficient) for that ingredient.
+   */
+  ingredient_prices: Record<string, number>;
+  /**
    * UI language. Seeded from the browser locale on first launch
    * (see `detectLocale`); changeable from Settings.
    */
@@ -79,6 +87,7 @@ export const DEFAULT_PREFS: UnitPreferences = {
   color: "EBC",
   currency: "EUR",
   cost_inflation_pct: 100,
+  ingredient_prices: {},
   locale: detectLocale(),
   theme: "auto",
   ibu_method: "Tinseth",

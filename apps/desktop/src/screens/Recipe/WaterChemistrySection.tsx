@@ -1,6 +1,6 @@
 import { toLiters } from "@werb/adapters";
 import type { BeerJsonRecipe } from "@werb/adapters";
-import { computeWaterAdditions } from "@werb/calc";
+import { computeWaterAdditions, suggestWaterAdditions } from "@werb/calc";
 import type { WaterAdditionsInput, WaterAdditionsOutput } from "@werb/types";
 import { SOURCE_WATER_PROFILES, type SourceWaterProfile } from "../../data/catalog/index.ts";
 import { useT } from "../../data/preferences.tsx";
@@ -128,6 +128,28 @@ export function WaterChemistrySection({ recipe }: { recipe: BeerJsonRecipe }) {
   const waterVolume = form.volume_l_override ?? defaultVolumeL;
   const target = TARGETS.find((t) => t.key === form.target_key)?.profile ?? null;
 
+  // Inverse calc: suggest salt grams that move the source toward the chosen
+  // target, then drop them into the editable salt fields so the brewer can
+  // tweak from there (the forward flow stays the source of truth).
+  const suggestSalts = () => {
+    if (!target) return;
+    const out = suggestWaterAdditions({
+      water_volume_l: waterVolume,
+      source: form.source,
+      target,
+    });
+    setForm((prev) => ({
+      ...prev,
+      salts: {
+        gypsum_g: out.additions.gypsum_g,
+        calcium_chloride_g: out.additions.calcium_chloride_g,
+        epsom_g: out.additions.epsom_g,
+        table_salt_g: out.additions.table_salt_g,
+        baking_soda_g: out.additions.baking_soda_g,
+      },
+    }));
+  };
+
   const calcInput: WaterAdditionsInput = {
     water_volume_l: waterVolume,
     source: form.source,
@@ -190,7 +212,12 @@ export function WaterChemistrySection({ recipe }: { recipe: BeerJsonRecipe }) {
           </label>
         </div>
 
-        <SaltsRow salts={form.salts} onChange={updateSalt} />
+        <SaltsRow
+          salts={form.salts}
+          onChange={updateSalt}
+          onSuggest={suggestSalts}
+          canSuggest={target !== null}
+        />
 
         <ResultStrip result={result} target={target} />
 
@@ -312,16 +339,35 @@ function SourceWaterRow({
 function SaltsRow({
   salts,
   onChange,
+  onSuggest,
+  canSuggest,
 }: {
   salts: SaltAmounts;
   onChange: <K extends keyof SaltAmounts>(key: K, value: number) => void;
+  onSuggest: () => void;
+  canSuggest: boolean;
 }) {
   const t = useT();
   return (
     <div className="mt-6">
-      <p className="text-caption uppercase tracking-widest text-text-muted mb-3">
-        {t("recipe.water.salts")}
-      </p>
+      <div className="flex items-baseline justify-between gap-3 mb-3">
+        <p className="text-caption uppercase tracking-widest text-text-muted">
+          {t("recipe.water.salts")}
+        </p>
+        <button
+          type="button"
+          onClick={onSuggest}
+          disabled={!canSuggest}
+          title={
+            canSuggest
+              ? t("recipe.water.suggest_hint")
+              : t("recipe.water.suggest_disabled")
+          }
+          className="text-caption font-medium text-accent hover:opacity-80 disabled:opacity-40 disabled:cursor-default transition-opacity"
+        >
+          {t("recipe.water.suggest")}
+        </button>
+      </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
         <SaltField label={t("recipe.water.gypsum")} sub="CaSO₄" value={salts.gypsum_g} onChange={(v) => onChange("gypsum_g", v)} />
         <SaltField label={t("recipe.water.cacl2")} sub="dihydrate" value={salts.calcium_chloride_g} onChange={(v) => onChange("calcium_chloride_g", v)} />

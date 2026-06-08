@@ -35,7 +35,7 @@ import type { WaterAdditionsInput, WaterAdditionsOutput } from "@werb/types";
 // Mass fraction of each ion in a gram of each (hydrated) salt.
 // Derived from MW(ion) / MW(salt). Source: Palmer, "How to Brew" +
 // Bru'n Water reference table.
-const FRAC = {
+export const FRAC = {
   gypsum: { ca: 0.2328, so4: 0.5580 }, // CaSO4·2H2O, MW 172.17
   calcium_chloride: { ca: 0.2726, cl: 0.4823 }, // CaCl2·2H2O, MW 147.01
   epsom: { mg: 0.0986, so4: 0.3898 }, // MgSO4·7H2O, MW 246.47

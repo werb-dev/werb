@@ -184,6 +184,10 @@ const STRINGS: Record<string, Entry> = {
   "brew.wake": { en: "WAKE", fr: "ACTIF" },
   "brew.sleep": { en: "SLEEP", fr: "VEILLE" },
   "brew.timeline": { en: "Timeline", fr: "Chronologie" },
+  "brew.step.out_of_order_confirm": {
+    en: "Earlier steps haven't been started yet. Start this one anyway?",
+    fr: "Des étapes précédentes n'ont pas été démarrées. Lancer celle-ci quand même ?",
+  },
   "brew.measurements": { en: "Measurements", fr: "Mesures" },
   "brew.tasting": { en: "Tasting", fr: "Dégustation" },
   "brew.mark_done": { en: "Mark done", fr: "Marquer terminée" },
@@ -652,6 +656,15 @@ const STRINGS: Record<string, Entry> = {
   "recipe.water.default_volume": { en: "Default {volume} L (mash + sparge)", fr: "Défaut {volume} L (empâtage + rinçage)" },
   "recipe.water.target_profile": { en: "Target profile", fr: "Profil cible" },
   "recipe.water.salts": { en: "Salt additions (g, total volume)", fr: "Ajouts de sels (g, volume total)" },
+  "recipe.water.suggest": { en: "Suggest additions", fr: "Suggérer les ajouts" },
+  "recipe.water.suggest_hint": {
+    en: "Estimate the salts that move your source water toward the target profile.",
+    fr: "Estime les sels qui rapprochent votre eau source du profil cible.",
+  },
+  "recipe.water.suggest_disabled": {
+    en: "Pick a target profile first.",
+    fr: "Choisissez d'abord un profil cible.",
+  },
   "recipe.water.gypsum": { en: "Gypsum", fr: "Gypse" },
   "recipe.water.cacl2": { en: "CaCl₂", fr: "CaCl₂" },
   "recipe.water.epsom": { en: "Epsom", fr: "Sel d'Epsom" },
@@ -818,6 +831,16 @@ const STRINGS: Record<string, Entry> = {
   "recipe.cost.batch_total": { en: "Batch total", fr: "Total du brassin" },
   "recipe.cost.per_unit": { en: "Per {unit}", fr: "Par {unit}" },
   "recipe.cost.per_bottle": { en: "Per 330 mL bottle", fr: "Par bouteille 33 cL" },
+  "recipe.cost.your_price": { en: "your price", fr: "votre prix" },
+  "recipe.cost.your_price_hint": {
+    en: "Using your personal price instead of the bundled estimate.",
+    fr: "Utilise votre prix personnel plutôt que l'estimation par défaut.",
+  },
+  "recipe.cost.edit_price": { en: "Set your price", fr: "Définir votre prix" },
+  "recipe.cost.reset_price": {
+    en: "Reset to the bundled price",
+    fr: "Revenir au prix par défaut",
+  },
 
   // ─── Equipment screen ────────────────────────────────────────
   "equipment.title": { en: "Equipment", fr: "Matériel" },
@@ -915,6 +938,18 @@ const STRINGS: Record<string, Entry> = {
   },
   "editor.cancel": { en: "Cancel", fr: "Annuler" },
   "editor.save": { en: "Save changes", fr: "Enregistrer" },
+  "editor.unsaved.confirm": {
+    en: "You have unsaved changes. Discard them?",
+    fr: "Des modifications ne sont pas enregistrées. Les abandonner ?",
+  },
+  "editor.stepper.increment": { en: "Increase", fr: "Augmenter" },
+  "editor.stepper.decrement": { en: "Decrease", fr: "Diminuer" },
+  "editor.tools.label": { en: "Retarget", fr: "Recibler" },
+  "editor.tools.scale": { en: "Scale to…", fr: "Mettre à l'échelle…" },
+  "editor.tools.solve_og": { en: "Solve to OG…", fr: "Viser une DI…" },
+  "editor.tools.solve_ibu": { en: "Solve to IBU…", fr: "Viser des IBU…" },
+  "editor.tools.apply": { en: "Apply", fr: "Appliquer" },
+  "editor.tools.cancel": { en: "Cancel", fr: "Annuler" },
   "editor.section.recipe": { en: "Recipe", fr: "Recette" },
   "editor.section.fermentables": { en: "Fermentables", fr: "Fermentescibles" },
   "editor.section.hops": { en: "Hops", fr: "Houblons" },

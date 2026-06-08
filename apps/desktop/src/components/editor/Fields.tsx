@@ -87,14 +87,18 @@ export function InlineNumber({
   unit,
   onChange,
   step = 1,
+  steppers = false,
   className,
 }: {
   value: number;
   unit: string;
   onChange: (v: number) => void;
   step?: number;
+  /** Show −/+ buttons that nudge the value by `step` (clamped ≥ 0). */
+  steppers?: boolean;
   className?: string;
 }) {
+  const t = useT();
   // Local text buffer so the user can freely type "1.", "1.5", "1.50"
   // without React stripping trailing zeros on every keystroke. We resync
   // from the prop only when not focused — that way an external change
@@ -107,10 +111,32 @@ export function InlineNumber({
     if (!focused) setText(formatForStep(value, step));
   }, [value, step, focused]);
 
+  // Nudge by one step. Round to the step grid so repeated clicks don't
+  // accumulate float drift (0.05 + 0.05 + … → 0.15000000002).
+  const nudge = (dir: 1 | -1) => {
+    const next = Math.max(0, roundForStep(value + dir * step, step));
+    setText(formatForStep(next, step));
+    onChange(next);
+  };
+
+  const stepBtn =
+    "shrink-0 w-6 h-6 rounded flex items-center justify-center text-text-muted hover:text-accent hover:bg-surface-raised transition-colors select-none";
+
   return (
     <div
       className={`flex items-baseline gap-1 border-b border-transparent px-1 py-1 focus-within:border-accent hover:border-border transition-colors min-w-0 ${className ?? ""}`}
     >
+      {steppers && (
+        <button
+          type="button"
+          tabIndex={-1}
+          aria-label={t("editor.stepper.decrement")}
+          onClick={() => nudge(-1)}
+          className={stepBtn}
+        >
+          −
+        </button>
+      )}
       <input
         type="text"
         inputMode="decimal"
@@ -129,6 +155,17 @@ export function InlineNumber({
         className="w-full bg-transparent text-body font-mono tabular-nums text-text focus:outline-none min-w-0 text-right"
       />
       <span className="text-caption font-mono text-text-muted shrink-0">{unit}</span>
+      {steppers && (
+        <button
+          type="button"
+          tabIndex={-1}
+          aria-label={t("editor.stepper.increment")}
+          onClick={() => nudge(1)}
+          className={stepBtn}
+        >
+          +
+        </button>
+      )}
     </div>
   );
 }
@@ -209,10 +246,12 @@ export function RowHeader({ cols }: { cols: { label: string; span: string }[] })
 export function MassLargeInlineInput({
   valueKg,
   onChangeKg,
+  steppers = false,
   className,
 }: {
   valueKg: number;
   onChangeKg: (kg: number) => void;
+  steppers?: boolean;
   className?: string;
 }) {
   const prefs = useUnits();
@@ -226,6 +265,7 @@ export function MassLargeInlineInput({
       value={roundForStep(kgToUserMassLarge(valueKg, prefs), step)}
       unit={massLargeUnitLabel(prefs)}
       step={step}
+      steppers={steppers}
       onChange={(v) => onChangeKg(userMassLargeToKg(v, prefs))}
     />
   );
@@ -234,10 +274,12 @@ export function MassLargeInlineInput({
 export function MassSmallInlineInput({
   valueG,
   onChangeG,
+  steppers = false,
   className,
 }: {
   valueG: number;
   onChangeG: (g: number) => void;
+  steppers?: boolean;
   className?: string;
 }) {
   const prefs = useUnits();
@@ -252,6 +294,7 @@ export function MassSmallInlineInput({
       value={roundForStep(display, step)}
       unit={massSmallUnitLabel(prefs)}
       step={step}
+      steppers={steppers}
       onChange={(v) =>
         onChangeG(prefs.mass === "lb" ? userMassSmallToG(v, prefs) : v)
       }
@@ -342,7 +385,7 @@ export function Combobox<T>({
   onChange: (v: string) => void;
   suggest: (query: string) => T[];
   onPick: (item: T) => void;
-  renderItem: (item: T) => React.ReactNode;
+  renderItem: (item: T, query: string) => React.ReactNode;
   placeholder?: string;
   autoFocus?: boolean;
   className?: string;
@@ -422,7 +465,7 @@ export function Combobox<T>({
                 }}
                 className="block w-full text-left px-3 py-2 hover:bg-surface focus:bg-surface border-b border-border last:border-b-0"
               >
-                {renderItem(item)}
+                {renderItem(item, value)}
               </button>
             ))}
           </div>,

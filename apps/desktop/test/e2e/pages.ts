@@ -193,4 +193,84 @@ class RecipePage {
   styleGauges() {
     return this.page.locator('[data-testid="style-gauge"]');
   }
+
+  // ─── v0.5 additions ──────────────────────────────────────────────
+
+  /** BU:GU tile (present on both the read view and the editor banner). */
+  buGuTile() {
+    return this.page.locator('[data-testid="targets-bugu"]');
+  }
+
+  /**
+   * A Tile's value text. The tile renders [label, value, …range/gauge],
+   * so read the second <p> — the bare number — not the whole tile (which
+   * would fold the BJCP range digits into the reading).
+   */
+  private tileValue(testId: string) {
+    return this.page.locator(`[data-testid="${testId}"] p`).nth(1);
+  }
+
+  async editorOgText(): Promise<string> {
+    return this.tileValue("targets-og").innerText();
+  }
+
+  async editorIbuText(): Promise<string> {
+    return this.tileValue("targets-ibu").innerText();
+  }
+
+  async buGuText(): Promise<string> {
+    return this.tileValue("targets-bugu").innerText();
+  }
+
+  /** Editor metadata batch-size field (resolved by label, like equipment). */
+  batchSizeField() {
+    return this.page
+      .locator("label", { hasText: /Batch size|Volume/i })
+      .locator("input")
+      .first();
+  }
+
+  async batchSizeValue(): Promise<string> {
+    return this.batchSizeField().inputValue();
+  }
+
+  /** First text input in the editor is the recipe name field. */
+  nameField() {
+    return this.page.locator("input[type='text']").first();
+  }
+
+  /** Header back/cancel affordance in the editor. */
+  async clickCancel() {
+    await this.page.getByRole("button", { name: /^Cancel$/i }).first().click();
+  }
+
+  /** Drive a TargetTool in the editor toolbar: open it, type, apply. */
+  private async applyTool(label: RegExp, value: string) {
+    const tools = this.page.locator('[data-testid="editor-tools"]');
+    await tools.getByRole("button", { name: label }).click();
+    const input = tools.locator("input");
+    await input.waitFor();
+    await input.fill(value);
+    await input.press("Enter");
+    await this.page.waitForTimeout(250);
+  }
+
+  async scaleToVolume(value: string) {
+    await this.applyTool(/Scale to/i, value);
+  }
+
+  async solveToOg(value: string) {
+    await this.applyTool(/Solve to OG/i, value);
+  }
+
+  async solveToIbu(value: string) {
+    await this.applyTool(/Solve to IBU/i, value);
+  }
+
+  /** Run the water salt-suggestion (target must be set). */
+  async suggestWaterAdditions() {
+    await this.page.locator('[data-testid="water-chemistry"]').scrollIntoViewIfNeeded();
+    await this.page.getByRole("button", { name: /Suggest additions/i }).click();
+    await this.page.waitForTimeout(250);
+  }
 }

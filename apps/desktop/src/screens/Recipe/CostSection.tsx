@@ -1,7 +1,8 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { BeerJsonRecipe } from "@werb/adapters";
-import { useT, useUnits } from "../../data/preferences.tsx";
-import { computeRecipeCost, type CostLine } from "../../data/cost.ts";
+import { useT, useUnitsControl } from "../../data/preferences.tsx";
+import { computeRecipeCost, priceKey, type CostLine } from "../../data/cost.ts";
+import { parseLocaleNumber } from "../../components/editor/Fields.tsx";
 import {
   formatLiters,
   formatMassLarge,
@@ -26,14 +27,24 @@ const CATEGORY_KEY: Record<CostLine["category"], string> = {
 };
 
 export function CostSection({ recipe }: { recipe: BeerJsonRecipe }) {
-  const prefs = useUnits();
+  const { prefs, setPrefs } = useUnitsControl();
   const tt = useT();
   const breakdown = useMemo(
-    () => computeRecipeCost(recipe, prefs.cost_inflation_pct),
-    [recipe, prefs.cost_inflation_pct],
+    () => computeRecipeCost(recipe, prefs.cost_inflation_pct, prefs.ingredient_prices),
+    [recipe, prefs.cost_inflation_pct, prefs.ingredient_prices],
   );
 
   if (breakdown.total_count === 0) return null;
+
+  const setOverride = (line: CostLine, value: number | null) => {
+    setPrefs((p) => {
+      const next = { ...(p.ingredient_prices ?? {}) };
+      const key = priceKey(line.category, line.name);
+      if (value === null) delete next[key];
+      else next[key] = value;
+      return { ...p, ingredient_prices: next };
+    });
+  };
 
   const inflationNote =
     prefs.cost_inflation_pct === 100
@@ -49,6 +60,7 @@ export function CostSection({ recipe }: { recipe: BeerJsonRecipe }) {
               key={`${line.category}-${line.name}-${i}`}
               line={line}
               prefs={prefs}
+              onSetPrice={(v) => setOverride(line, v)}
             />
           ))}
         </ul>
@@ -100,9 +112,11 @@ function formatCostAmount(line: CostLine, prefs: UnitPreferences): string | null
 function CostLineRow({
   line,
   prefs,
+  onSetPrice,
 }: {
   line: CostLine;
   prefs: UnitPreferences;
+  onSetPrice: (value: number | null) => void;
 }) {
   const t = useT();
   const amountDisplay = formatCostAmount(line, prefs);
@@ -117,24 +131,118 @@ function CostLineRow({
             </span>
           )}
         </p>
-        <p className="text-caption text-text-muted mt-0.5">
-          {t(CATEGORY_KEY[line.category])}
-          {line.default_unit_price !== null && line.natural_unit && (
-            <>
-              {" · "}
-              {formatMoney(line.default_unit_price, prefs)}/{line.natural_unit}
-            </>
+        <p className="text-caption text-text-muted mt-0.5 flex items-center gap-1 flex-wrap">
+          <span>{t(CATEGORY_KEY[line.category])}</span>
+          {line.unit_price !== null && line.natural_unit && (
+            <PriceEditor
+              line={line}
+              prefs={prefs}
+              onSetPrice={onSetPrice}
+            />
+          )}
+          {line.is_override && (
+            <span className="text-accent" title={t("recipe.cost.your_price_hint")}>
+              · {t("recipe.cost.your_price")}
+            </span>
           )}
         </p>
       </div>
       <p
         className={`font-mono text-body tabular-nums shrink-0 ${
-          line.line_cost !== null ? "text-text" : "text-text-muted"
+          line.line_cost !== null
+            ? line.is_override
+              ? "text-accent"
+              : "text-text"
+            : "text-text-muted"
         }`}
       >
         {line.line_cost !== null ? formatMoney(line.line_cost, prefs) : "—"}
       </p>
     </li>
+  );
+}
+
+/**
+ * Inline editor for a personal per-unit price. Shows the active price as a
+ * button; clicking opens a small input (price per natural unit). ✓ saves,
+ * ↺ clears back to the bundled baseline, × cancels.
+ */
+function PriceEditor({
+  line,
+  prefs,
+  onSetPrice,
+}: {
+  line: CostLine;
+  prefs: UnitPreferences;
+  onSetPrice: (value: number | null) => void;
+}) {
+  const t = useT();
+  const [open, setOpen] = useState(false);
+  const [val, setVal] = useState("");
+
+  const apply = () => {
+    const n = parseLocaleNumber(val);
+    if (Number.isFinite(n) && n >= 0) onSetPrice(n);
+    setOpen(false);
+  };
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          setVal(String(line.unit_price ?? ""));
+          setOpen(true);
+        }}
+        className="underline decoration-dotted underline-offset-2 hover:text-accent transition-colors"
+        title={t("recipe.cost.edit_price")}
+      >
+        · {formatMoney(line.unit_price ?? 0, prefs)}/{line.natural_unit}
+      </button>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1">
+      ·{" "}
+      <input
+        autoFocus
+        type="text"
+        inputMode="decimal"
+        value={val}
+        onChange={(e) => setVal(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") apply();
+          if (e.key === "Escape") setOpen(false);
+        }}
+        className="w-14 bg-transparent border-b border-accent text-text font-mono tabular-nums text-right focus:outline-none"
+      />
+      <span className="font-mono">/{line.natural_unit}</span>
+      <button type="button" onClick={apply} className="text-accent" aria-label={t("editor.tools.apply")}>
+        ✓
+      </button>
+      {line.is_override && (
+        <button
+          type="button"
+          onClick={() => {
+            onSetPrice(null);
+            setOpen(false);
+          }}
+          className="text-text-muted hover:text-text"
+          aria-label={t("recipe.cost.reset_price")}
+          title={t("recipe.cost.reset_price")}
+        >
+          ↺
+        </button>
+      )}
+      <button
+        type="button"
+        onClick={() => setOpen(false)}
+        className="text-text-muted"
+        aria-label={t("editor.tools.cancel")}
+      >
+        ×
+      </button>
+    </span>
   );
 }
 

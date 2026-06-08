@@ -280,3 +280,46 @@ describe("computeRecipeCost", () => {
     expect(breakdown.lines.find((l) => l.category === "hop")?.name).toBe("Mosaic");
   });
 });
+
+describe("computeRecipeCost — personal price overrides", () => {
+  it("uses the override price for a line instead of the baseline", () => {
+    // Real-world: brewer bought pale malt at €1.50/kg, cheaper than the
+    // €2.20 baseline. 5 kg × €1.50 = €7.50 (vs €11.00 default).
+    const breakdown = computeRecipeCost(recipe(), 100, {
+      "fermentable:pale ale malt": 1.5,
+    });
+    const grain = breakdown.lines.find((l) => l.category === "fermentable")!;
+    expect(grain.is_override).toBe(true);
+    expect(grain.unit_price).toBe(1.5);
+    expect(grain.line_cost).toBeCloseTo(7.5, 4);
+    // Baseline is still exposed for reference.
+    expect(grain.default_unit_price).toBe(2.2);
+  });
+
+  it("overrides bypass the global inflation coefficient", () => {
+    // The override is the brewer's real price; inflation must not touch it.
+    const at150 = computeRecipeCost(recipe(), 150, {
+      "fermentable:pale ale malt": 2.0,
+    });
+    const grain = at150.lines.find((l) => l.category === "fermentable")!;
+    expect(grain.line_cost).toBeCloseTo(5 * 2.0, 4); // 150% ignored
+  });
+
+  it("non-overridden lines still take the baseline × inflation", () => {
+    const breakdown = computeRecipeCost(recipe(), 120, {
+      "fermentable:pale ale malt": 2.0,
+    });
+    const hop = breakdown.lines.find((l) => l.category === "hop")!;
+    expect(hop.is_override).toBe(false);
+    expect(hop.line_cost).toBeCloseTo(0.03 * 1000 * 0.07 * 1.2, 4);
+  });
+
+  it("matches the override key case-insensitively via priceKey", () => {
+    const breakdown = computeRecipeCost(recipe(), 100, {
+      "culture:us-05": 4,
+    });
+    const yeast = breakdown.lines.find((l) => l.category === "culture")!;
+    expect(yeast.is_override).toBe(true);
+    expect(yeast.line_cost).toBeCloseTo(4, 4);
+  });
+});

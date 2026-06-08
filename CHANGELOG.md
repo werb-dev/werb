@@ -6,6 +6,77 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-06-08
+
+Second feedback-driven release. A third batch of forum testers (Eric974,
+Stanovitch, and a returning Arwen) pushed on editor ergonomics, ingredient
+search, and water chemistry; their notes were triaged into issues
+[#31–#38](https://github.com/werb-dev/werb/issues) plus a reopened
+[#7](https://github.com/werb-dev/werb/issues/7) and worked through together.
+
+Headline: the recipe editor gains BeerSmith-style retargeting (scale to a
+volume, solve to an OG or IBU, ±  steppers), every recipe now shows grain-bill
+percentages and a BU:GU balance gauge, and water chemistry can finally work
+**backwards** — pick a target profile and let Werb suggest the salts.
+
+### Added
+
+- **BU:GU gauge + grain-bill percentages.** Every fermentable row shows its
+  share of the bill by mass (read view + editor); the targets strip gains a
+  sixth tile, BU:GU (IBU ÷ gravity units), with a soft in-style range derived
+  from the style's IBU and OG ranges. Closes
+  [#32](https://github.com/werb-dev/werb/issues/32).
+- **Editor retargeting tools.** A toolbar under the live banner: **Scale to…**
+  a new batch volume (proportional, opt-in — not a side effect of editing the
+  volume field), **Solve to OG…** (scales the whole grain bill), and **Solve
+  to IBU…** (scales the hops). Plus ±  steppers on fermentable and hop amounts.
+  Closes [#33](https://github.com/werb-dev/werb/issues/33).
+- **Water salt suggestion (inverse calc).** Pick a target profile and hit
+  **Suggest additions**: a non-negative least-squares solver over the salt→ion
+  matrix proposes gypsum / CaCl₂ / Epsom / table salt / baking soda, fills the
+  editable salt fields, and the existing forward strip shows how close the
+  match lands. Shares the `FRAC` model with the forward calc so the two never
+  disagree. Closes [#10](https://github.com/werb-dev/werb/issues/10).
+- **Personal per-ingredient prices.** Click any price in the cost panel to set
+  what you actually paid (€/kg grain, €/g hop, €/pack yeast). Overrides bypass
+  the global inflation coefficient and are flagged "your price"; stored
+  per-install, never written into the recipe (BeerJSON stays standard). Seeds
+  the future inventory module. Closes
+  [#2](https://github.com/werb-dev/werb/issues/2).
+- **Unsaved-changes guard.** Leaving the editor — back button, or closing the
+  tab/window — now warns when the draft has unsaved edits.
+  Closes [#35](https://github.com/werb-dev/werb/issues/35).
+- **Out-of-sequence brew-step guard.** Starting a step while earlier ones are
+  still pending asks for confirmation (soft — real brew days skip and reorder).
+  Closes [#37](https://github.com/werb-dev/werb/issues/37).
+
+### Changed
+
+- **Ingredient picker ordering** ([#7](https://github.com/werb-dev/werb/issues/7),
+  reopened from v0.4). An empty query now lists alphabetically instead of in
+  catalog order (no more surprise "Pilsner malt" default); a prefix on the
+  visible name outranks a prefix on a hidden alias; and when an alias drove the
+  match the picker shows it (e.g. "Honey — miel") so the ordering reads sensibly.
+- **Category-scoped fermentable search** — setting a row's type to "sugar"
+  lists only sugars, etc. Closes
+  [#34](https://github.com/werb-dev/werb/issues/34).
+
+### Fixed
+
+- **macOS "Werb is damaged" on Apple Silicon**
+  ([#31](https://github.com/werb-dev/werb/issues/31)). Documented the
+  quarantine workaround (`xattr` / right-click → Open) and the no-install PWA
+  in the README and release notes. Proper Developer ID signing + notarization
+  is tracked for a future release.
+
+### Deferred
+
+- Inline-editable recipe view ([#36](https://github.com/werb-dev/werb/issues/36))
+  — kept the v0.4 view/edit split + the new unsaved guard; full inline editing
+  is its own design effort.
+- Recipe layout density ([#38](https://github.com/werb-dev/werb/issues/38)) —
+  awaiting reproduction details (device / resolution) from the reporter.
+
 ## [0.4.0] — 2026-05-26
 
 Feedback-driven release. Two batches of forum tester feedback (issues

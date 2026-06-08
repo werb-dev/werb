@@ -75,6 +75,38 @@ export interface StyleHints {
   ibu: RangeHint | null;
   abv: RangeHint | null;
   color: RangeHint | null;
+  bu_gu: RangeHint | null;
+}
+
+/**
+ * BU:GU has no first-class BJCP field, so derive a soft envelope from the
+ * style's IBU and OG ranges: the least-bitter/most-gravity corner gives the
+ * floor, the most-bitter/least-gravity corner the ceiling. Returns undefined
+ * bounds when the style lacks either range, leaving the gauge unrendered and
+ * the tile value-only.
+ */
+function deriveBuGuRange(style: BeerJsonRecipe["style"]): {
+  min: number | undefined;
+  max: number | undefined;
+} {
+  const ibuMin = style?.international_bitterness_units?.minimum?.value;
+  const ibuMax = style?.international_bitterness_units?.maximum?.value;
+  const ogMin = style?.original_gravity?.minimum?.value;
+  const ogMax = style?.original_gravity?.maximum?.value;
+  if (
+    ibuMin === undefined ||
+    ibuMax === undefined ||
+    ogMin === undefined ||
+    ogMax === undefined ||
+    ogMin <= 1 ||
+    ogMax <= 1
+  ) {
+    return { min: undefined, max: undefined };
+  }
+  return {
+    min: ibuMin / ((ogMax - 1) * 1000),
+    max: ibuMax / ((ogMin - 1) * 1000),
+  };
 }
 
 /**
@@ -92,6 +124,7 @@ export function computeStyleHints({
   ibu,
   abv,
   srm,
+  buGu,
   style,
   prefs,
 }: {
@@ -100,9 +133,11 @@ export function computeStyleHints({
   ibu: number | null | undefined;
   abv: number | null | undefined;
   srm: number | null | undefined;
+  buGu?: number | null | undefined;
   style: BeerJsonRecipe["style"];
   prefs: UnitPreferences;
 }): StyleHints {
+  const buGuRange = deriveBuGuRange(style);
   return {
     og: rangeHint({
       current: og,
@@ -133,6 +168,12 @@ export function computeStyleHints({
       min: style?.color?.minimum ? toSrm(style.color.minimum) : undefined,
       max: style?.color?.maximum ? toSrm(style.color.maximum) : undefined,
       format: (s) => formatSrm(s, prefs).display,
+    }),
+    bu_gu: rangeHint({
+      current: buGu,
+      min: buGuRange.min,
+      max: buGuRange.max,
+      format: (v) => v.toFixed(2),
     }),
   };
 }
