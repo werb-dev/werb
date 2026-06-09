@@ -1,0 +1,142 @@
+{
+  "beerjson": {
+    "version": 2.06,
+    "recipes": [
+      {
+        "name": "Oatmeal Stout",
+        "type": "all grain",
+        "author": "Werb",
+        "batch_size": { "value": 20, "unit": "l" },
+        "efficiency": { "brewhouse": { "value": 70, "unit": "%" } },
+        "style": {
+          "name": "Oatmeal Stout",
+          "category": "Dark British Beer",
+          "category_number": 16,
+          "style_letter": "B",
+          "style_guide": "BJCP 2021",
+          "type": "beer",
+          "original_gravity": {
+            "minimum": { "value": 1.045, "unit": "sg" },
+            "maximum": { "value": 1.065, "unit": "sg" }
+          },
+          "final_gravity": {
+            "minimum": { "value": 1.01, "unit": "sg" },
+            "maximum": { "value": 1.018, "unit": "sg" }
+          },
+          "international_bitterness_units": {
+            "minimum": { "value": 25, "unit": "IBUs" },
+            "maximum": { "value": 40, "unit": "IBUs" }
+          },
+          "color": {
+            "minimum": { "value": 22, "unit": "SRM" },
+            "maximum": { "value": 40, "unit": "SRM" }
+          },
+          "alcohol_by_volume": {
+            "minimum": { "value": 4.2, "unit": "%" },
+            "maximum": { "value": 5.9, "unit": "%" }
+          }
+        },
+        "original_gravity": { "value": 1.054, "unit": "sg" },
+        "final_gravity": { "value": 1.013, "unit": "sg" },
+        "alcohol_by_volume": { "value": 5.3, "unit": "%" },
+        "ibu_estimate": { "method": "Tinseth", "ibu": { "value": 29, "unit": "IBUs" } },
+        "color_estimate": { "value": 82, "unit": "EBC" },
+        "ingredients": {
+          "fermentable_additions": [
+            {
+              "name": "Maris Otter Pale",
+              "type": "grain",
+              "yield": { "fine_grind": { "value": 81, "unit": "%" } },
+              "color": { "value": 6, "unit": "EBC" },
+              "amount": { "value": 3.8, "unit": "kg" }
+            },
+            {
+              "name": "Flaked Oats",
+              "type": "grain",
+              "yield": { "fine_grind": { "value": 70, "unit": "%" } },
+              "color": { "value": 2, "unit": "EBC" },
+              "amount": { "value": 0.5, "unit": "kg" }
+            },
+            {
+              "name": "Caramel / Crystal 60L",
+              "type": "grain",
+              "yield": { "fine_grind": { "value": 74, "unit": "%" } },
+              "color": { "value": 120, "unit": "EBC" },
+              "amount": { "value": 0.3, "unit": "kg" }
+            },
+            {
+              "name": "Chocolate Malt",
+              "type": "grain",
+              "yield": { "fine_grind": { "value": 70, "unit": "%" } },
+              "color": { "value": 900, "unit": "EBC" },
+              "amount": { "value": 0.25, "unit": "kg" }
+            },
+            {
+              "name": "Roasted Barley",
+              "type": "grain",
+              "yield": { "fine_grind": { "value": 65, "unit": "%" } },
+              "color": { "value": 1300, "unit": "EBC" },
+              "amount": { "value": 0.25, "unit": "kg" }
+            }
+          ],
+          "hop_additions": [
+            {
+              "name": "East Kent Goldings",
+              "alpha_acid": { "value": 5, "unit": "%" },
+              "form": "pellet",
+              "amount": { "value": 0.04, "unit": "kg" },
+              "timing": { "use": "add_to_boil", "time": { "value": 60, "unit": "min" } }
+            },
+            {
+              "name": "East Kent Goldings",
+              "alpha_acid": { "value": 5, "unit": "%" },
+              "form": "pellet",
+              "amount": { "value": 0.02, "unit": "kg" },
+              "timing": { "use": "add_to_boil", "time": { "value": 15, "unit": "min" } }
+            }
+          ],
+          "culture_additions": [
+            {
+              "name": "SafAle S-04",
+              "type": "ale",
+              "form": "dry",
+              "producer": "Fermentis",
+              "product_id": "S-04",
+              "amount": { "value": 1, "unit": "pkg" },
+              "attenuation": { "value": 75, "unit": "%" }
+            }
+          ],
+          "miscellaneous_additions": [
+            {
+              "name": "Irish Moss",
+              "type": "fining",
+              "amount": { "value": 5, "unit": "g" },
+              "timing": { "use": "add_to_boil", "time": { "value": 15, "unit": "min" } }
+            }
+          ]
+        },
+        "mash": {
+          "name": "Single infusion",
+          "grain_temperature": { "value": 20, "unit": "C" },
+          "mash_steps": [
+            {
+              "name": "Saccharification",
+              "type": "infusion",
+              "step_temperature": { "value": 67, "unit": "C" },
+              "step_time": { "value": 60, "unit": "min" },
+              "amount": { "value": 14, "unit": "l" }
+            },
+            {
+              "name": "Mash-out",
+              "type": "temperature",
+              "step_temperature": { "value": 76, "unit": "C" },
+              "step_time": { "value": 10, "unit": "min" }
+            }
+          ]
+        },
+        "boil": { "boil_time": { "value": 60, "unit": "min" } },
+        "notes": "A roasty, full-bodied oatmeal stout — the dark counterpoint to the hop-forward samples. Flaked oats for body, chocolate malt + roasted barley for colour and coffee notes, English ale yeast. Lands inside BJCP 16B and shows off the deep end of the colour scale."
+      }
+    ]
+  }
+}

@@ -127,10 +127,15 @@ async function main() {
     await capture(page, "library");
 
     // ─── 2. Recipe ──────────────────────────────────────────────────
-    // Click the recipe-name h2 inside the first card. Clicking the
-    // card directly would risk hitting the dup/delete buttons in the
-    // top-right corner; the h2 propagates to the onSelect button.
-    await page.locator("ul.grid li h2").first().click();
+    // Open the flagship "West Coast IPA" deliberately — it's the most
+    // complete sample (full BJCP envelope so every in-style gauge incl.
+    // BU:GU renders, stepped mash, full hop schedule, salt + fining
+    // miscs), so the hero shot shows off the most of the app. Click the
+    // recipe-name h2 (not the card) to avoid the dup/delete buttons.
+    await page
+      .locator("ul.grid li h2", { hasText: /West Coast IPA/i })
+      .first()
+      .click();
     // "Water volumes" is always rendered (computed defaults if no
     // equipment profile) — a more reliable wait target than
     // "Hop additions" which depends on the recipe having hops.

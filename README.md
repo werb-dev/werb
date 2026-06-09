@@ -20,7 +20,7 @@ Runs as a [Tauri](https://tauri.app/) desktop app on macOS / Windows / Linux, an
 | | |
 |-|-|
 | ![Library](./docs/screenshots/library.png) | ![Recipe](./docs/screenshots/recipe.png) |
-| Library — every recipe at a glance. | Recipe — targets, water, hops, tasting profile. |
+| Library — every recipe at a glance. | Recipe — targets vs style (BU:GU + in-style gauges), grain-bill %, water, hops. |
 | ![Brew](./docs/screenshots/brew.png) | ![Journal](./docs/screenshots/journal.png) |
 | Brew — live timeline, hop schedule, measurements. | Journal — every past brew, exportable. |
 

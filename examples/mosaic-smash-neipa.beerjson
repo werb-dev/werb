@@ -6,102 +6,266 @@
         "name": "Mosaic SMaSH NEIPA",
         "type": "all grain",
         "author": "Andre Mazany (@andre.mazany)",
-        "batch_size": { "value": 21, "unit": "l" },
-        "efficiency": { "brewhouse": { "value": 65.4, "unit": "%" } },
+        "batch_size": {
+          "value": 21,
+          "unit": "l"
+        },
+        "efficiency": {
+          "brewhouse": {
+            "value": 65.4,
+            "unit": "%"
+          }
+        },
         "style": {
           "name": "New England IPA",
-          "category": "IPA",
+          "category": "India Pale Ale",
           "category_number": 21,
-          "style_letter": "B",
+          "style_letter": "C",
           "style_guide": "BJCP 2021",
-          "type": "beer"
+          "type": "beer",
+          "original_gravity": {
+            "minimum": {
+              "value": 1.06,
+              "unit": "sg"
+            },
+            "maximum": {
+              "value": 1.085,
+              "unit": "sg"
+            }
+          },
+          "final_gravity": {
+            "minimum": {
+              "value": 1.01,
+              "unit": "sg"
+            },
+            "maximum": {
+              "value": 1.015,
+              "unit": "sg"
+            }
+          },
+          "international_bitterness_units": {
+            "minimum": {
+              "value": 25,
+              "unit": "IBUs"
+            },
+            "maximum": {
+              "value": 60,
+              "unit": "IBUs"
+            }
+          },
+          "color": {
+            "minimum": {
+              "value": 3,
+              "unit": "SRM"
+            },
+            "maximum": {
+              "value": 7,
+              "unit": "SRM"
+            }
+          },
+          "alcohol_by_volume": {
+            "minimum": {
+              "value": 6.0,
+              "unit": "%"
+            },
+            "maximum": {
+              "value": 9.0,
+              "unit": "%"
+            }
+          }
         },
-        "original_gravity": { "value": 1.055, "unit": "sg" },
-        "final_gravity": { "value": 1.012, "unit": "sg" },
-        "alcohol_by_volume": { "value": 5.6, "unit": "%" },
+        "original_gravity": {
+          "value": 1.055,
+          "unit": "sg"
+        },
+        "final_gravity": {
+          "value": 1.012,
+          "unit": "sg"
+        },
+        "alcohol_by_volume": {
+          "value": 5.6,
+          "unit": "%"
+        },
         "ibu_estimate": {
           "method": "Tinseth",
-          "ibu": { "value": 33, "unit": "IBUs" }
+          "ibu": {
+            "value": 33,
+            "unit": "IBUs"
+          }
         },
-        "color_estimate": { "value": 10.8, "unit": "EBC" },
+        "color_estimate": {
+          "value": 10.8,
+          "unit": "EBC"
+        },
         "ingredients": {
           "fermentable_additions": [
             {
               "name": "Gladfield Ale Malt",
               "type": "grain",
-              "yield": { "fine_grind": { "value": 81, "unit": "%" } },
-              "color": { "value": 6, "unit": "EBC" },
-              "amount": { "value": 4.0, "unit": "kg" }
+              "yield": {
+                "fine_grind": {
+                  "value": 81,
+                  "unit": "%"
+                }
+              },
+              "color": {
+                "value": 6,
+                "unit": "EBC"
+              },
+              "amount": {
+                "value": 4.0,
+                "unit": "kg"
+              }
             },
             {
               "name": "Gladfield Wheat Malt",
               "type": "grain",
-              "yield": { "fine_grind": { "value": 82, "unit": "%" } },
-              "color": { "value": 4.2, "unit": "EBC" },
-              "amount": { "value": 0.85, "unit": "kg" }
+              "yield": {
+                "fine_grind": {
+                  "value": 82,
+                  "unit": "%"
+                }
+              },
+              "color": {
+                "value": 4.2,
+                "unit": "EBC"
+              },
+              "amount": {
+                "value": 0.85,
+                "unit": "kg"
+              }
             },
             {
               "name": "Oats, Flaked",
               "type": "grain",
-              "yield": { "fine_grind": { "value": 80, "unit": "%" } },
-              "color": { "value": 2.8, "unit": "EBC" },
-              "amount": { "value": 0.35, "unit": "kg" }
+              "yield": {
+                "fine_grind": {
+                  "value": 80,
+                  "unit": "%"
+                }
+              },
+              "color": {
+                "value": 2.8,
+                "unit": "EBC"
+              },
+              "amount": {
+                "value": 0.35,
+                "unit": "kg"
+              }
             },
             {
               "name": "Gladfield Wheat Flaked",
               "type": "grain",
-              "yield": { "fine_grind": { "value": 77, "unit": "%" } },
-              "color": { "value": 3.2, "unit": "EBC" },
-              "amount": { "value": 0.35, "unit": "kg" }
+              "yield": {
+                "fine_grind": {
+                  "value": 77,
+                  "unit": "%"
+                }
+              },
+              "color": {
+                "value": 3.2,
+                "unit": "EBC"
+              },
+              "amount": {
+                "value": 0.35,
+                "unit": "kg"
+              }
             },
             {
               "name": "Gladfield Light Crystal Malt",
               "type": "grain",
-              "yield": { "fine_grind": { "value": 78, "unit": "%" } },
-              "color": { "value": 50, "unit": "EBC" },
-              "amount": { "value": 0.1, "unit": "kg" }
+              "yield": {
+                "fine_grind": {
+                  "value": 78,
+                  "unit": "%"
+                }
+              },
+              "color": {
+                "value": 50,
+                "unit": "EBC"
+              },
+              "amount": {
+                "value": 0.1,
+                "unit": "kg"
+              }
             }
           ],
           "hop_additions": [
             {
               "name": "El Dorado",
-              "alpha_acid": { "value": 11.6, "unit": "%" },
+              "alpha_acid": {
+                "value": 11.6,
+                "unit": "%"
+              },
               "form": "pellet",
-              "amount": { "value": 0.015, "unit": "kg" },
+              "amount": {
+                "value": 0.015,
+                "unit": "kg"
+              },
               "timing": {
                 "use": "add_to_boil",
-                "time": { "value": 60, "unit": "min" }
+                "time": {
+                  "value": 60,
+                  "unit": "min"
+                }
               }
             },
             {
               "name": "Mosaic",
-              "alpha_acid": { "value": 12.25, "unit": "%" },
+              "alpha_acid": {
+                "value": 12.25,
+                "unit": "%"
+              },
               "form": "pellet",
-              "amount": { "value": 0.015, "unit": "kg" },
+              "amount": {
+                "value": 0.015,
+                "unit": "kg"
+              },
               "timing": {
                 "use": "add_to_boil",
-                "time": { "value": 10, "unit": "min" }
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
               }
             },
             {
               "name": "Mosaic",
-              "alpha_acid": { "value": 12.25, "unit": "%" },
+              "alpha_acid": {
+                "value": 12.25,
+                "unit": "%"
+              },
               "form": "pellet",
-              "amount": { "value": 0.04, "unit": "kg" },
+              "amount": {
+                "value": 0.04,
+                "unit": "kg"
+              },
               "timing": {
                 "use": "add_to_boil",
-                "time": { "value": 10, "unit": "min" }
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
               },
               "notes": "Hopstand 10 min @ 80 °C — actual whirlpool, not boil"
             },
             {
               "name": "Mosaic",
-              "alpha_acid": { "value": 12.25, "unit": "%" },
+              "alpha_acid": {
+                "value": 12.25,
+                "unit": "%"
+              },
               "form": "pellet",
-              "amount": { "value": 0.1, "unit": "kg" },
+              "amount": {
+                "value": 0.1,
+                "unit": "kg"
+              },
               "timing": {
                 "use": "add_to_fermentation",
-                "time": { "value": 3, "unit": "day" }
+                "time": {
+                  "value": 3,
+                  "unit": "day"
+                }
               }
             }
           ],
@@ -112,25 +276,48 @@
               "form": "liquid",
               "producer": "White Labs",
               "product_id": "WLP518",
-              "amount": { "value": 1.2, "unit": "pkg" },
-              "attenuation": { "value": 80, "unit": "%" }
+              "amount": {
+                "value": 1.2,
+                "unit": "pkg"
+              },
+              "attenuation": {
+                "value": 80,
+                "unit": "%"
+              }
             }
           ]
         },
         "mash": {
           "name": "Single infusion (BIAB)",
-          "grain_temperature": { "value": 20, "unit": "C" },
+          "grain_temperature": {
+            "value": 20,
+            "unit": "C"
+          },
           "mash_steps": [
             {
               "name": "Saccharification",
               "type": "infusion",
-              "step_temperature": { "value": 67, "unit": "C" },
-              "step_time": { "value": 60, "unit": "min" },
-              "amount": { "value": 16.95, "unit": "l" }
+              "step_temperature": {
+                "value": 67,
+                "unit": "C"
+              },
+              "step_time": {
+                "value": 60,
+                "unit": "min"
+              },
+              "amount": {
+                "value": 16.95,
+                "unit": "l"
+              }
             }
           ]
         },
-        "boil": { "boil_time": { "value": 60, "unit": "min" } },
+        "boil": {
+          "boil_time": {
+            "value": 60,
+            "unit": "min"
+          }
+        },
         "notes": "BIAB. RO water + 8 g CaCl2, 2 g gypsum, 1 g epsom, 1 g canning salt (mash). Brewfather-computed water: mash 16.95 L, sparge 12.19 L, total 29.14 L, pre-boil 25.12 L @ 1.051. Primary fermentation: 29 °C, 4 days (kveik). Carbonation target 2.5 vol."
       }
     ]

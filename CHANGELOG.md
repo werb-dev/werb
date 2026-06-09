@@ -6,6 +6,19 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **Richer bundled examples + refreshed README screenshots.** Added a
+  flagship "West Coast IPA" sample that exercises most of the app end-to-end
+  (stepped mash, full boil + dry-hop schedule, salt + fining miscellaneous
+  additions, a sugar adjunct, and the complete BJCP envelope) and an "Oatmeal
+  Stout" for dark-colour contrast; backfilled full BJCP style ranges onto the
+  existing four so every sample now renders the in-style gauges. Regenerated
+  the README screenshots against the flagship so they show BU:GU, the in-style
+  gauges, and grain-bill percentages. A new test asserts every bundled example
+  is valid BeerJSON (the app silently skips invalid samples, so this guards the
+  "Import samples" path).
+
 ### Fixed
 
 - **Style-fit gauges now agree between the recipe view and the editor

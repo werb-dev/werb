@@ -21,8 +21,58 @@
           "category": "Strong American Ale",
           "category_number": 22,
           "style_letter": "A",
-          "style_guide": "BJCP 2015",
-          "type": "beer"
+          "style_guide": "BJCP 2021",
+          "type": "beer",
+          "original_gravity": {
+            "minimum": {
+              "value": 1.065,
+              "unit": "sg"
+            },
+            "maximum": {
+              "value": 1.085,
+              "unit": "sg"
+            }
+          },
+          "final_gravity": {
+            "minimum": {
+              "value": 1.008,
+              "unit": "sg"
+            },
+            "maximum": {
+              "value": 1.018,
+              "unit": "sg"
+            }
+          },
+          "international_bitterness_units": {
+            "minimum": {
+              "value": 60,
+              "unit": "IBUs"
+            },
+            "maximum": {
+              "value": 100,
+              "unit": "IBUs"
+            }
+          },
+          "color": {
+            "minimum": {
+              "value": 6,
+              "unit": "SRM"
+            },
+            "maximum": {
+              "value": 14,
+              "unit": "SRM"
+            }
+          },
+          "alcohol_by_volume": {
+            "minimum": {
+              "value": 7.5,
+              "unit": "%"
+            },
+            "maximum": {
+              "value": 10.0,
+              "unit": "%"
+            }
+          }
         },
         "original_gravity": {
           "value": 1.069,

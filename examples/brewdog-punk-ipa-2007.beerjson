@@ -17,10 +17,62 @@
           }
         },
         "style": {
-          "name": "IPA",
-          "category": "IPA",
-          "style_guide": "Unspecified",
-          "type": "beer"
+          "name": "American IPA",
+          "category": "India Pale Ale",
+          "style_guide": "BJCP 2021",
+          "type": "beer",
+          "category_number": 21,
+          "style_letter": "A",
+          "original_gravity": {
+            "minimum": {
+              "value": 1.056,
+              "unit": "sg"
+            },
+            "maximum": {
+              "value": 1.07,
+              "unit": "sg"
+            }
+          },
+          "final_gravity": {
+            "minimum": {
+              "value": 1.008,
+              "unit": "sg"
+            },
+            "maximum": {
+              "value": 1.014,
+              "unit": "sg"
+            }
+          },
+          "international_bitterness_units": {
+            "minimum": {
+              "value": 40,
+              "unit": "IBUs"
+            },
+            "maximum": {
+              "value": 70,
+              "unit": "IBUs"
+            }
+          },
+          "color": {
+            "minimum": {
+              "value": 6,
+              "unit": "SRM"
+            },
+            "maximum": {
+              "value": 14,
+              "unit": "SRM"
+            }
+          },
+          "alcohol_by_volume": {
+            "minimum": {
+              "value": 5.5,
+              "unit": "%"
+            },
+            "maximum": {
+              "value": 7.5,
+              "unit": "%"
+            }
+          }
         },
         "original_gravity": {
           "value": 1.056,

@@ -1,0 +1,194 @@
+{
+  "beerjson": {
+    "version": 2.06,
+    "recipes": [
+      {
+        "name": "West Coast IPA",
+        "type": "all grain",
+        "author": "Werb",
+        "batch_size": { "value": 20, "unit": "l" },
+        "efficiency": { "brewhouse": { "value": 72, "unit": "%" } },
+        "style": {
+          "name": "American IPA",
+          "category": "India Pale Ale",
+          "category_number": 21,
+          "style_letter": "A",
+          "style_guide": "BJCP 2021",
+          "type": "beer",
+          "original_gravity": {
+            "minimum": { "value": 1.056, "unit": "sg" },
+            "maximum": { "value": 1.07, "unit": "sg" }
+          },
+          "final_gravity": {
+            "minimum": { "value": 1.008, "unit": "sg" },
+            "maximum": { "value": 1.014, "unit": "sg" }
+          },
+          "international_bitterness_units": {
+            "minimum": { "value": 40, "unit": "IBUs" },
+            "maximum": { "value": 70, "unit": "IBUs" }
+          },
+          "color": {
+            "minimum": { "value": 6, "unit": "SRM" },
+            "maximum": { "value": 14, "unit": "SRM" }
+          },
+          "alcohol_by_volume": {
+            "minimum": { "value": 5.5, "unit": "%" },
+            "maximum": { "value": 7.5, "unit": "%" }
+          }
+        },
+        "original_gravity": { "value": 1.065, "unit": "sg" },
+        "final_gravity": { "value": 1.012, "unit": "sg" },
+        "alcohol_by_volume": { "value": 6.9, "unit": "%" },
+        "ibu_estimate": { "method": "Tinseth", "ibu": { "value": 39, "unit": "IBUs" } },
+        "color_estimate": { "value": 18, "unit": "EBC" },
+        "ingredients": {
+          "fermentable_additions": [
+            {
+              "name": "Pale Ale Malt (2-row)",
+              "type": "grain",
+              "yield": { "fine_grind": { "value": 81, "unit": "%" } },
+              "color": { "value": 4, "unit": "EBC" },
+              "amount": { "value": 4.6, "unit": "kg" }
+            },
+            {
+              "name": "Munich Malt",
+              "type": "grain",
+              "yield": { "fine_grind": { "value": 80, "unit": "%" } },
+              "color": { "value": 15, "unit": "EBC" },
+              "amount": { "value": 0.3, "unit": "kg" }
+            },
+            {
+              "name": "Caramel / Crystal 60L",
+              "type": "grain",
+              "yield": { "fine_grind": { "value": 74, "unit": "%" } },
+              "color": { "value": 120, "unit": "EBC" },
+              "amount": { "value": 0.35, "unit": "kg" }
+            },
+            {
+              "name": "Carapils (Dextrine)",
+              "type": "grain",
+              "yield": { "fine_grind": { "value": 72, "unit": "%" } },
+              "color": { "value": 3, "unit": "EBC" },
+              "amount": { "value": 0.2, "unit": "kg" }
+            },
+            {
+              "name": "Dextrose (Corn Sugar)",
+              "type": "sugar",
+              "yield": { "fine_grind": { "value": 100, "unit": "%" } },
+              "color": { "value": 0, "unit": "EBC" },
+              "amount": { "value": 0.25, "unit": "kg" }
+            }
+          ],
+          "hop_additions": [
+            {
+              "name": "Magnum",
+              "alpha_acid": { "value": 12.5, "unit": "%" },
+              "form": "pellet",
+              "amount": { "value": 0.015, "unit": "kg" },
+              "timing": { "use": "add_to_boil", "time": { "value": 60, "unit": "min" } }
+            },
+            {
+              "name": "Centennial",
+              "alpha_acid": { "value": 10, "unit": "%" },
+              "form": "pellet",
+              "amount": { "value": 0.025, "unit": "kg" },
+              "timing": { "use": "add_to_boil", "time": { "value": 15, "unit": "min" } }
+            },
+            {
+              "name": "Cascade",
+              "alpha_acid": { "value": 5.5, "unit": "%" },
+              "form": "pellet",
+              "amount": { "value": 0.025, "unit": "kg" },
+              "timing": { "use": "add_to_boil", "time": { "value": 5, "unit": "min" } }
+            },
+            {
+              "name": "Citra",
+              "alpha_acid": { "value": 12, "unit": "%" },
+              "form": "pellet",
+              "amount": { "value": 0.03, "unit": "kg" },
+              "timing": { "use": "add_to_boil", "time": { "value": 0, "unit": "min" } }
+            },
+            {
+              "name": "Citra",
+              "alpha_acid": { "value": 12, "unit": "%" },
+              "form": "pellet",
+              "amount": { "value": 0.04, "unit": "kg" },
+              "timing": { "use": "add_to_fermentation", "time": { "value": 4, "unit": "day" } }
+            },
+            {
+              "name": "Mosaic",
+              "alpha_acid": { "value": 12.5, "unit": "%" },
+              "form": "pellet",
+              "amount": { "value": 0.04, "unit": "kg" },
+              "timing": { "use": "add_to_fermentation", "time": { "value": 4, "unit": "day" } }
+            }
+          ],
+          "culture_additions": [
+            {
+              "name": "SafAle US-05",
+              "type": "ale",
+              "form": "dry",
+              "producer": "Fermentis",
+              "product_id": "US-05",
+              "amount": { "value": 1, "unit": "pkg" },
+              "attenuation": { "value": 81, "unit": "%" }
+            }
+          ],
+          "miscellaneous_additions": [
+            {
+              "name": "Gypsum (CaSO4)",
+              "type": "water agent",
+              "amount": { "value": 4, "unit": "g" },
+              "timing": { "use": "add_to_mash" }
+            },
+            {
+              "name": "Calcium Chloride (CaCl2)",
+              "type": "water agent",
+              "amount": { "value": 2, "unit": "g" },
+              "timing": { "use": "add_to_mash" }
+            },
+            {
+              "name": "Whirlfloc Tablet",
+              "type": "fining",
+              "amount": { "value": 1, "unit": "g" },
+              "timing": { "use": "add_to_boil", "time": { "value": 15, "unit": "min" } }
+            },
+            {
+              "name": "Yeast Nutrient",
+              "type": "other",
+              "amount": { "value": 1, "unit": "g" },
+              "timing": { "use": "add_to_boil", "time": { "value": 10, "unit": "min" } }
+            }
+          ]
+        },
+        "mash": {
+          "name": "Step mash",
+          "grain_temperature": { "value": 20, "unit": "C" },
+          "mash_steps": [
+            {
+              "name": "Beta rest",
+              "type": "infusion",
+              "step_temperature": { "value": 63, "unit": "C" },
+              "step_time": { "value": 20, "unit": "min" },
+              "amount": { "value": 16, "unit": "l" }
+            },
+            {
+              "name": "Alpha rest",
+              "type": "temperature",
+              "step_temperature": { "value": 70, "unit": "C" },
+              "step_time": { "value": 30, "unit": "min" }
+            },
+            {
+              "name": "Mash-out",
+              "type": "temperature",
+              "step_temperature": { "value": 76, "unit": "C" },
+              "step_time": { "value": 10, "unit": "min" }
+            }
+          ]
+        },
+        "boil": { "boil_time": { "value": 60, "unit": "min" } },
+        "notes": "Flagship showcase recipe — exercises most of Werb end-to-end: a stepped mash, a full boil + dry-hop schedule, brewing-salt and fining miscellaneous additions, a sugar adjunct alongside base/crystal/dextrine malts, and the complete BJCP 21A envelope so every in-style gauge (incl. BU:GU) has something to read against."
+      }
+    ]
+  }
+}
