@@ -6,32 +6,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Changed
-
-- **Richer bundled examples + refreshed README screenshots.** Added a
-  flagship "West Coast IPA" sample that exercises most of the app end-to-end
-  (stepped mash, full boil + dry-hop schedule, salt + fining miscellaneous
-  additions, a sugar adjunct, and the complete BJCP envelope) and an "Oatmeal
-  Stout" for dark-colour contrast; backfilled full BJCP style ranges onto the
-  existing four so every sample now renders the in-style gauges. Regenerated
-  the README screenshots against the flagship so they show BU:GU, the in-style
-  gauges, and grain-bill percentages. A new test asserts every bundled example
-  is valid BeerJSON (the app silently skips invalid samples, so this guards the
-  "Import samples" path).
-
-### Fixed
-
-- **Style-fit gauges now agree between the recipe view and the editor
-  banner.** Both judge fit on the *computed* recipe (grain bill + hops), so
-  the level bars sit at the same spot whether you're viewing or editing. The
-  read view used to feed the gauge the file's *claimed* OG/FG/IBU/etc. while
-  the editor used the live compute, so the needles jumped when you toggled
-  edit mode. The big numbers still show the claimed values with the ≈computed
-  sanity line + divergence warning; only the fit gauge follows the computed
-  reality. Regression-guarded by an e2e that asserts the gauges are identical
-  across both screens.
-
-## [0.5.0] — 2026-06-08
+## [0.5.0] — 2026-06-09
 
 Second feedback-driven release. A third batch of forum testers (Eric974,
 Stanovitch, and a returning Arwen) pushed on editor ergonomics, ingredient
@@ -85,9 +60,28 @@ percentages and a BU:GU balance gauge, and water chemistry can finally work
 - **Category-scoped fermentable search** — setting a row's type to "sugar"
   lists only sugars, etc. Closes
   [#34](https://github.com/werb-dev/werb/issues/34).
+- **Richer bundled examples + refreshed README screenshots.** Added a flagship
+  "West Coast IPA" sample that exercises most of the app end-to-end (stepped
+  mash, full boil + dry-hop schedule, salt + fining miscellaneous additions, a
+  sugar adjunct, and the complete BJCP envelope) and an "Oatmeal Stout" for
+  dark-colour contrast; backfilled full BJCP style ranges onto the existing
+  four so every sample now renders the in-style gauges. Regenerated the README
+  screenshots against the flagship so they show BU:GU, the in-style gauges, and
+  grain-bill percentages. A new test asserts every bundled example is valid
+  BeerJSON (the app silently skips invalid samples, so this guards the "Import
+  samples" path).
 
 ### Fixed
 
+- **Style-fit gauges agree between the recipe view and the editor banner.**
+  Both judge fit on the *computed* recipe (grain bill + hops), so the level
+  bars sit at the same spot whether you're viewing or editing. The read view
+  used to feed the gauge the file's *claimed* OG/FG/IBU/etc. while the editor
+  used the live compute, so the needles jumped when you toggled edit mode. The
+  big numbers still show the claimed values with the ≈computed sanity line +
+  divergence warning; only the fit gauge follows the computed reality.
+  Regression-guarded by an e2e that asserts the gauges are identical across
+  both screens.
 - **macOS "Werb is damaged" on Apple Silicon**
   ([#31](https://github.com/werb-dev/werb/issues/31)). Documented the
   quarantine workaround (`xattr` / right-click → Open) and the no-install PWA
