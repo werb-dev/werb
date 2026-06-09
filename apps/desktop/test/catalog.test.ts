@@ -11,6 +11,7 @@ import {
   searchHops,
   searchMiscs,
   searchStyles,
+  matchedAlias,
 } from "../src/data/catalog/index.ts";
 import { computeWaterAdditions } from "@werb/calc";
 
@@ -136,6 +137,55 @@ describe("catalog search — fermentables", () => {
     // aliases are first-class search keys, not just a noisy fallback.
     const out = searchFermentables("miel");
     expect(out.some((f) => /Honey/i.test(f.name))).toBe(true);
+  });
+
+  it("empty query returns the whole catalog, alphabetical by name", () => {
+    const out = searchFermentables("");
+    expect(out.length).toBe(FERMENTABLES.length);
+    const names = out.map((f) => f.name);
+    const sorted = [...names].sort((a, b) => a.localeCompare(b));
+    expect(names).toEqual(sorted);
+    // Specifically NOT the catalog's internal order (which opened on
+    // "Pilsner Malt" and surprised users).
+    expect(out[0]?.name).not.toBe(FERMENTABLES[0]?.name);
+  });
+
+  it("ranks a visible-name prefix above an alias-only prefix match", () => {
+    // Typing "m" should surface names that visibly start with M (Munich,
+    // Maris Otter…) before alias-only hits like Honey (miel) or Flaked
+    // Corn (maïs) whose displayed names don't start with M.
+    const out = searchFermentables("m");
+    expect(out[0]?.name.toLowerCase().startsWith("m")).toBe(true);
+    const firstNamePrefix = out.findIndex((f) => /^m/i.test(f.name));
+    const firstAliasOnly = out.findIndex(
+      (f) => !/m/i.test(f.name) && (f.aliases ?? []).some((a) => /^m/i.test(a)),
+    );
+    if (firstAliasOnly !== -1) {
+      expect(firstNamePrefix).toBeLessThan(firstAliasOnly);
+    }
+  });
+
+  it("scopes results to a fermentable category when one is given", () => {
+    const sugars = searchFermentables("", "sugar");
+    expect(sugars.length).toBeGreaterThan(0);
+    expect(sugars.every((f) => f.type === "sugar")).toBe(true);
+    // A grain like Pilsner must not leak into a sugar-scoped search.
+    expect(searchFermentables("pils", "sugar").length).toBe(0);
+  });
+});
+
+describe("matchedAlias", () => {
+  it("returns the alias that a query matched when the name doesn't", () => {
+    expect(matchedAlias({ name: "Honey", aliases: ["miel"] }, "mie")).toBe("miel");
+  });
+
+  it("returns null when the name itself matches", () => {
+    expect(matchedAlias({ name: "Wheat Malt", aliases: ["blé"] }, "wheat")).toBeNull();
+  });
+
+  it("returns null when nothing matches or there are no aliases", () => {
+    expect(matchedAlias({ name: "Pilsner" }, "xyz")).toBeNull();
+    expect(matchedAlias({ name: "Pilsner", aliases: ["pils"] }, "")).toBeNull();
   });
 });
 

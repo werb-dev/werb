@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://werb.dev/schemas/tools/water-suggest.input.schema.json",
+  "title": "WaterSuggestInput",
+  "description": "Source + target water ion profiles + total water volume. Drives the inverse calc that suggests brewing-salt additions to move source toward target.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["water_volume_l", "source", "target"],
+  "properties": {
+    "water_volume_l": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Total water volume the salts are mixed into, in liters. Typically the sum of mash + sparge water."
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Source water ion concentrations in ppm (mg/L).",
+      "required": ["ca_ppm", "mg_ppm", "na_ppm", "cl_ppm", "so4_ppm", "hco3_ppm"],
+      "properties": {
+        "ca_ppm":   { "type": "number", "minimum": 0, "description": "Calcium, ppm." },
+        "mg_ppm":   { "type": "number", "minimum": 0, "description": "Magnesium, ppm." },
+        "na_ppm":   { "type": "number", "minimum": 0, "description": "Sodium, ppm." },
+        "cl_ppm":   { "type": "number", "minimum": 0, "description": "Chloride, ppm." },
+        "so4_ppm":  { "type": "number", "minimum": 0, "description": "Sulfate, ppm." },
+        "hco3_ppm": { "type": "number", "minimum": 0, "description": "Bicarbonate, ppm." }
+      }
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Target water ion concentrations in ppm (mg/L).",
+      "required": ["ca_ppm", "mg_ppm", "na_ppm", "cl_ppm", "so4_ppm", "hco3_ppm"],
+      "properties": {
+        "ca_ppm":   { "type": "number", "minimum": 0, "description": "Calcium, ppm." },
+        "mg_ppm":   { "type": "number", "minimum": 0, "description": "Magnesium, ppm." },
+        "na_ppm":   { "type": "number", "minimum": 0, "description": "Sodium, ppm." },
+        "cl_ppm":   { "type": "number", "minimum": 0, "description": "Chloride, ppm." },
+        "so4_ppm":  { "type": "number", "minimum": 0, "description": "Sulfate, ppm." },
+        "hco3_ppm": { "type": "number", "minimum": 0, "description": "Bicarbonate, ppm." }
+      }
+    }
+  }
+}

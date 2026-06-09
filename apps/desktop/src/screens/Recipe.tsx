@@ -10,6 +10,7 @@ import {
   toLiters,
   toMinutes,
   toSrm,
+  toKilograms,
   isMass,
   isVolume,
   recipeApparentAttenuationPct,
@@ -23,6 +24,8 @@ import {
   computeFg,
   computeGravity,
   computeScale,
+  computeBuGu,
+  computeGrainBillPct,
 } from "@werb/calc";
 import { profileToWaterOverrides, type ProfileWithId } from "../data/equipment.ts";
 import { exportBeerJson, exportBeerXml, exportRecipeHtml } from "../data/recipe-export.ts";
@@ -129,6 +132,18 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
   const computedColorDisplay = formatSrm(computed.color.srm, prefs).display;
   const computedOgDisplay = formatSpecificGravity(computed.gravity.og, prefs).display;
   const computedFgDisplay = formatSpecificGravity(computed.fg, prefs).display;
+  // BU:GU off the same numbers the strip displays (claimed value preferred).
+  const buGu = computeBuGu(
+    claimedIbu ?? computed.ibu.total_ibu,
+    claimedOgSg ?? computed.gravity.og,
+  );
+  // Per-fermentable share of the bill by mass, aligned to the ingredient list.
+  const grainShares = computeGrainBillPct(
+    recipe.ingredients.fermentable_additions.map((f) => ({
+      name: f.name,
+      mass_kg: isMass(f.amount) ? toKilograms(f.amount) : 0,
+    })),
+  );
 
   // BJCP range hints. `current` prefers the recipe's claimed value and falls
   // back to our computed estimate so the indicator works on bare imports.
@@ -139,6 +154,7 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
     ibu: claimedIbu ?? computed.ibu.total_ibu,
     abv: claimedAbv ?? computed.abv,
     srm: claimedSrm ?? computed.color.srm,
+    buGu,
     style: recipe.style,
     prefs,
   });
@@ -215,7 +231,7 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
             we show our compute as the main number with no subtitle —
             displaying "—" with the estimate as a tiny subtitle hides
             the answer the brewer is actually looking for. */}
-        <section className="mb-8 sm:mb-10 lg:mb-12 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-px bg-border rounded-xl overflow-hidden">
+        <section className="mb-8 sm:mb-10 lg:mb-12 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-px bg-border rounded-xl overflow-hidden">
           <Tile
             label="OG"
             value={claimedOgSg !== null ? claimedOgDisplay : computedOgDisplay}
@@ -259,6 +275,12 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
               claimedSrm !== null && Math.abs(computed.color.srm - claimedSrm) > 3
             }
             styleHint={styleHints.color}
+          />
+          <Tile
+            label="BU:GU"
+            value={buGu > 0 ? buGu.toFixed(2) : "—"}
+            styleHint={buGu > 0 ? styleHints.bu_gu : null}
+            testId="targets-bugu"
           />
         </section>
 
@@ -308,6 +330,11 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
                   </div>
                   <div className="font-mono text-mono-lg shrink-0 text-right">
                     {massDisplay}
+                    {grainShares[i] && grainShares[i].pct > 0 && (
+                      <span className="block text-body-sm text-text-muted">
+                        {grainShares[i].pct.toFixed(1)}%
+                      </span>
+                    )}
                   </div>
                 </li>
               );

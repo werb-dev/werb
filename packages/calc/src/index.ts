@@ -14,5 +14,9 @@ export {
   type YeastStarterInput,
   type YeastStarterOutput,
 } from "./yeast-starter.js";
-export { computeWaterAdditions } from "./water-additions.js";
+export { computeWaterAdditions, FRAC } from "./water-additions.js";
+export { suggestWaterAdditions } from "./water-suggest.js";
 export { computeEquipmentSuggest } from "./equipment-suggest.js";
+export { computeBuGu } from "./bu-gu.js";
+export { computeGrainBillPct, type GrainBillShare } from "./grain-bill.js";
+export { solveGrainToOg, solveHopsToIbu } from "./solve.js";

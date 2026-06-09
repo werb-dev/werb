@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://werb.dev/schemas/tools/water-suggest.output.schema.json",
+  "title": "WaterSuggestOutput",
+  "description": "Suggested brewing-salt additions (grams) that move the source water toward the target profile, plus the achieved profile and the residual delta per ion.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["additions", "achieved", "residual"],
+  "properties": {
+    "additions": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Suggested salt amounts in grams. Feed these straight into water-additions to reproduce `achieved`.",
+      "required": [
+        "gypsum_g",
+        "calcium_chloride_g",
+        "epsom_g",
+        "table_salt_g",
+        "baking_soda_g"
+      ],
+      "properties": {
+        "gypsum_g":           { "type": "number", "minimum": 0, "description": "Calcium sulfate (CaSO4·2H2O)." },
+        "calcium_chloride_g": { "type": "number", "minimum": 0, "description": "Calcium chloride (CaCl2·2H2O)." },
+        "epsom_g":            { "type": "number", "minimum": 0, "description": "Magnesium sulfate (MgSO4·7H2O)." },
+        "table_salt_g":       { "type": "number", "minimum": 0, "description": "Sodium chloride (NaCl)." },
+        "baking_soda_g":      { "type": "number", "minimum": 0, "description": "Sodium bicarbonate (NaHCO3)." }
+      }
+    },
+    "achieved": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Resulting ion profile after applying the suggested additions to the source.",
+      "required": ["ca_ppm", "mg_ppm", "na_ppm", "cl_ppm", "so4_ppm", "hco3_ppm"],
+      "properties": {
+        "ca_ppm":   { "type": "number", "description": "Calcium, ppm." },
+        "mg_ppm":   { "type": "number", "description": "Magnesium, ppm." },
+        "na_ppm":   { "type": "number", "description": "Sodium, ppm." },
+        "cl_ppm":   { "type": "number", "description": "Chloride, ppm." },
+        "so4_ppm":  { "type": "number", "description": "Sulfate, ppm." },
+        "hco3_ppm": { "type": "number", "description": "Bicarbonate, ppm." }
+      }
+    },
+    "residual": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Per-ion delta (achieved − target), in ppm. Near zero means a close match; positive means the suggestion overshot that ion.",
+      "required": ["ca_ppm", "mg_ppm", "na_ppm", "cl_ppm", "so4_ppm", "hco3_ppm"],
+      "properties": {
+        "ca_ppm":   { "type": "number", "description": "Calcium, ppm." },
+        "mg_ppm":   { "type": "number", "description": "Magnesium, ppm." },
+        "na_ppm":   { "type": "number", "description": "Sodium, ppm." },
+        "cl_ppm":   { "type": "number", "description": "Chloride, ppm." },
+        "so4_ppm":  { "type": "number", "description": "Sulfate, ppm." },
+        "hco3_ppm": { "type": "number", "description": "Bicarbonate, ppm." }
+      }
+    }
+  }
+}

@@ -11,6 +11,12 @@ Werb sits at the intersection of [BeerSmith](https://beersmith.com/) (calculatio
 
 Runs as a [Tauri](https://tauri.app/) desktop app on macOS / Windows / Linux, and as a Progressive Web App in any modern browser.
 
+> **macOS users — “Werb is damaged and can’t be opened”?** The desktop builds aren’t code-signed/notarized yet (Apple Developer ID pending), so Gatekeeper quarantines the download. It’s not actually damaged. Either:
+> - right-click `Werb.app` → **Open** → **Open** (or System Settings → Privacy & Security → **Open Anyway**), or
+> - clear the quarantine flag: `xattr -dr com.apple.quarantine /Applications/Werb.app`
+>
+> Or skip the install entirely and use the **[PWA](https://werb-dev.github.io/werb/)** — same app, nothing to sign, works offline once loaded.
+
 | | |
 |-|-|
 | ![Library](./docs/screenshots/library.png) | ![Recipe](./docs/screenshots/recipe.png) |

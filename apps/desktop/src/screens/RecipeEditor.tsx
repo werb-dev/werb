@@ -12,12 +12,14 @@ import type {
   TimeType,
 } from "@werb/adapters";
 import {
+  applyScale,
   isMass,
   isVolume,
   recipeApparentAttenuationPct,
   recipeToColorInput,
   recipeToGravityInput,
   recipeToIbuInput,
+  recipeToScaleInput,
   toCelsius,
   toGrams,
   toKilograms,
@@ -26,16 +28,22 @@ import {
 } from "@werb/adapters";
 import {
   computeAbv,
+  computeBuGu,
   computeColor,
   computeFg,
+  computeGrainBillPct,
   computeGravity,
   computeIbu,
+  computeScale,
+  solveGrainToOg,
+  solveHopsToIbu,
 } from "@werb/calc";
 import {
   formatSpecificGravity,
   formatSrm,
 } from "../data/units-format.ts";
 import {
+  matchedAlias,
   searchCultures,
   searchFermentables,
   searchHops,
@@ -94,6 +102,27 @@ export function RecipeEditor({ recipe, onClose, onSave }: RecipeEditorProps) {
   const [draft, setDraft] = useState<BeerJsonRecipe>(recipe);
   const t = useT();
 
+  // Dirty = the draft has diverged from the recipe we opened. Drives the
+  // leave-without-saving guard (in-app close + tab/window close). Snapshot
+  // the opened recipe once so saving — which commits draft upstream — doesn't
+  // leave us looking "dirty" against a stale baseline.
+  const initialJson = useMemo(() => JSON.stringify(recipe), [recipe]);
+  const dirty = useMemo(
+    () => JSON.stringify(draft) !== initialJson,
+    [draft, initialJson],
+  );
+
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      // Legacy assignment some browsers still require to trigger the prompt.
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
+
   const update = <K extends keyof BeerJsonRecipe>(key: K, value: BeerJsonRecipe[K]) =>
     setDraft((d) => ({ ...d, [key]: value }));
 
@@ -105,12 +134,19 @@ export function RecipeEditor({ recipe, onClose, onSave }: RecipeEditorProps) {
     onClose();
   };
 
+  // Guarded close for the back/cancel affordance: confirm before discarding
+  // unsaved edits. Saving uses onClose directly, so it never prompts.
+  const handleClose = () => {
+    if (dirty && !window.confirm(t("editor.unsaved.confirm"))) return;
+    onClose();
+  };
+
   return (
     <div className="min-h-dvh bg-bg text-text">
       <main className="mx-auto max-w-4xl px-4 pt-12 pb-8 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
         <header className="mb-8 sm:mb-10 flex items-center justify-between gap-4">
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="text-caption font-medium text-text-muted hover:text-text transition-colors flex items-center gap-2"
           >
             <span aria-hidden>←</span> {t("editor.cancel")}
@@ -129,6 +165,7 @@ export function RecipeEditor({ recipe, onClose, onSave }: RecipeEditorProps) {
         </p>
 
         <TargetsBanner draft={draft} />
+        <EditorTools draft={draft} onChange={setDraft} />
 
         <MetadataSection draft={draft} update={update} />
         <FermentablesSection
@@ -174,7 +211,8 @@ function TargetsBanner({ draft }: { draft: BeerJsonRecipe }) {
     const attenuation = recipeApparentAttenuationPct(draft);
     const fg = computeFg(gravity.og, attenuation);
     const abv = computeAbv(gravity.og, fg);
-    return { og: gravity.og, fg, ibu: ibu.total_ibu, abv, srm: color.srm };
+    const buGu = computeBuGu(ibu.total_ibu, gravity.og);
+    return { og: gravity.og, fg, ibu: ibu.total_ibu, abv, srm: color.srm, buGu };
   }, [draft, prefs.ibu_method, prefs.color_method]);
 
   // Same BJCP-fit helper the read-only Recipe screen uses, so "in style"
@@ -185,6 +223,7 @@ function TargetsBanner({ draft }: { draft: BeerJsonRecipe }) {
     ibu: targets.ibu,
     abv: targets.abv,
     srm: targets.srm,
+    buGu: targets.buGu,
     style: draft.style,
     prefs,
   });
@@ -198,7 +237,7 @@ function TargetsBanner({ draft }: { draft: BeerJsonRecipe }) {
           shared brewer vocabulary. Same Tile component as the read-only
           Recipe screen, so the two strips can't drift in size or fit
           colouring. */}
-      <div className="grid grid-cols-5 gap-px bg-border rounded-xl overflow-hidden">
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-px bg-border rounded-xl overflow-hidden">
         <Tile
           label="OG"
           value={formatSpecificGravity(targets.og, prefs).display}
@@ -229,7 +268,195 @@ function TargetsBanner({ draft }: { draft: BeerJsonRecipe }) {
           styleHint={styleHints.color}
           testId="targets-color"
         />
+        <Tile
+          label="BU:GU"
+          value={targets.buGu > 0 ? targets.buGu.toFixed(2) : "—"}
+          styleHint={targets.buGu > 0 ? styleHints.bu_gu : null}
+          testId="targets-bugu"
+        />
       </div>
+    </div>
+  );
+}
+
+// ─── Editor tools: scale to volume, solve to OG / IBU ──────────────────────
+
+/**
+ * A button that expands into an inline target input. The brewer types a
+ * value, hits ✓ (or Enter), and the parent retargets the recipe. Closed by
+ * default so the toolbar stays compact.
+ */
+function TargetTool({
+  label,
+  unit,
+  initial,
+  onApply,
+}: {
+  label: string;
+  unit: string;
+  initial: string;
+  onApply: (v: number) => void;
+}) {
+  const t = useT();
+  const [open, setOpen] = useState(false);
+  const [val, setVal] = useState(initial);
+
+  const apply = () => {
+    const n = parseLocaleNumber(val);
+    if (Number.isFinite(n)) onApply(n);
+    setOpen(false);
+  };
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          setVal(initial);
+          setOpen(true);
+        }}
+        className="px-3 py-1.5 rounded-lg bg-surface-raised border border-border text-body-sm font-medium text-text-muted hover:border-accent hover:text-accent transition-colors"
+      >
+        {label}
+      </button>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 rounded-lg border border-accent bg-surface px-2 py-1">
+      <span className="text-caption text-text-muted">{label}</span>
+      <input
+        autoFocus
+        type="text"
+        inputMode="decimal"
+        value={val}
+        onChange={(e) => setVal(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") apply();
+          if (e.key === "Escape") setOpen(false);
+        }}
+        className="w-16 bg-transparent text-body-sm font-mono tabular-nums text-text text-right focus:outline-none"
+      />
+      <span className="text-caption font-mono text-text-muted">{unit}</span>
+      <button
+        type="button"
+        onClick={apply}
+        aria-label={t("editor.tools.apply")}
+        className="ml-1 text-accent text-body-sm font-medium"
+      >
+        ✓
+      </button>
+      <button
+        type="button"
+        onClick={() => setOpen(false)}
+        aria-label={t("editor.tools.cancel")}
+        className="text-text-muted text-body-sm"
+      >
+        ×
+      </button>
+    </span>
+  );
+}
+
+/**
+ * Retarget actions that live just under the live banner. All three preserve
+ * the recipe's shape: "Scale" keeps grist/hop ratios at a new volume;
+ * "Solve OG" multiplies the whole grain bill to hit a gravity; "Solve IBU"
+ * multiplies the hops to hit a bitterness. The banner recomputes instantly so
+ * the brewer sees the result land. (Solve OG raises utilization slightly →
+ * IBU drifts down; solve OG first, then IBU.)
+ */
+function EditorTools({
+  draft,
+  onChange,
+}: {
+  draft: BeerJsonRecipe;
+  onChange: (next: BeerJsonRecipe) => void;
+}) {
+  const t = useT();
+  const prefs = useUnits();
+
+  const scaleToVolume = (targetUserVol: number) => {
+    const targetL = userVolumeToLiters(targetUserVol, prefs);
+    if (!(targetL > 0)) return;
+    const out = computeScale(
+      recipeToScaleInput(draft, {
+        batch_size_l: targetL,
+        efficiency_pct: draft.efficiency?.brewhouse?.value ?? 75,
+      }),
+    );
+    onChange(applyScale(draft, out));
+  };
+
+  const solveToOg = (targetOg: number) => {
+    if (!(targetOg > 1)) return;
+    const currentOg = computeGravity(recipeToGravityInput(draft)).og;
+    const factor = solveGrainToOg(currentOg, targetOg);
+    onChange({
+      ...draft,
+      ingredients: {
+        ...draft.ingredients,
+        fermentable_additions: draft.ingredients.fermentable_additions.map((f) =>
+          isMass(f.amount)
+            ? { ...f, amount: { ...f.amount, value: f.amount.value * factor } }
+            : f,
+        ),
+      },
+    });
+  };
+
+  const solveToIbu = (targetIbu: number) => {
+    if (!(targetIbu >= 0)) return;
+    const currentIbu = computeIbu({
+      ...recipeToIbuInput(draft),
+      method: prefs.ibu_method,
+    }).total_ibu;
+    const factor = solveHopsToIbu(currentIbu, targetIbu);
+    onChange({
+      ...draft,
+      ingredients: {
+        ...draft.ingredients,
+        hop_additions: (draft.ingredients.hop_additions ?? []).map((h) =>
+          isMass(h.amount)
+            ? { ...h, amount: { ...h.amount, value: h.amount.value * factor } }
+            : h,
+        ),
+      },
+    });
+  };
+
+  const curVol = litersToUserVolume(toLiters(draft.batch_size), prefs);
+  const curOg = computeGravity(recipeToGravityInput(draft)).og;
+  const curIbu = computeIbu({
+    ...recipeToIbuInput(draft),
+    method: prefs.ibu_method,
+  }).total_ibu;
+
+  return (
+    <div
+      className="mb-6 sm:mb-8 flex flex-wrap items-center gap-2"
+      data-testid="editor-tools"
+    >
+      <span className="text-caption uppercase tracking-widest text-text-muted mr-1">
+        {t("editor.tools.label")}
+      </span>
+      <TargetTool
+        label={t("editor.tools.scale")}
+        unit={volumeUnitLabel(prefs)}
+        initial={curVol.toFixed(1)}
+        onApply={scaleToVolume}
+      />
+      <TargetTool
+        label={t("editor.tools.solve_og")}
+        unit="SG"
+        initial={curOg.toFixed(3)}
+        onApply={solveToOg}
+      />
+      <TargetTool
+        label={t("editor.tools.solve_ibu")}
+        unit="IBU"
+        initial={curIbu.toFixed(0)}
+        onApply={solveToIbu}
+      />
     </div>
   );
 }
@@ -341,6 +568,14 @@ function FermentablesSection({
       yield: { fine_grind: { value: 80, unit: "%" } },
     });
 
+  // Each row's share of the bill by mass, recomputed live as amounts change.
+  const shares = computeGrainBillPct(
+    items.map((f) => ({
+      name: f.name,
+      mass_kg: isMass(f.amount) ? toKilograms(f.amount) : 0,
+    })),
+  );
+
   return (
     <Section title={t("editor.section.fermentables")}>
       <div className="rounded-xl bg-surface border border-border overflow-x-auto md:overflow-x-visible">
@@ -363,22 +598,30 @@ function FermentablesSection({
               className="col-span-4"
               value={f.name}
               onChange={(v) => updateRow(i, { ...f, name: v })}
-              suggest={searchFermentables}
+              suggest={(q) => searchFermentables(q, f.type)}
               onPick={(entry) => updateRow(i, applyFermentableEntry(f, entry))}
               placeholder={t("editor.placeholder.pick_fermentable")}
               autoFocus={pendingFocusIdx === i}
-              renderItem={(entry) => (
-                <div>
-                  <p className="text-body-sm font-medium text-text">{entry.name}</p>
-                  <p className="font-mono text-caption text-text-muted mt-0.5">
-                    <span className="capitalize">{fermentableTypeLabel(t, entry.type)}</span>
-                    {" · "}
-                    {entry.color_ebc} EBC · {entry.yield_pct}% yield
-                    {entry.producer && ` · ${entry.producer}`}
-                    {entry.origin && ` · ${entry.origin}`}
-                  </p>
-                </div>
-              )}
+              renderItem={(entry, query) => {
+                const alias = matchedAlias(entry, query);
+                return (
+                  <div>
+                    <p className="text-body-sm font-medium text-text">
+                      {entry.name}
+                      {alias && (
+                        <span className="text-text-muted font-normal"> — {alias}</span>
+                      )}
+                    </p>
+                    <p className="font-mono text-caption text-text-muted mt-0.5">
+                      <span className="capitalize">{fermentableTypeLabel(t, entry.type)}</span>
+                      {" · "}
+                      {entry.color_ebc} EBC · {entry.yield_pct}% yield
+                      {entry.producer && ` · ${entry.producer}`}
+                      {entry.origin && ` · ${entry.origin}`}
+                    </p>
+                  </div>
+                );
+              }}
             />
             <InlineSelect
               className="col-span-2"
@@ -391,13 +634,21 @@ function FermentablesSection({
               )}
               options={FERMENTABLE_TYPES}
             />
-            <MassLargeInlineInput
-              className="col-span-2"
-              valueKg={isMass(f.amount) ? toKilograms(f.amount) : 0}
-              onChangeKg={(kg) =>
-                updateRow(i, { ...f, amount: { value: kg, unit: "kg" } })
-              }
-            />
+            <div className="col-span-2">
+              <MassLargeInlineInput
+                className="w-full"
+                steppers
+                valueKg={isMass(f.amount) ? toKilograms(f.amount) : 0}
+                onChangeKg={(kg) =>
+                  updateRow(i, { ...f, amount: { value: kg, unit: "kg" } })
+                }
+              />
+              {shares[i] && shares[i].pct > 0 && (
+                <p className="font-mono text-[10px] text-text-muted mt-0.5 text-right tabular-nums">
+                  {shares[i].pct.toFixed(1)}%
+                </p>
+              )}
+            </div>
             <ColorInlineInput
               className="col-span-2"
               valueSrm={f.color ? toSrm(f.color) : 0}
@@ -584,6 +835,7 @@ function HopsSection({
             />
             <MassSmallInlineInput
               className="col-span-2"
+              steppers
               valueG={isMass(h.amount) ? toGrams(h.amount) : 0}
               onChangeG={(g) =>
                 updateRow(i, { ...h, amount: { value: g / 1000, unit: "kg" } })

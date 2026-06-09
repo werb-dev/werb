@@ -36,9 +36,27 @@ export interface CostLine {
   name: string;
   amount_in_natural_unit: number | null;
   natural_unit: PriceUnit | null;
+  /** Bundled baseline price for the natural unit, before inflation. */
   default_unit_price: number | null;
-  /** unit_price × amount × inflation_factor */
+  /** Price actually used: the brewer's override if set, else the baseline. */
+  unit_price: number | null;
+  /** True when a personal price override drove this line. */
+  is_override: boolean;
+  /** unit_price × amount (× inflation_factor when no override). */
   line_cost: number | null;
+}
+
+/**
+ * Per-install personal price overrides, keyed by {@link priceKey}. Value is
+ * the price per the ingredient's natural unit (€/kg for grain, €/g for hops,
+ * €/pack for yeast). Overrides bypass the global inflation coefficient — the
+ * brewer typed their real price, so we use it verbatim.
+ */
+export type PriceOverrides = Record<string, number>;
+
+/** Stable key for an override entry: matches the cost grouping key. */
+export function priceKey(category: CostCategory, name: string): string {
+  return `${category}:${name.trim().toLowerCase()}`;
 }
 
 export interface CostBreakdown {
@@ -196,16 +214,25 @@ function makeLine(
   amount: unknown,
   extra: { type?: string | undefined; form?: string | undefined },
   inflationFactor: number,
+  overrides?: PriceOverrides,
 ): CostLine {
   const price = defaultPriceFor(category, name, extra);
+  const override = overrides?.[priceKey(category, name)];
+  const is_override = typeof override === "number" && override >= 0;
+  // Override is the brewer's real per-unit price → used verbatim. Baseline
+  // prices are EUR-anchored estimates the inflation knob tunes globally.
+  const unit_price = is_override ? override : price.unit_price;
   const qty = amountIn(amount, price.natural_unit);
-  const line_cost = qty !== null ? qty * price.unit_price * inflationFactor : null;
+  const line_cost =
+    qty !== null ? qty * unit_price * (is_override ? 1 : inflationFactor) : null;
   return {
     category,
     name,
     amount_in_natural_unit: qty,
     natural_unit: price.natural_unit,
     default_unit_price: price.unit_price,
+    unit_price,
+    is_override,
     line_cost,
   };
 }
@@ -251,21 +278,22 @@ function groupLines(lines: CostLine[]): CostLine[] {
 export function computeRecipeCost(
   recipe: BeerJsonRecipe,
   cost_inflation_pct: number,
+  overrides?: PriceOverrides,
 ): CostBreakdown {
   const factor = cost_inflation_pct / 100;
   const raw: CostLine[] = [];
 
   for (const f of recipe.ingredients.fermentable_additions ?? []) {
-    raw.push(makeLine("fermentable", f.name, f.amount, { type: f.type }, factor));
+    raw.push(makeLine("fermentable", f.name, f.amount, { type: f.type }, factor, overrides));
   }
   for (const h of recipe.ingredients.hop_additions ?? []) {
-    raw.push(makeLine("hop", h.name, h.amount, {}, factor));
+    raw.push(makeLine("hop", h.name, h.amount, {}, factor, overrides));
   }
   for (const c of recipe.ingredients.culture_additions ?? []) {
-    raw.push(makeLine("culture", c.name, c.amount, { form: c.form }, factor));
+    raw.push(makeLine("culture", c.name, c.amount, { form: c.form }, factor, overrides));
   }
   for (const m of recipe.ingredients.miscellaneous_additions ?? []) {
-    raw.push(makeLine("misc", m.name, m.amount, { type: m.type }, factor));
+    raw.push(makeLine("misc", m.name, m.amount, { type: m.type }, factor, overrides));
   }
 
   const lines = groupLines(raw);
