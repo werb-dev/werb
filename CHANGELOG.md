@@ -6,6 +6,18 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Style-fit gauges now agree between the recipe view and the editor
+  banner.** Both judge fit on the *computed* recipe (grain bill + hops), so
+  the level bars sit at the same spot whether you're viewing or editing. The
+  read view used to feed the gauge the file's *claimed* OG/FG/IBU/etc. while
+  the editor used the live compute, so the needles jumped when you toggled
+  edit mode. The big numbers still show the claimed values with the ≈computed
+  sanity line + divergence warning; only the fit gauge follows the computed
+  reality. Regression-guarded by an e2e that asserts the gauges are identical
+  across both screens.
+
 ## [0.5.0] — 2026-06-08
 
 Second feedback-driven release. A third batch of forum testers (Eric974,

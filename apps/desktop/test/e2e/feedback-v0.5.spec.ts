@@ -98,6 +98,38 @@ test.describe("Recipe editor — retargeting tools (#33)", () => {
   });
 });
 
+test.describe("Style fit — view and editor agree", () => {
+  test("the level bars sit at the same spot in view mode and edit mode", async ({
+    page,
+  }) => {
+    const app = new App(page);
+    await app.go("Library");
+    await app.library.importSamples();
+    await app.library.openRecipeByName("Cascade Pale Ale");
+
+    // Snapshot every style-fit gauge (fit colour + needle position).
+    const gauges = () =>
+      page.locator('[data-testid="style-gauge"]').evaluateAll((els) =>
+        els.map((el) => ({
+          status: el.getAttribute("data-status"),
+          left: (el.querySelector("div[style]") as HTMLElement | null)?.style.left,
+        })),
+      );
+
+    const viewGauges = await gauges();
+    expect(viewGauges.length).toBeGreaterThanOrEqual(4);
+
+    await app.recipe.edit();
+    const editorGauges = await gauges();
+
+    // Same recipe, same fit basis (computed) → identical bars. This is the
+    // regression guard: the read view used to feed the gauge the file's
+    // claimed values while the editor used the live compute, so the needles
+    // jumped when you toggled edit mode.
+    expect(editorGauges).toEqual(viewGauges);
+  });
+});
+
 test.describe("Recipe — BU:GU tile (#32)", () => {
   test("a styled recipe shows a numeric BU:GU on the read view", async ({ page }) => {
     const app = new App(page);

@@ -132,11 +132,9 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
   const computedColorDisplay = formatSrm(computed.color.srm, prefs).display;
   const computedOgDisplay = formatSpecificGravity(computed.gravity.og, prefs).display;
   const computedFgDisplay = formatSpecificGravity(computed.fg, prefs).display;
-  // BU:GU off the same numbers the strip displays (claimed value preferred).
-  const buGu = computeBuGu(
-    claimedIbu ?? computed.ibu.total_ibu,
-    claimedOgSg ?? computed.gravity.og,
-  );
+  // BU:GU from the computed grain bill + hops — same basis as the editor's
+  // live banner, so the value (and its gauge) read identically across views.
+  const buGu = computeBuGu(computed.ibu.total_ibu, computed.gravity.og);
   // Per-fermentable share of the bill by mass, aligned to the ingredient list.
   const grainShares = computeGrainBillPct(
     recipe.ingredients.fermentable_additions.map((f) => ({
@@ -145,15 +143,17 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
     })),
   );
 
-  // BJCP range hints. `current` prefers the recipe's claimed value and falls
-  // back to our computed estimate so the indicator works on bare imports.
-  // Same helper drives the editor's live banner, so the two views agree.
+  // BJCP range hints. Judged on the COMPUTED recipe (grain bill + hops),
+  // exactly like the editor's live banner — so the style-fit gauges sit at
+  // the same spot whether you're viewing or editing. (The big numbers still
+  // show the file's claimed values with an ≈computed sanity line + warn when
+  // they diverge; only the fit gauge follows the computed reality.)
   const styleHints = computeStyleHints({
-    og: claimedOgSg ?? computed.gravity.og,
-    fg: claimedFgSg ?? computed.fg,
-    ibu: claimedIbu ?? computed.ibu.total_ibu,
-    abv: claimedAbv ?? computed.abv,
-    srm: claimedSrm ?? computed.color.srm,
+    og: computed.gravity.og,
+    fg: computed.fg,
+    ibu: computed.ibu.total_ibu,
+    abv: computeAbv(computed.gravity.og, computed.fg),
+    srm: computed.color.srm,
     buGu,
     style: recipe.style,
     prefs,
@@ -241,6 +241,7 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
               Math.abs(computed.gravity.og - claimedOgSg) > 0.008
             }
             styleHint={styleHints.og}
+            testId="targets-og"
           />
           <Tile
             label="FG"
@@ -250,6 +251,7 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
               claimedFgSg !== null && Math.abs(computed.fg - claimedFgSg) > 0.005
             }
             styleHint={styleHints.fg}
+            testId="targets-fg"
           />
           <Tile
             label="IBU"
@@ -257,6 +259,7 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
             sub={claimedIbu !== null ? `≈${computed.ibu.total_ibu.toFixed(0)}` : undefined}
             warn={claimedIbu !== null && Math.abs(computed.ibu.total_ibu - claimedIbu) > 15}
             styleHint={styleHints.ibu}
+            testId="targets-ibu"
           />
           <Tile
             label="ABV"
@@ -266,6 +269,7 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
               claimedAbv !== null && Math.abs(computed.abv - claimedAbv) > 0.5
             }
             styleHint={styleHints.abv}
+            testId="targets-abv"
           />
           <Tile
             label="Color"
@@ -275,6 +279,7 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
               claimedSrm !== null && Math.abs(computed.color.srm - claimedSrm) > 3
             }
             styleHint={styleHints.color}
+            testId="targets-color"
           />
           <Tile
             label="BU:GU"
