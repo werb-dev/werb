@@ -170,6 +170,53 @@ export function InlineNumber({
   );
 }
 
+/**
+ * Local-text-buffer behaviour for boxed `type="number"` inputs. Without it a
+ * controlled `value={number}` snaps an emptied field back to "0" mid-edit
+ * (clear the box → onChange(0) → it re-renders as "0", so you can't retype
+ * cleanly). Buffering the raw text and only resyncing from the prop while
+ * unfocused lets the field sit empty while you retype, then reformat on blur.
+ * Spread the result onto an input: `<input type="number" {...useNumericText(v, commit)} />`.
+ */
+export function useNumericText(
+  value: number,
+  commit: (n: number) => void,
+  // What an emptied field commits. Defaults to 0; pass NaN for fields where
+  // "blank" means "no reading" (e.g. brew-day measurements) rather than zero.
+  opts: { emptyValue?: number } = {},
+) {
+  const emptyValue = opts.emptyValue ?? 0;
+  const fmt = (n: number) => (Number.isFinite(n) ? String(n) : "");
+  const [text, setText] = useState<string>(() => fmt(value));
+  const [focused, setFocused] = useState(false);
+  useEffect(() => {
+    if (!focused) setText(fmt(value));
+  }, [value, focused]);
+  return {
+    value: text,
+    onFocus: () => setFocused(true),
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+      const raw = e.target.value;
+      setText(raw);
+      if (raw.trim() === "") {
+        commit(emptyValue);
+        return;
+      }
+      const n = parseLocaleNumber(raw);
+      commit(Number.isFinite(n) ? n : emptyValue);
+    },
+    onBlur: () => {
+      setFocused(false);
+      if (text.trim() === "") {
+        setText(fmt(emptyValue));
+        return;
+      }
+      const n = parseLocaleNumber(text);
+      setText(Number.isFinite(n) ? String(n) : fmt(emptyValue));
+    },
+  };
+}
+
 export function InlineSelect({
   value,
   onChange,

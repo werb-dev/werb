@@ -5,6 +5,8 @@
  * border and live in standalone form rows, not table cells.
  */
 
+import { useNumericText } from "../../components/editor/Fields.tsx";
+
 export function CarbField({
   label,
   unit,
@@ -28,12 +30,8 @@ export function CarbField({
       <div className="flex items-baseline gap-1 bg-bg border border-border rounded-lg px-3 py-2 focus-within:border-accent">
         <input
           type="number"
-          value={Number.isFinite(value) ? value : ""}
           step={step}
-          onChange={(e) => {
-            const n = Number(e.target.value);
-            onChange(Number.isFinite(n) ? n : 0);
-          }}
+          {...useNumericText(value, onChange)}
           className="w-full bg-transparent text-body font-mono tabular-nums text-text focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
         />
         <span className="text-caption font-mono text-text-muted shrink-0">{unit}</span>

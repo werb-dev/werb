@@ -6,6 +6,16 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Numeric fields no longer snap back to "0" while you clear them.** Boxed
+  number inputs (water ions + salts, carbonation, equipment sizing, brew-day
+  measurements) re-rendered an emptied field as "0" mid-edit, so you couldn't
+  cleanly retype — you had to delete the leading 0 every time. They now buffer
+  the text locally and sit empty while you retype, reformatting on blur (the
+  same behaviour the inline editor fields already had). Measurement fields keep
+  their "blank = no reading" meaning instead of logging a 0.
+
 ### Added
 
 - **Live strike-water temperature in the recipe editor.** The mash schedule

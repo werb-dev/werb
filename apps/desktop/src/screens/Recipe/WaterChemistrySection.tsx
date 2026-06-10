@@ -7,6 +7,7 @@ import { useT } from "../../data/preferences.tsx";
 import { usePersistedJson } from "../../storage/index.ts";
 import { Section } from "./Section.tsx";
 import { CarbField } from "./CarbFields.tsx";
+import { useNumericText } from "../../components/editor/Fields.tsx";
 
 const WATER_STORAGE_PREFIX = "werb.water.";
 // Source water is the brewer's tap / RO / spring — same across recipes
@@ -452,11 +453,7 @@ function IonField({
         type="number"
         min={0}
         step={1}
-        value={Number.isFinite(value) ? value : ""}
-        onChange={(e) => {
-          const n = Number(e.target.value);
-          onChange(Number.isFinite(n) ? Math.max(0, n) : 0);
-        }}
+        {...useNumericText(value, (n) => onChange(Math.max(0, n)))}
         className="w-full bg-bg border border-border rounded-lg px-2 py-1.5 text-body-sm font-mono tabular-nums text-text focus:outline-none focus:border-accent [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
       />
     </label>
@@ -487,11 +484,7 @@ function SaltField({
           type="number"
           min={0}
           step={0.5}
-          value={Number.isFinite(value) ? value : ""}
-          onChange={(e) => {
-            const n = Number(e.target.value);
-            onChange(Number.isFinite(n) ? Math.max(0, n) : 0);
-          }}
+          {...useNumericText(value, (n) => onChange(Math.max(0, n)))}
           className="w-full bg-transparent text-body-sm font-mono tabular-nums text-text focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
         />
         <span className="text-caption font-mono text-text-muted shrink-0">g</span>

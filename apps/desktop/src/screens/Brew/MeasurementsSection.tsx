@@ -3,6 +3,7 @@ import type { Measurement, WerbSession } from "@werb/types";
 import { useBcp47, useT } from "../../data/preferences.tsx";
 import { Section } from "./Section.tsx";
 import { formatTimeOfDay, stepTitle } from "./format.ts";
+import { useNumericText } from "../../components/editor/Fields.tsx";
 
 /**
  * Each measurement kind ships a sensible default value so the input
@@ -41,6 +42,9 @@ export function MeasurementsSection({
   const [value, setValue] = useState<number>(spec.defaultValue);
   const [notes, setNotes] = useState("");
   const localeTag = useBcp47();
+  // Empty reading = NaN (not 0): a blank field means "no measurement yet",
+  // and the submit guard already rejects non-finite values.
+  const valueNum = useNumericText(value, setValue, { emptyValue: NaN });
 
   // Re-seed value when kind changes so the input is sensible for the
   // new unit (e.g. switching gravity → temperature shouldn't leave
@@ -94,11 +98,7 @@ export function MeasurementsSection({
               <input
                 type="number"
                 step={spec.step}
-                value={Number.isFinite(value) ? value : ""}
-                onChange={(e) => {
-                  const n = Number(e.target.value);
-                  setValue(Number.isFinite(n) ? n : NaN);
-                }}
+                {...valueNum}
                 className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-body font-mono tabular-nums text-text focus:outline-none focus:border-accent [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
               />
             </label>

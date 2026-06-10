@@ -169,6 +169,24 @@ test.describe("Recipe — BU:GU tile (#32)", () => {
   });
 });
 
+test.describe("Numeric fields — clearing no longer snaps to 0", () => {
+  test("emptying a water-ion field leaves it blank, not '0'", async ({ page }) => {
+    const app = new App(page);
+    await app.go("Library");
+    await app.library.importSamples();
+    await app.library.openFirstRecipe();
+
+    const ion = page
+      .locator('[data-testid="water-chemistry"] input[type="number"]')
+      .first();
+    await ion.scrollIntoViewIfNeeded();
+    await ion.fill("50");
+    await ion.fill(""); // select-all + delete
+    // Old behaviour re-rendered the field as "0" mid-edit; now it stays empty.
+    await expect(ion).toHaveValue("");
+  });
+});
+
 test.describe("Water chemistry — suggest additions (#10)", () => {
   test("suggesting salts moves RO water closer to a Burton target", async ({ page }) => {
     const app = new App(page);

@@ -4,6 +4,7 @@ import type { useEquipment } from "../hooks/useEquipment.ts";
 import { computeEquipmentSuggest } from "@werb/calc";
 import type { EquipmentSuggestInput, EquipmentSuggestOutput } from "@werb/types";
 import { useT } from "../data/preferences.tsx";
+import { useNumericText } from "../components/editor/Fields.tsx";
 
 interface EquipmentScreenProps {
   api: ReturnType<typeof useEquipment>;
@@ -482,6 +483,7 @@ function SuggestPanel({
   // Seed from the current draft so the wizard reflects what the brewer
   // already entered. They tweak only if they want to re-derive.
   const [batchSize, setBatchSize] = useState(initialBatchSize);
+  const batchNum = useNumericText(batchSize, setBatchSize);
 
   const preview = useMemo(
     () =>
@@ -524,12 +526,8 @@ function SuggestPanel({
             <div className="flex items-baseline gap-2 bg-surface border border-border rounded-lg px-3 py-2 focus-within:border-accent">
               <input
                 type="number"
-                value={Number.isFinite(batchSize) ? batchSize : ""}
                 step={0.5}
-                onChange={(e) => {
-                  const n = Number(e.target.value);
-                  setBatchSize(Number.isFinite(n) ? n : 0);
-                }}
+                {...batchNum}
                 className="w-full bg-transparent text-body font-mono tabular-nums text-text focus:outline-none"
               />
               <span className="text-caption font-mono text-text-muted shrink-0">L</span>
@@ -726,6 +724,7 @@ function NumberField({
   onBlur: () => void;
   step?: number;
 }) {
+  const num = useNumericText(value, onChange);
   return (
     <label className="block">
       <span className="block text-caption uppercase tracking-widest text-text-muted mb-2">
@@ -734,13 +733,12 @@ function NumberField({
       <div className="flex items-baseline gap-2 bg-surface border border-border rounded-lg px-3 py-2 focus-within:border-accent">
         <input
           type="number"
-          value={Number.isFinite(value) ? value : ""}
           step={step}
-          onChange={(e) => {
-            const n = Number(e.target.value);
-            onChange(Number.isFinite(n) ? n : 0);
+          {...num}
+          onBlur={() => {
+            num.onBlur();
+            onBlur();
           }}
-          onBlur={onBlur}
           className="w-full bg-transparent text-body font-mono tabular-nums text-text focus:outline-none"
         />
         <span className="text-caption font-mono text-text-muted shrink-0">{unit}</span>
