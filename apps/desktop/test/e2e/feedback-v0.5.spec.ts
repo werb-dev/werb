@@ -130,6 +130,31 @@ test.describe("Style fit — view and editor agree", () => {
   });
 });
 
+test.describe("Mash schedule — live strike-water temperature", () => {
+  test("the editor shows a computed strike temp for the mash-in step", async ({
+    page,
+  }) => {
+    const app = new App(page);
+    await app.go("Library");
+    await app.library.importSamples();
+    // West Coast IPA ships a stepped mash whose first step targets 63 °C.
+    await app.library.openRecipeByName("West Coast IPA");
+    await app.recipe.edit();
+
+    const hint = page.locator('[data-testid="strike-temp-hint"]');
+    await hint.scrollIntoViewIfNeeded();
+    await hint.waitFor();
+    const text = await hint.innerText();
+    // Shows a heat temperature, and names the first-step target it solves for.
+    expect(text).toMatch(/\d+\s*°?C/i);
+    expect(text).toMatch(/63/);
+
+    // Apply writes it into the step without throwing; the hint stays.
+    await page.getByRole("button", { name: /^Apply$/ }).last().click();
+    await expect(hint).toBeVisible();
+  });
+});
+
 test.describe("Recipe — BU:GU tile (#32)", () => {
   test("a styled recipe shows a numeric BU:GU on the read view", async ({ page }) => {
     const app = new App(page);

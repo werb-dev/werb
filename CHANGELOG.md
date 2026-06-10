@@ -6,6 +6,17 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **Live strike-water temperature in the recipe editor.** The mash schedule
+  now shows the temperature to heat the strike water to so the mash-in lands on
+  the first step's target — computed with Palmer's formula (step target + grain
+  temp + thickness) and updated live as you change the target or the water
+  volume, with an **Apply** button to write it into the step's infusion temp.
+  It's the same calc the brew session uses, so the editor and brew day agree.
+  Previously the infusion temperature was a static manual field and the
+  computed strike temp only appeared once brewing started (forum feedback).
+
 ## [0.5.0] — 2026-06-09
 
 Second feedback-driven release. A third batch of forum testers (Eric974,

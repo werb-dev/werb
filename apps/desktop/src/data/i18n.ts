@@ -995,6 +995,11 @@ const STRINGS: Record<string, Entry> = {
   },
   "editor.row.delete": { en: "Delete", fr: "Supprimer" },
   "editor.mash.empty": { en: "No mash steps. Add one below.", fr: "Aucune étape d'empâtage. Ajoutez-en une ci-dessous." },
+  "editor.mash.strike_hint": {
+    en: "Heat strike water to ≈{temp} to hit {target} at mash-in.",
+    fr: "Chauffer l'eau d'empâtage à ≈{temp} pour atteindre {target} à l'empâtage.",
+  },
+  "editor.mash.strike_apply": { en: "Apply", fr: "Appliquer" },
   "editor.style.clear_title": { en: "Clear style", fr: "Effacer le style" },
   "editor.style.clear": { en: "Clear", fr: "Effacer" },
   "editor.hop.use.boil": { en: "Boil", fr: "Ébullition" },

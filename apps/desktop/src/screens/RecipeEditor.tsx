@@ -20,6 +20,7 @@ import {
   recipeToGravityInput,
   recipeToIbuInput,
   recipeToScaleInput,
+  recipeToStrikeTempInput,
   toCelsius,
   toGrams,
   toKilograms,
@@ -35,6 +36,7 @@ import {
   computeGravity,
   computeIbu,
   computeScale,
+  computeStrikeTemp,
   solveGrainToOg,
   solveHopsToIbu,
 } from "@werb/calc";
@@ -63,7 +65,13 @@ import {
   hopFormLabel,
   miscTypeLabel,
 } from "../data/enum-labels.ts";
-import { litersToUserVolume, userVolumeToLiters, volumeUnitLabel } from "../data/units-format.ts";
+import {
+  celsiusToUserTemp,
+  litersToUserVolume,
+  tempUnitLabel,
+  userVolumeToLiters,
+  volumeUnitLabel,
+} from "../data/units-format.ts";
 import {
   AddRowButton,
   ColorInlineInput,
@@ -1027,6 +1035,7 @@ function MashSection({
   update: <K extends keyof BeerJsonRecipe>(key: K, value: BeerJsonRecipe[K]) => void;
 }) {
   const t = useT();
+  const prefs = useUnits();
   const ensureMash = (): MashProcedure =>
     draft.mash ?? {
       name: "Mash",
@@ -1085,6 +1094,21 @@ function MashSection({
   };
 
   const steps = draft.mash?.mash_steps ?? [];
+
+  // Live strike-water temperature for the mash-in (first step). Same calc the
+  // brew session uses — Palmer's formula over the step target, grain temp, and
+  // thickness (step volume ÷ grain) — so the editor and brew day agree. It's a
+  // non-destructive suggestion: it recomputes as you change the target or the
+  // water volume, and "Apply" writes it into the step's infusion temperature.
+  const strikeInput = recipeToStrikeTempInput(draft);
+  const strike = strikeInput ? computeStrikeTemp(strikeInput) : null;
+  const fmtTemp = (c: number) =>
+    `${Math.round(celsiusToUserTemp(c, prefs))} ${tempUnitLabel(prefs)}`;
+  const applyStrike = () => {
+    const first = steps[0];
+    if (!strike || !first) return;
+    setStepInfuseTemp(0, first, Math.round(strike.strike_temp_c));
+  };
 
   return (
     <Section title={t("editor.section.mash")}>
@@ -1153,6 +1177,26 @@ function MashSection({
           </div>
         ))}
       </div>
+      {strike && (
+        <div
+          data-testid="strike-temp-hint"
+          className="mt-3 flex items-center justify-between gap-3 rounded-lg bg-surface-raised border border-border px-4 py-2"
+        >
+          <p className="text-body-sm text-text-muted">
+            {t("editor.mash.strike_hint", {
+              temp: fmtTemp(strike.strike_temp_c),
+              target: fmtTemp(strike.mash_target_c),
+            })}
+          </p>
+          <button
+            type="button"
+            onClick={applyStrike}
+            className="shrink-0 text-caption font-medium text-accent hover:opacity-80 transition-opacity"
+          >
+            {t("editor.mash.strike_apply")}
+          </button>
+        </div>
+      )}
       <AddRowButton label={t("editor.add.mash_step")} onClick={addStep} />
     </Section>
   );
