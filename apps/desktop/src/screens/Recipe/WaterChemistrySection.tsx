@@ -1,9 +1,18 @@
+import { useState } from "react";
 import { toLiters } from "@werb/adapters";
 import type { BeerJsonRecipe } from "@werb/adapters";
 import { computeWaterAdditions, suggestWaterAdditions } from "@werb/calc";
 import type { WaterAdditionsInput, WaterAdditionsOutput } from "@werb/types";
 import { SOURCE_WATER_PROFILES, type SourceWaterProfile } from "../../data/catalog/index.ts";
 import { useT } from "../../data/preferences.tsx";
+import { translateError } from "../../data/errors.ts";
+import { isTauri } from "../../data/runtime.ts";
+import {
+  fetchCommuneAnalyses,
+  isValidInsee,
+  type CommuneAnalyses,
+  type WaterAnalysis,
+} from "../../data/moneaudebrassage.ts";
 import { usePersistedJson } from "../../storage/index.ts";
 import { Section } from "./Section.tsx";
 import { CarbField } from "./CarbFields.tsx";
@@ -15,7 +24,7 @@ const WATER_STORAGE_PREFIX = "werb.water.";
 // fills new recipes without forcing the user to retype.
 const WATER_SOURCE_PREFS_KEY = "local.prefs.water";
 
-interface IonProfile {
+export interface IonProfile {
   ca_ppm: number;
   mg_ppm: number;
   na_ppm: number;
@@ -83,6 +92,49 @@ const TARGETS: Array<{ key: string; profile: IonProfile | null }> = [
   { key: "munich", profile: sourceAsTarget("munich") },
   { key: "dublin_stout", profile: { ca_ppm: 120, mg_ppm: 10, na_ppm: 15, cl_ppm: 70, so4_ppm: 60, hco3_ppm: 250 } },
 ];
+
+// Persist the last moneaudebrassage pull globally (not per-recipe) so a
+// brewer's home commune is one click away on the next recipe and stays
+// usable offline.
+const MAB_CACHE_KEY = "local.prefs.water.mab";
+
+export function analysisToIons(a: WaterAnalysis): IonProfile {
+  return {
+    ca_ppm: a.ca_ppm,
+    mg_ppm: a.mg_ppm,
+    na_ppm: a.na_ppm,
+    cl_ppm: a.cl_ppm,
+    so4_ppm: a.so4_ppm,
+    hco3_ppm: a.hco3_ppm,
+  };
+}
+
+/**
+ * Pull source ions off a recipe's BeerJSON `water_additions` (WaterBase).
+ * Concentrations are stored as ppm/mg-L objects; for dilute brewing
+ * water the two are interchangeable, so we read `.value` directly.
+ * Returns null when the recipe carries no usable source profile.
+ */
+export function recipeSourceIons(recipe: BeerJsonRecipe): IonProfile | null {
+  const additions = (recipe.ingredients as { water_additions?: unknown[] }).water_additions;
+  if (!Array.isArray(additions) || additions.length === 0) return null;
+  const w = additions[0] as Record<string, { value?: unknown } | undefined>;
+  const conc = (key: string): number => {
+    const v = w[key]?.value;
+    return typeof v === "number" && Number.isFinite(v) ? v : 0;
+  };
+  const ions: IonProfile = {
+    ca_ppm: conc("calcium"),
+    mg_ppm: conc("magnesium"),
+    na_ppm: conc("sodium"),
+    cl_ppm: conc("chloride"),
+    so4_ppm: conc("sulfate"),
+    hco3_ppm: conc("bicarbonate"),
+  };
+  const total =
+    ions.ca_ppm + ions.mg_ppm + ions.na_ppm + ions.cl_ppm + ions.so4_ppm + ions.hco3_ppm;
+  return total > 0 ? ions : null;
+}
 
 const FLAVOR_HINT_KEYS: Record<WaterAdditionsOutput["flavor_hint"], string> = {
   very_malty: "recipe.water.flavor_label.very_malty",
@@ -178,6 +230,12 @@ export function WaterChemistrySection({ recipe }: { recipe: BeerJsonRecipe }) {
           onChange={updateSource}
           onSaveDefault={() => setSavedSource(form.source)}
           savedMatches={ionsEqual(form.source, savedSource)}
+        />
+
+        <SourceProfileLoaders
+          recipeIons={recipeSourceIons(recipe)}
+          recipeMatches={(ions) => ionsEqual(form.source, ions)}
+          onLoad={updateSource}
         />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mt-6">
@@ -334,6 +392,164 @@ function SourceWaterRow({
         <IonField label="HCO₃⁻" value={source.hco3_ppm} onChange={(v) => onChange({ ...source, hco3_ppm: v })} />
       </div>
     </>
+  );
+}
+
+/**
+ * Two one-click ways to fill the source ions without typing:
+ *   1. From the recipe's own BeerJSON water profile, when it carries one.
+ *   2. From the moneaudebrassage.fr public analysis for a French commune
+ *      (desktop only — the API is cross-origin + Origin-gated, which a
+ *      browser fetch can't do). The last pull is cached so the brewer's
+ *      home commune stays one tap away and works offline.
+ */
+function SourceProfileLoaders({
+  recipeIons,
+  recipeMatches,
+  onLoad,
+}: {
+  recipeIons: IonProfile | null;
+  recipeMatches: (ions: IonProfile) => boolean;
+  onLoad: (ions: IonProfile) => void;
+}) {
+  const t = useT();
+  const desktop = isTauri();
+  const [open, setOpen] = useState(false);
+  const [code, setCode] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [cache, setCache] = usePersistedJson<CommuneAnalyses | null>(MAB_CACHE_KEY, null);
+
+  const submit = async () => {
+    setError(null);
+    setLoading(true);
+    try {
+      const res = await fetchCommuneAnalyses(code);
+      setCache(res);
+      // One network → apply straight away; several → let the brewer
+      // pick from the list the panel renders below.
+      const only = res.networks[0];
+      if (res.networks.length === 1 && only) onLoad(analysisToIons(only));
+    } catch (err) {
+      setError(translateError(err, t));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="mt-3 flex flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+        {recipeIons && (
+          <button
+            type="button"
+            onClick={() => onLoad(recipeIons)}
+            disabled={recipeMatches(recipeIons)}
+            className="text-caption font-medium text-accent hover:opacity-80 disabled:opacity-40 disabled:cursor-default transition-opacity"
+          >
+            {recipeMatches(recipeIons)
+              ? t("recipe.water.from_recipe_loaded")
+              : t("recipe.water.from_recipe")}
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          className="text-caption font-medium text-accent hover:opacity-80 transition-opacity"
+        >
+          {t("recipe.water.from_mab")}
+        </button>
+      </div>
+
+      {open && (
+        <div
+          data-testid="water-mab-panel"
+          className="rounded-lg bg-surface-raised border border-border p-3"
+        >
+          {desktop ? (
+            <>
+              <div className="flex flex-wrap items-end gap-2">
+                <label className="block">
+                  <span className="block text-caption uppercase tracking-widest text-text-muted mb-1">
+                    {t("recipe.water.mab_insee")}
+                  </span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={5}
+                    value={code}
+                    placeholder="73008"
+                    onChange={(e) => setCode(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && isValidInsee(code) && !loading) submit();
+                    }}
+                    className="w-28 bg-bg border border-border rounded-lg px-2 py-1.5 text-body-sm font-mono tabular-nums text-text focus:outline-none focus:border-accent"
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={submit}
+                  disabled={loading || !isValidInsee(code)}
+                  className="rounded-lg bg-accent text-bg px-3 py-1.5 text-body-sm font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-default transition-opacity"
+                >
+                  {loading ? t("recipe.water.mab_loading") : t("recipe.water.mab_load")}
+                </button>
+              </div>
+              {error && <p className="mt-2 text-caption text-warning">{error}</p>}
+              {cache && cache.networks.length > 0 && (
+                <MabNetworkList
+                  commune={cache}
+                  onPick={(a) => onLoad(analysisToIons(a))}
+                />
+              )}
+            </>
+          ) : (
+            <p className="text-caption text-text-muted">{t("recipe.water.mab_desktop_only")}</p>
+          )}
+          <p className="mt-3 text-caption text-text-muted opacity-70">
+            {t("recipe.water.mab_attribution")}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Per-network rows from a moneaudebrassage pull; click one to apply. */
+function MabNetworkList({
+  commune,
+  onPick,
+}: {
+  commune: CommuneAnalyses;
+  onPick: (a: WaterAnalysis) => void;
+}) {
+  const t = useT();
+  return (
+    <div className="mt-3">
+      <p className="text-caption uppercase tracking-widest text-text-muted mb-2">
+        {t("recipe.water.mab_networks", { insee: commune.insee })}
+      </p>
+      <div className="flex flex-col gap-1">
+        {commune.networks.map((a, i) => (
+          <button
+            key={`${a.network}-${i}`}
+            type="button"
+            onClick={() => onPick(a)}
+            className="text-left rounded-lg border border-border px-3 py-2 hover:border-accent transition-colors"
+          >
+            <span className="block text-body-sm text-text">
+              {a.network}
+              {a.date ? <span className="text-text-muted"> · {a.date}</span> : null}
+            </span>
+            <span className="block text-caption font-mono text-text-muted mt-0.5">
+              Ca {a.ca_ppm.toFixed(0)} · Mg {a.mg_ppm.toFixed(0)} · Na {a.na_ppm.toFixed(0)} · Cl{" "}
+              {a.cl_ppm.toFixed(0)} · SO₄ {a.so4_ppm.toFixed(0)} · HCO₃ {a.hco3_ppm.toFixed(0)}
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
