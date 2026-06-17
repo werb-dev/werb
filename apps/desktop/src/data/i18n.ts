@@ -380,7 +380,9 @@ const STRINGS: Record<string, Entry> = {
   "journal.status.done": { en: "Done", fr: "Terminé" },
   "journal.status.abandoned": { en: "Abandoned", fr: "Abandonné" },
   "journal.export.aria": { en: "Export this brew log", fr: "Exporter ce journal" },
-  "journal.export.html_label": { en: "Printable HTML / PDF", fr: "HTML / PDF imprimable" },
+  "journal.export.pdf_label": { en: "PDF brew sheet", fr: "Fiche de brassage PDF" },
+  "journal.export.pdf_sub": { en: "One paginated PDF — recipe, targets vs. actuals, log, tasting", fr: "Un PDF paginé — recette, cibles vs. réel, journal, dégustation" },
+  "journal.export.html_label": { en: "Printable HTML", fr: "HTML imprimable" },
   "journal.export.html_sub": { en: "Open in any browser, print to PDF", fr: "À ouvrir dans n'importe quel navigateur, imprimable en PDF" },
   "journal.export.json_label": { en: "JSON", fr: "JSON" },
   "journal.export.json_sub": { en: "Full session data — steps, measurements, notes", fr: "Données complètes — étapes, mesures, notes" },
@@ -692,6 +694,21 @@ const STRINGS: Record<string, Entry> = {
     fr: "Profil d'eau source",
   },
   "recipe.water.source_custom": { en: "Custom", fr: "Personnalisé" },
+  "recipe.water.from_recipe": { en: "Use recipe's water", fr: "Utiliser l'eau de la recette" },
+  "recipe.water.from_recipe_loaded": { en: "✓ recipe water loaded", fr: "✓ eau de la recette chargée" },
+  "recipe.water.from_mab": { en: "Load from moneaudebrassage.fr", fr: "Charger depuis moneaudebrassage.fr" },
+  "recipe.water.mab_insee": { en: "INSEE code", fr: "Code INSEE" },
+  "recipe.water.mab_load": { en: "Load", fr: "Charger" },
+  "recipe.water.mab_loading": { en: "Loading…", fr: "Chargement…" },
+  "recipe.water.mab_desktop_only": {
+    en: "Live commune lookup is available in the desktop app only. In the browser, enter the ions manually.",
+    fr: "La recherche par commune n'est disponible que dans l'application de bureau. Dans le navigateur, saisissez les ions manuellement.",
+  },
+  "recipe.water.mab_networks": { en: "Networks for {insee} — pick one", fr: "Réseaux pour {insee} — choisissez-en un" },
+  "recipe.water.mab_attribution": {
+    en: "Water data © moneaudebrassage.fr",
+    fr: "Données sur l'eau © moneaudebrassage.fr",
+  },
   "recipe.water.save_default": { en: "Save as default", fr: "Enregistrer par défaut" },
   "recipe.water.saved_default": { en: "✓ saved as default", fr: "✓ enregistré par défaut" },
   "recipe.water.total": { en: "Total water", fr: "Eau totale" },
@@ -1077,6 +1094,25 @@ const STRINGS: Record<string, Entry> = {
   // Export (download / write)
   "error.export.download_failed": { en: "Download failed: {detail}", fr: "Échec du téléchargement : {detail}" },
   "error.export.write_failed": { en: "Write failed: {detail}", fr: "Échec d'écriture : {detail}" },
+  "error.export.pdf_failed": { en: "Couldn't build the PDF: {detail}", fr: "Impossible de générer le PDF : {detail}" },
+
+  // moneaudebrassage.fr source-water lookup
+  "error.water.mab.bad_code": {
+    en: "Enter a valid 5-digit INSEE commune code (e.g. 73008).",
+    fr: "Saisissez un code INSEE de commune à 5 chiffres (ex. 73008).",
+  },
+  "error.water.mab.web_unsupported": {
+    en: "Commune lookup needs the desktop app — enter the ions manually here.",
+    fr: "La recherche par commune nécessite l'application de bureau — saisissez les ions manuellement ici.",
+  },
+  "error.water.mab.not_found": {
+    en: "No published water analysis found for that commune.",
+    fr: "Aucune analyse d'eau publiée pour cette commune.",
+  },
+  "error.water.mab.network": {
+    en: "Couldn't reach moneaudebrassage.fr: {detail}",
+    fr: "Impossible de joindre moneaudebrassage.fr : {detail}",
+  },
 
   // GitHub sync
   "error.github.invalid_token": {

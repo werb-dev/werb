@@ -109,7 +109,21 @@ export function downloadTextFile(
   contents: string,
   mime: string,
 ): void {
-  const blob = new Blob([contents], { type: mime });
+  downloadBlob(filename, new Blob([contents], { type: mime }));
+}
+
+/** Binary sibling of {@link downloadTextFile} — used for the PDF brew sheet. */
+export function downloadBinaryFile(
+  filename: string,
+  bytes: Uint8Array,
+  mime: string,
+): void {
+  // `bytes` may be backed by a SharedArrayBuffer per the lib types;
+  // BlobPart wants a plain ArrayBuffer view — the cast is safe here.
+  downloadBlob(filename, new Blob([bytes as BlobPart], { type: mime }));
+}
+
+function downloadBlob(filename: string, blob: Blob): void {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;

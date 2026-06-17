@@ -154,6 +154,16 @@ export function App() {
           )?.recipe;
           return exportSessionHtml(session, recipe, prefs);
         }}
+        onExportPdf={async (session) => {
+          // Same recipe-snapshot fallback as the HTML export. The PDF
+          // renderer lives in its own (heavy) chunk, lazily imported
+          // here so jsPDF stays off the cold-start bundle.
+          const recipe = recipesApi.recipes.find(
+            (r) => r.id === session.recipe_id,
+          )?.recipe;
+          const { exportSessionPdf } = await import("./data/session-pdf.ts");
+          return exportSessionPdf(session, recipe, prefs);
+        }}
       />
     );
   } else if (state.view === "settings") {
