@@ -3,6 +3,7 @@ import type { BeerJsonRecipe } from "@werb/adapters";
 import { MemoryBackend } from "../src/storage/index.ts";
 import {
   applyInventoryOverrides,
+  checkRecipeStock,
   indexInventory,
   inventoryKey,
   loadStore,
@@ -150,6 +151,69 @@ describe("applyInventoryOverrides", () => {
     const r = recipe();
     applyInventoryOverrides(r, [item({ category: "hop", name: "Cascade", alpha_acid_pct: 9 })]);
     expect(r.ingredients.hop_additions![0].alpha_acid?.value).toBe(5.5);
+  });
+});
+
+describe("checkRecipeStock (short-on-stock)", () => {
+  it("flags a hop you don't have enough of, summing across additions", () => {
+    // Recipe needs 28 g Cascade; add a second 28 g addition → 56 g total.
+    const r = recipe({
+      hop_additions: [
+        {
+          name: "Cascade",
+          alpha_acid: { value: 5.5, unit: "%" },
+          amount: { value: 0.028, unit: "kg" },
+          timing: { use: "add_to_boil", time: { value: 60, unit: "min" } },
+        },
+        {
+          name: "Cascade",
+          alpha_acid: { value: 5.5, unit: "%" },
+          amount: { value: 0.028, unit: "kg" },
+          timing: { use: "add_to_fermentation", time: { value: 3, unit: "day" } },
+        },
+      ],
+    } as Partial<BeerJsonRecipe["ingredients"]>);
+    const out = checkRecipeStock(r, [
+      item({ category: "hop", name: "Cascade", quantity: 50, quantity_unit: "g" }),
+    ]);
+    expect(out).toEqual([
+      { category: "hop", name: "Cascade", needed_g: 56, on_hand_g: 50 },
+    ]);
+  });
+
+  it("does not flag when there's enough on hand", () => {
+    const out = checkRecipeStock(recipe(), [
+      item({ category: "hop", name: "Cascade", quantity: 100, quantity_unit: "g" }),
+    ]);
+    expect(out).toEqual([]);
+  });
+
+  it("converts kg on-hand before comparing", () => {
+    // Recipe needs 4.5 kg Pale 2-Row; only 1 kg on hand.
+    const out = checkRecipeStock(recipe(), [
+      item({ category: "fermentable", name: "Pale 2-Row", quantity: 1, quantity_unit: "kg" }),
+    ]);
+    expect(out).toEqual([
+      { category: "fermentable", name: "Pale 2-Row", needed_g: 4500, on_hand_g: 1000 },
+    ]);
+  });
+
+  it("ignores stock tracked in a non-mass unit (packs / ml)", () => {
+    const out = checkRecipeStock(recipe(), [
+      item({ category: "hop", name: "Cascade", quantity: 1, quantity_unit: "pkg" }),
+    ]);
+    expect(out).toEqual([]);
+  });
+
+  it("ignores ingredients not in the stock list (no nagging about untracked items)", () => {
+    const out = checkRecipeStock(recipe(), [
+      item({ category: "hop", name: "Citra", quantity: 1, quantity_unit: "g" }),
+    ]);
+    expect(out).toEqual([]);
+  });
+
+  it("returns nothing when the brewer has no inventory", () => {
+    expect(checkRecipeStock(recipe(), [])).toEqual([]);
   });
 });
 

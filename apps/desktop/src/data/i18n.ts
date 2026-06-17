@@ -132,6 +132,14 @@ const STRINGS: Record<string, Entry> = {
     en: "Using your stock values ({count})",
     fr: "Valeurs de votre stock utilisées ({count})",
   },
+  "recipe.inventory.short_title": {
+    en: "Short on stock ({count})",
+    fr: "Stock insuffisant ({count})",
+  },
+  "recipe.inventory.short_item": {
+    en: "— have {have}, need {need}",
+    fr: "— en stock {have}, besoin {need}",
+  },
   "recipe.inventory.field.alpha": { en: "alpha", fr: "alpha" },
   "recipe.inventory.field.color": { en: "color (EBC)", fr: "couleur (EBC)" },
   "recipe.inventory.field.yield": { en: "yield", fr: "rendement" },

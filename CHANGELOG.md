@@ -8,6 +8,12 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **"Short on stock" warning on the recipe screen**
+  ([#1](https://github.com/werb-dev/werb/issues/1)). Building on the inventory
+  module: when a recipe needs more of a malt or hop than you have on hand, the
+  recipe screen now says so (e.g. *Cascade — have 20 g, need 56 g*), summing the
+  amount across all additions. Only fires for items you actually stock with a
+  comparable (mass) quantity, so it never nags about ingredients you don't track.
 - **Single-vessel (all-in-one) equipment layout** ([#47](https://github.com/werb-dev/werb/issues/47)).
   A new mash mode for Brewzilla / Grainfather-style rigs: one vessel for mash +
   boil, no separate HLT or mash tun (those sections hide, like BIAB), but —
