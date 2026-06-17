@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Default capability for the Werb desktop app — read recipes from a user-picked working directory; export recipes (BeerJSON / BeerXML) to user-picked save targets.",
+  "description": "Default capability for the Werb desktop app — read recipes from a user-picked working directory; export recipes (BeerJSON / BeerXML) to user-picked save targets; fetch public tap-water analyses from moneaudebrassage.fr.",
   "windows": ["main"],
   "permissions": [
     "core:default",
@@ -20,6 +20,10 @@
         { "path": "$DOCUMENT/**" },
         { "path": "$DOWNLOAD/**" }
       ]
+    },
+    {
+      "identifier": "http:default",
+      "allow": [{ "url": "https://apidb.moneaudebrassage.fr/*" }]
     }
   ]
 }
