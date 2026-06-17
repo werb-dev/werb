@@ -280,8 +280,12 @@ function DevNav({
   goSettings: () => void;
   goTokens: () => void;
 }) {
-  // Hide nav on the brew screen — fewer distractions during a brew.
-  if (state.view === "brew") return null;
+  // Hide nav on the brew screen (fewer distractions during a brew) and on the
+  // recipe editor: the editor is a focused mode whose only exits — the
+  // back/cancel button and Save — run through the unsaved-changes guard. Left
+  // visible, the nav pill would call setState directly and silently discard an
+  // unsaved draft, bypassing the guard (#51).
+  if (state.view === "brew" || state.view === "edit_recipe") return null;
 
   return <NavPill state={state} goLibrary={goLibrary} goJournal={goJournal} goEquipment={goEquipment} goInventory={goInventory} goSettings={goSettings} goTokens={goTokens} />;
 }
