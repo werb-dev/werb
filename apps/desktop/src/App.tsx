@@ -7,6 +7,7 @@ import { JournalScreen } from "./screens/Journal.tsx";
 import { SettingsScreen } from "./screens/Settings.tsx";
 import { useRecipes } from "./hooks/useRecipes.ts";
 import { useEquipment } from "./hooks/useEquipment.ts";
+import { useInventory } from "./hooks/useInventory.ts";
 import { BUNDLED_SAMPLES, createBlankRecipe, importRecipesFromDisk } from "./data/recipes.ts";
 import { exportSessionHtml, exportSessionJson } from "./data/recipe-export.ts";
 import { partitionForImport, skippedSummary } from "./data/import-dedup.ts";
@@ -21,6 +22,9 @@ const RecipeEditor = lazy(() =>
 );
 const EquipmentScreen = lazy(() =>
   import("./screens/Equipment.tsx").then((m) => ({ default: m.EquipmentScreen })),
+);
+const InventoryScreen = lazy(() =>
+  import("./screens/Inventory.tsx").then((m) => ({ default: m.InventoryScreen })),
 );
 
 /**
@@ -47,6 +51,7 @@ type AppState =
   // finds the live session for the recipe or offers to start one.
   | { view: "brew"; recipeId: string; sessionId?: string }
   | { view: "equipment" }
+  | { view: "inventory" }
   | { view: "journal" }
   | { view: "settings" }
   | { view: "tokens" };
@@ -55,6 +60,7 @@ export function App() {
   const [state, setState] = useState<AppState>({ view: "library" });
   const recipesApi = useRecipes();
   const equipmentApi = useEquipment();
+  const inventoryApi = useInventory();
   const prefs = useUnits();
   const t = useT();
   // Pure modules return structured skip summaries; flatten to a UI
@@ -70,6 +76,7 @@ export function App() {
   const goBrew = (recipeId: string, sessionId?: string) =>
     setState(sessionId ? { view: "brew", recipeId, sessionId } : { view: "brew", recipeId });
   const goEquipment = () => setState({ view: "equipment" });
+  const goInventory = () => setState({ view: "inventory" });
   const goJournal = () => setState({ view: "journal" });
   const goSettings = () => setState({ view: "settings" });
   const goTokens = () => setState({ view: "tokens" });
@@ -86,6 +93,7 @@ export function App() {
           recipeId={state.recipeId}
           recipe={loaded.recipe}
           activeProfile={profile}
+          inventory={inventoryApi.items}
           onBack={goLibrary}
           onStartBrewing={() => goBrew(state.recipeId)}
           onEdit={() => goEditRecipe(state.recipeId)}
@@ -129,6 +137,8 @@ export function App() {
     }
   } else if (state.view === "equipment") {
     screen = <EquipmentScreen api={equipmentApi} />;
+  } else if (state.view === "inventory") {
+    screen = <InventoryScreen api={inventoryApi} />;
   } else if (state.view === "journal") {
     screen = (
       <JournalScreen
@@ -227,6 +237,7 @@ export function App() {
         state={state}
         goLibrary={goLibrary}
         goEquipment={goEquipment}
+        goInventory={goInventory}
         goJournal={goJournal}
         goSettings={goSettings}
         goTokens={goTokens}
@@ -256,6 +267,7 @@ function DevNav({
   state,
   goLibrary,
   goEquipment,
+  goInventory,
   goJournal,
   goSettings,
   goTokens,
@@ -263,6 +275,7 @@ function DevNav({
   state: AppState;
   goLibrary: () => void;
   goEquipment: () => void;
+  goInventory: () => void;
   goJournal: () => void;
   goSettings: () => void;
   goTokens: () => void;
@@ -270,7 +283,7 @@ function DevNav({
   // Hide nav on the brew screen — fewer distractions during a brew.
   if (state.view === "brew") return null;
 
-  return <NavPill state={state} goLibrary={goLibrary} goJournal={goJournal} goEquipment={goEquipment} goSettings={goSettings} goTokens={goTokens} />;
+  return <NavPill state={state} goLibrary={goLibrary} goJournal={goJournal} goEquipment={goEquipment} goInventory={goInventory} goSettings={goSettings} goTokens={goTokens} />;
 }
 
 /**
@@ -283,6 +296,7 @@ function NavPill({
   goLibrary,
   goJournal,
   goEquipment,
+  goInventory,
   goSettings,
   goTokens,
 }: {
@@ -290,6 +304,7 @@ function NavPill({
   goLibrary: () => void;
   goJournal: () => void;
   goEquipment: () => void;
+  goInventory: () => void;
   goSettings: () => void;
   goTokens: () => void;
 }) {
@@ -307,6 +322,9 @@ function NavPill({
       </NavButton>
       <NavButton active={state.view === "equipment"} onClick={goEquipment}>
         {t("nav.equipment")}
+      </NavButton>
+      <NavButton active={state.view === "inventory"} onClick={goInventory}>
+        {t("nav.inventory")}
       </NavButton>
       <NavButton active={state.view === "settings"} onClick={goSettings}>
         {t("nav.settings")}

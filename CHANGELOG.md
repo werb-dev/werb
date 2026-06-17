@@ -34,6 +34,15 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   measured**, the full recipe, mash schedule and brew-day timeline, the
   fermentation/measurement log, incidents, and the post-brew tasting — 7-axis
   sensory radar, rating, and tags. The printable HTML stays as a web fallback.
+- **Inventory / personal stock** ([#1](https://github.com/werb-dev/werb/issues/1)).
+  A new **Stock** screen tracks the malts, hops, yeast, and miscs you actually
+  own, with the per-item numbers that matter — hop alpha % (+ year, form), malt
+  EBC and yield, yeast attenuation (+ form, best-by). When a recipe references
+  an ingredient by name, the recipe screen uses your stock values to compute
+  OG/FG/IBU/SRM and the style-fit gauges, and shows a banner saying exactly
+  which values it swapped (e.g. *Cascade · alpha 5.5 → 7.2*). The shared catalog
+  stays immutable (SPEC principle #7) and the BeerJSON file is never rewritten —
+  overrides are per-install and display-only, so recipes stay portable.
 - **Live strike-water temperature in the recipe editor.** The mash schedule
   now shows the temperature to heat the strike water to so the mash-in lands on
   the first step's target — computed with Palmer's formula (step target + grain
