@@ -58,6 +58,11 @@ import { CarbonationSection } from "./Recipe/CarbonationSection.tsx";
 import { CostSection } from "./Recipe/CostSection.tsx";
 import { TastingCard } from "./Recipe/TastingCard.tsx";
 import { WaterChemistrySection } from "./Recipe/WaterChemistrySection.tsx";
+import {
+  applyInventoryOverrides,
+  type AppliedOverride,
+  type InventoryItem,
+} from "../data/inventory.ts";
 
 // Hop / misc addition stage → i18n key for the displayed label. The
 // dictionary returns a key (not a literal string) so the Recipe
@@ -74,33 +79,44 @@ interface RecipeScreenProps {
   recipeId: string;
   recipe: BeerJsonRecipe;
   activeProfile?: ProfileWithId | undefined;
+  /** Personal stock — overrides catalog/recipe ingredient characteristics. */
+  inventory?: InventoryItem[] | undefined;
   onBack?: (() => void) | undefined;
   onStartBrewing?: (() => void) | undefined;
   onEdit?: (() => void) | undefined;
   onApplyScaled?: ((scaled: BeerJsonRecipe) => void) | undefined;
 }
 
-export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartBrewing, onEdit, onApplyScaled }: RecipeScreenProps) {
+export function RecipeScreen({ recipeId, recipe, activeProfile, inventory, onBack, onStartBrewing, onEdit, onApplyScaled }: RecipeScreenProps) {
   const hasActiveSession = useBrewSessionExists(recipeId);
   const prefs = useUnits();
   const t = useT();
+  // Apply personal stock overrides (alpha % / EBC / yield / attenuation)
+  // before computing metrics, so OG/FG/IBU/SRM and the style-fit gauges
+  // reflect the ingredients the brewer actually has — not the catalog's
+  // spec sheet. The override is display-only; the BeerJSON file keeps its
+  // own values (and the big "claimed" numbers still show them).
+  const { recipe: effectiveRecipe, applied } = useMemo(
+    () => applyInventoryOverrides(recipe, inventory ?? []),
+    [recipe, inventory],
+  );
   const computed = useMemo(() => {
-    const ibu = computeIbu({ ...recipeToIbuInput(recipe), method: prefs.ibu_method });
-    const water = computeWater(recipeToWaterInput(recipe, profileToWaterOverrides(activeProfile)));
-    const color = computeColor({ ...recipeToColorInput(recipe), method: prefs.color_method });
-    const gravity = computeGravity(recipeToGravityInput(recipe));
+    const ibu = computeIbu({ ...recipeToIbuInput(effectiveRecipe), method: prefs.ibu_method });
+    const water = computeWater(recipeToWaterInput(effectiveRecipe, profileToWaterOverrides(activeProfile)));
+    const color = computeColor({ ...recipeToColorInput(effectiveRecipe), method: prefs.color_method });
+    const gravity = computeGravity(recipeToGravityInput(effectiveRecipe));
     // FG is always computed (yeast attenuation × OG); the file value
     // takes precedence in the display but the estimate is the
     // workhorse for bare BeerXML imports that ship without a target
     // FG. ABV cascades: claimed file FG → computed FG, so we never
     // show "—" when a brewer has typed a grain bill + yeast.
-    const apparentAttenuationPct = recipeApparentAttenuationPct(recipe);
+    const apparentAttenuationPct = recipeApparentAttenuationPct(effectiveRecipe);
     const fgEstimate = computeFg(gravity.og, apparentAttenuationPct);
     const ogForAbv = recipe.original_gravity?.value ?? gravity.og;
     const fgForAbv = recipe.final_gravity?.value ?? fgEstimate;
     const abv = computeAbv(ogForAbv, fgForAbv);
     // Per-addition IBU lookup keyed by index, since duplicate hop names exist.
-    const boilHopIndices = (recipe.ingredients.hop_additions ?? [])
+    const boilHopIndices = (effectiveRecipe.ingredients.hop_additions ?? [])
       .map((h, i) => ({ h, i }))
       .filter(({ h }) => h.timing?.use === "add_to_boil")
       .map(({ i }) => i);
@@ -109,7 +125,7 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
       ibuByIndex.set(idx, ibu.additions[k]?.ibu ?? 0);
     });
     return { ibu, water, color, gravity, fg: fgEstimate, abv, ibuByIndex };
-  }, [recipe, activeProfile, prefs.ibu_method, prefs.color_method]);
+  }, [effectiveRecipe, recipe, activeProfile, prefs.ibu_method, prefs.color_method]);
 
   const claimedIbu = recipe.ibu_estimate?.ibu?.value ?? null;
   // Gravity values from BeerJSON are normalized through the formatter
@@ -223,6 +239,8 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
             <ExportMenu recipe={recipe} prefs={prefs} />
           </div>
         </header>
+
+        {applied.length > 0 && <InventoryOverrideBanner applied={applied} />}
 
         {/* ─── Targets vs computed strip ───────────────────────────────── */}
         {/* Display rule, applied to every tile: if the file declares a
@@ -536,6 +554,47 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, onBack, onStartB
 }
 
 // ─── Subcomponents ─────────────────────────────────────────────────────
+
+const OVERRIDE_FIELD_KEY: Record<AppliedOverride["field"], string> = {
+  alpha_acid: "recipe.inventory.field.alpha",
+  color: "recipe.inventory.field.color",
+  yield: "recipe.inventory.field.yield",
+  attenuation: "recipe.inventory.field.attenuation",
+};
+
+/**
+ * Tells the brewer their personal stock numbers are driving the metrics
+ * above, and exactly which values changed — so a shifted IBU/OG never
+ * looks like a bug.
+ */
+function InventoryOverrideBanner({ applied }: { applied: AppliedOverride[] }) {
+  const t = useT();
+  return (
+    <div
+      data-testid="inventory-override-banner"
+      className="mb-6 rounded-xl border border-accent/40 bg-surface px-4 py-3"
+    >
+      <p className="text-caption uppercase tracking-widest text-accent font-medium">
+        {t("recipe.inventory.banner_title", { count: applied.length })}
+      </p>
+      <ul className="mt-2 flex flex-col gap-1">
+        {applied.map((a, i) => (
+          <li key={`${a.name}-${a.field}-${i}`} className="text-body-sm text-text-muted">
+            <span className="text-text">{a.name}</span> · {t(OVERRIDE_FIELD_KEY[a.field])}{" "}
+            <span className="font-mono">
+              {a.from !== null ? `${formatNum(a.from)} → ` : ""}
+              {formatNum(a.to)}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function formatNum(n: number): string {
+  return Number.isInteger(n) ? String(n) : n.toFixed(1);
+}
 
 function ExportMenu({ recipe, prefs }: { recipe: BeerJsonRecipe; prefs: UnitPreferences }) {
   const t = useT();
