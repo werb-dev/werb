@@ -274,7 +274,7 @@ function ProfileForm({
         them. The mash mode is still editable below, so a brewer who picked a
         mode by mistake can flip back to "classic" and the vessels reappear.
       */}
-      {draft.mash_mode === "classic" && (
+      {draft.mash_mode !== "biab" && draft.mash_mode !== "single_vessel" && (
         <Section title={t("equipment.section.hlt")} testId="equipment-section-hlt">
           <div className="grid grid-cols-2 gap-4">
             <NumberField
@@ -295,7 +295,7 @@ function ProfileForm({
         </Section>
       )}
 
-      {draft.mash_mode === "classic" && (
+      {draft.mash_mode !== "biab" && draft.mash_mode !== "single_vessel" && (
       <Section title={t("equipment.section.mash_tun")} testId="equipment-section-mash-tun">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <NumberField
