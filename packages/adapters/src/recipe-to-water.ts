@@ -28,6 +28,8 @@ export interface EquipmentOverrides {
   kettle_dead_space_l?: number;
   evaporation_rate_l_per_hour?: number;
   post_boil_shrinkage_pct?: number;
+  /** Post-boil contraction as an absolute volume (L); overrides the pct. */
+  post_boil_shrinkage_l?: number;
   kettle_to_fermenter_loss_l?: number;
   /** Mash thickness in L/kg — used when the recipe has no mash schedule. */
   mash_thickness_l_per_kg?: number;

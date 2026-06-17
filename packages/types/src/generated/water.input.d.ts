@@ -45,6 +45,10 @@ export interface WaterInput {
    */
   post_boil_shrinkage_pct?: number;
   /**
+   * Post-boil hot→cold contraction as an absolute volume (L). When provided, it overrides post_boil_shrinkage_pct: post_boil = post_cool + this.
+   */
+  post_boil_shrinkage_l?: number;
+  /**
    * Volume lost transferring from the boil kettle to the fermenter (liters).
    */
   kettle_to_fermenter_loss_l?: number;

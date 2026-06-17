@@ -25,6 +25,38 @@ describe("computeWater", () => {
     expect(out.total_water_l).toBeCloseTo(29.154, 2);
   });
 
+  it("post_boil_shrinkage_l overrides the percentage with an additive volume (#46)", () => {
+    const base = {
+      batch_size_l: 20,
+      total_grain_kg: 5,
+      boil_time_min: 60,
+      mash_thickness_l_per_kg: 3.0,
+    } as const;
+    // post_cool_kettle = 20 + 0.5 transfer + 0 kettle dead space = 20.5.
+    const out = computeWater({ ...base, post_boil_shrinkage_l: 1 });
+    expect(out.post_cool_kettle_volume_l).toBeCloseTo(20.5, 4);
+    // Additive: hot post-boil = 20.5 + 1, NOT the / (1 - pct) form.
+    expect(out.post_boil_volume_l).toBeCloseTo(21.5, 4);
+    // The supplied percentage is ignored once a volume is given.
+    const withPct = computeWater({
+      ...base,
+      post_boil_shrinkage_l: 1,
+      post_boil_shrinkage_pct: 15,
+    });
+    expect(withPct.post_boil_volume_l).toBeCloseTo(21.5, 4);
+  });
+
+  it("post_boil_shrinkage_l of 0 means no contraction (vs the default 4%)", () => {
+    const base = {
+      batch_size_l: 20,
+      total_grain_kg: 5,
+      boil_time_min: 60,
+      mash_thickness_l_per_kg: 3.0,
+    } as const;
+    const zero = computeWater({ ...base, post_boil_shrinkage_l: 0 });
+    expect(zero.post_boil_volume_l).toBeCloseTo(zero.post_cool_kettle_volume_l, 4);
+  });
+
   it("longer boil increases pre-boil volume by exactly the extra boil-off", () => {
     const base = { batch_size_l: 20, total_grain_kg: 5, mash_thickness_l_per_kg: 3.0 };
     const sixty = computeWater({ ...base, boil_time_min: 60 });

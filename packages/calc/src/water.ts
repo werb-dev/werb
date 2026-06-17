@@ -32,6 +32,7 @@ export function computeWater(input: WaterInput): WaterOutput {
     kettle_dead_space_l = 0,
     evaporation_rate_l_per_hour = 3,
     post_boil_shrinkage_pct = 4,
+    post_boil_shrinkage_l,
     kettle_to_fermenter_loss_l = 0.5,
     biab = false,
   } = input;
@@ -41,8 +42,13 @@ export function computeWater(input: WaterInput): WaterOutput {
 
   const post_cool_kettle_volume_l =
     batch_size_l + kettle_to_fermenter_loss_l + kettle_dead_space_l;
+  // Hot post-boil volume is larger than the cooled volume. The brewer can
+  // express that contraction either as a percentage (default) or, when they'd
+  // rather enter a measured number, as an absolute volume — which wins.
   const post_boil_volume_l =
-    post_cool_kettle_volume_l / (1 - post_boil_shrinkage_pct / 100);
+    post_boil_shrinkage_l !== undefined
+      ? post_cool_kettle_volume_l + post_boil_shrinkage_l
+      : post_cool_kettle_volume_l / (1 - post_boil_shrinkage_pct / 100);
   const pre_boil_volume_l = post_boil_volume_l + boil_off_l;
 
   let mash_water_l: number;
