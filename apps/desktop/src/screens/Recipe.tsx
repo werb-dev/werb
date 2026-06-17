@@ -60,8 +60,10 @@ import { TastingCard } from "./Recipe/TastingCard.tsx";
 import { WaterChemistrySection } from "./Recipe/WaterChemistrySection.tsx";
 import {
   applyInventoryOverrides,
+  checkRecipeStock,
   type AppliedOverride,
   type InventoryItem,
+  type StockShortfall,
 } from "../data/inventory.ts";
 
 // Hop / misc addition stage → i18n key for the displayed label. The
@@ -98,6 +100,13 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, inventory, onBac
   // own values (and the big "claimed" numbers still show them).
   const { recipe: effectiveRecipe, applied } = useMemo(
     () => applyInventoryOverrides(recipe, inventory ?? []),
+    [recipe, inventory],
+  );
+  // "Do I have enough?" — compares the recipe's grain/hop amounts against the
+  // grams on hand in stock. Uses the original amounts (overrides change specs,
+  // not weights).
+  const shortfalls = useMemo(
+    () => checkRecipeStock(recipe, inventory ?? []),
     [recipe, inventory],
   );
   const computed = useMemo(() => {
@@ -241,6 +250,7 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, inventory, onBac
         </header>
 
         {applied.length > 0 && <InventoryOverrideBanner applied={applied} />}
+        {shortfalls.length > 0 && <StockShortfallBanner shortfalls={shortfalls} />}
 
         {/* ─── Targets vs computed strip ───────────────────────────────── */}
         {/* Display rule, applied to every tile: if the file declares a
@@ -594,6 +604,43 @@ function InventoryOverrideBanner({ applied }: { applied: AppliedOverride[] }) {
 
 function formatNum(n: number): string {
   return Number.isInteger(n) ? String(n) : n.toFixed(1);
+}
+
+/** Grams → a compact "1.2 kg" / "56 g" label for the stock callout. */
+function grams(n: number): string {
+  return n >= 1000 ? `${(n / 1000).toFixed(n % 1000 === 0 ? 0 : 2)} kg` : `${Math.round(n)} g`;
+}
+
+/**
+ * Warns when the recipe needs more of a stocked ingredient than the brewer
+ * has on hand — so you find out before brew day, not at the scale. Only fires
+ * for items actually in stock with a comparable (mass) quantity.
+ */
+function StockShortfallBanner({ shortfalls }: { shortfalls: StockShortfall[] }) {
+  const t = useT();
+  return (
+    <div
+      data-testid="stock-shortfall-banner"
+      className="mb-6 rounded-xl border border-warning/50 bg-surface px-4 py-3"
+    >
+      <p className="text-caption uppercase tracking-widest text-warning font-medium">
+        {t("recipe.inventory.short_title", { count: shortfalls.length })}
+      </p>
+      <ul className="mt-2 flex flex-col gap-1">
+        {shortfalls.map((s, i) => (
+          <li key={`${s.name}-${i}`} className="text-body-sm text-text-muted">
+            <span className="text-text">{s.name}</span>{" "}
+            <span className="font-mono">
+              {t("recipe.inventory.short_item", {
+                have: grams(s.on_hand_g),
+                need: grams(s.needed_g),
+              })}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 function ExportMenu({ recipe, prefs }: { recipe: BeerJsonRecipe; prefs: UnitPreferences }) {

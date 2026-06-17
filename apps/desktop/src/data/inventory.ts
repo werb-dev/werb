@@ -18,7 +18,7 @@
  * StorageBackend, each item with a stable id.
  */
 
-import type { BeerJsonRecipe } from "@werb/adapters";
+import { isMass, toGrams, type BeerJsonRecipe } from "@werb/adapters";
 import type { StorageBackend } from "../storage/index.ts";
 
 export type InventoryCategory = "fermentable" | "hop" | "culture" | "misc";
@@ -258,4 +258,72 @@ export function applyInventoryOverrides(
     },
     applied,
   };
+}
+
+// ─── Stock sufficiency ("do I have enough?") ──────────────────────────────
+
+/** A stocked ingredient the recipe needs more of than the brewer has. */
+export interface StockShortfall {
+  category: "fermentable" | "hop";
+  name: string;
+  /** Total grams the recipe calls for (summed across all additions). */
+  needed_g: number;
+  /** Grams currently on hand. */
+  on_hand_g: number;
+}
+
+/** On-hand quantity in grams, or null when the unit isn't mass-comparable. */
+function stockGrams(item: InventoryItem): number | null {
+  if (typeof item.quantity !== "number" || !Number.isFinite(item.quantity)) return null;
+  const unit = (item.quantity_unit ?? "").trim().toLowerCase();
+  if (unit === "" || unit === "g") return item.quantity;
+  if (unit === "kg") return item.quantity * 1000;
+  return null; // ml / pkg / etc. — not mass-comparable here
+}
+
+/**
+ * Compare what a recipe needs against what's on hand, for the mass-based
+ * categories (fermentables + hops), and report anything the brewer is short
+ * on. Only flags items that are actually in stock with a comparable quantity —
+ * an ingredient that isn't tracked, or is tracked in a non-mass unit (packs,
+ * ml), is never reported as "missing", to avoid nagging brewers who only
+ * stock-track part of their cupboard. Amounts are summed across additions
+ * (a hop used at 60 min + dry hop counts once).
+ *
+ * Returns [] when the brewer has no inventory at all.
+ */
+export function checkRecipeStock(
+  recipe: BeerJsonRecipe,
+  items: InventoryItem[],
+): StockShortfall[] {
+  if (items.length === 0) return [];
+  const index = indexInventory(items);
+
+  // Total grams needed per stocked ingredient key.
+  const needed = new Map<string, number>();
+  const addNeed = (category: "fermentable" | "hop", name: string, amount: unknown) => {
+    if (!isMass(amount as Parameters<typeof isMass>[0])) return;
+    const key = inventoryKey(category, name);
+    if (!index.has(key)) return; // only tally things we actually stock
+    needed.set(key, (needed.get(key) ?? 0) + toGrams(amount as Parameters<typeof toGrams>[0]));
+  };
+  for (const f of recipe.ingredients.fermentable_additions ?? []) {
+    addNeed("fermentable", f.name, f.amount);
+  }
+  for (const h of recipe.ingredients.hop_additions ?? []) {
+    addNeed("hop", h.name, h.amount);
+  }
+
+  const out: StockShortfall[] = [];
+  for (const item of items) {
+    if (item.category !== "fermentable" && item.category !== "hop") continue;
+    const need = needed.get(inventoryKey(item.category, item.name));
+    if (need === undefined || need <= 0) continue;
+    const onHand = stockGrams(item);
+    if (onHand === null) continue;
+    if (onHand + 1e-6 < need) {
+      out.push({ category: item.category, name: item.name, needed_g: need, on_hand_g: onHand });
+    }
+  }
+  return out;
 }
