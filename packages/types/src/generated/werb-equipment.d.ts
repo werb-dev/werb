@@ -51,6 +51,10 @@ export interface WerbEquipmentProfile {
      * Volume reduction percentage from boiling temperature to room temperature.
      */
     post_boil_shrinkage_pct?: number;
+    /**
+     * Post-boil hot→cold contraction as an absolute volume (L) instead of a percentage. When set, it overrides post_boil_shrinkage_pct — for brewers who'd rather enter a measured number of liters than a percentage.
+     */
+    post_boil_shrinkage_l?: number;
   };
   fermenter?: {
     capacity_l: number;
@@ -64,8 +68,8 @@ export interface WerbEquipmentProfile {
    */
   transfer_loss_l?: number;
   /**
-   * How this rig mashes. 'classic' = mash tun + separate sparge. 'biab' = brew in a bag, all water in the kettle, lift the bag, no sparge.
+   * How this rig mashes. 'classic' = mash tun + separate sparge. 'biab' = brew in a bag, all water in the kettle, lift the bag, no sparge. 'single_vessel' = all-in-one (Brewzilla / Grainfather): mash and boil in one vessel but still sparge — water math is the classic mash+sparge split, just without a separate HLT or mash tun.
    */
-  mash_mode?: "classic" | "biab";
+  mash_mode?: "classic" | "biab" | "single_vessel";
   notes?: string;
 }

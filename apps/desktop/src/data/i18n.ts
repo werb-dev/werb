@@ -934,15 +934,21 @@ const STRINGS: Record<string, Entry> = {
   "equipment.field.mash_thickness": { en: "Mash thickness", fr: "Épaisseur d'empâtage" },
   "equipment.field.boil_off": { en: "Boil-off rate", fr: "Taux d'évaporation" },
   "equipment.field.post_boil_shrink": { en: "Post-boil shrink", fr: "Retrait après ébullition" },
+  "equipment.field.post_boil_shrink_l": { en: "…or fixed loss", fr: "…ou perte fixe" },
+  "equipment.field.post_boil_shrink_hint": {
+    en: "Post-boil hot→cold contraction. Set a percentage, or enter a measured volume (L) which takes over when above 0.",
+    fr: "Contraction chaud→froid après ébullition. Indiquez un pourcentage, ou saisissez un volume mesuré (L) qui prend le dessus dès qu'il dépasse 0.",
+  },
   "equipment.field.trub_loss": { en: "Trub loss", fr: "Perte au trub" },
   "equipment.field.transfer_loss": { en: "Kettle → fermenter transfer loss", fr: "Perte au transfert cuve → fermenteur" },
   "equipment.field.mash_mode": { en: "Mash mode", fr: "Mode d'empâtage" },
   "equipment.field.mash_mode_hint": {
-    en: "Classic = mash tun + separate sparge. BIAB = grain bag in the kettle, full water at once, no sparge.",
-    fr: "Classique = cuve d'empâtage + rinçage séparé. BIAB = sac de grain dans la cuve d'ébullition, toute l'eau en une fois, sans rinçage.",
+    en: "Classic = mash tun + separate sparge. BIAB = grain bag in the kettle, full water at once, no sparge. Single-vessel = all-in-one (Brewzilla/Grainfather): one vessel, but you still sparge.",
+    fr: "Classique = cuve d'empâtage + rinçage séparé. BIAB = sac de grain dans la cuve, toute l'eau en une fois, sans rinçage. Cuve unique = tout-en-un (Brewzilla/Grainfather) : une seule cuve, mais avec rinçage.",
   },
   "equipment.opt.mash_classic": { en: "Classic 3-vessel", fr: "Classique 3 cuves" },
   "equipment.opt.mash_biab": { en: "BIAB (brew in a bag)", fr: "BIAB (sac dans la cuve)" },
+  "equipment.opt.mash_single_vessel": { en: "Single-vessel (all-in-one)", fr: "Cuve unique (tout-en-un)" },
   "equipment.field.notes": { en: "Notes", fr: "Notes" },
 
   "equipment.set_active": { en: "Set as active", fr: "Définir comme actif" },

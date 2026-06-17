@@ -210,7 +210,14 @@ function ProfileForm({
       kettle: out.kettle,
       fermenter: out.fermenter,
       transfer_loss_l: out.transfer_loss_l,
-      mash_mode: setupType === "biab" ? "biab" : "classic",
+      // The sizing wizard only knows biab vs multi-vessel; preserve a
+      // single-vessel choice the brewer already made (it sizes like classic).
+      mash_mode:
+        setupType === "biab"
+          ? "biab"
+          : draft.mash_mode === "single_vessel"
+            ? "single_vessel"
+            : "classic",
     };
     setDraft(next);
     const { id: _id, ...patch } = next;
@@ -261,13 +268,13 @@ function ProfileForm({
       </div>
 
       {/*
-        BIAB does the mash in the kettle and uses no separate HLT —
-        hide both sections so the form reflects the layout the brewer
-        actually has. The mash mode is still editable below, so a
-        brewer who picked BIAB by mistake can flip back to "classic"
-        and the vessels reappear.
+        BIAB and single-vessel rigs mash in the kettle with no separate HLT
+        or mash tun — hide both sections so the form reflects the layout the
+        brewer actually has. Only "classic" (a true multi-vessel rig) shows
+        them. The mash mode is still editable below, so a brewer who picked a
+        mode by mistake can flip back to "classic" and the vessels reappear.
       */}
-      {draft.mash_mode !== "biab" && (
+      {draft.mash_mode === "classic" && (
         <Section title={t("equipment.section.hlt")} testId="equipment-section-hlt">
           <div className="grid grid-cols-2 gap-4">
             <NumberField
@@ -288,7 +295,7 @@ function ProfileForm({
         </Section>
       )}
 
-      {draft.mash_mode !== "biab" && (
+      {draft.mash_mode === "classic" && (
       <Section title={t("equipment.section.mash_tun")} testId="equipment-section-mash-tun">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <NumberField
@@ -369,7 +376,22 @@ function ProfileForm({
             onBlur={commit}
             step={0.5}
           />
+          <NumberField
+            label={t("equipment.field.post_boil_shrink_l")}
+            unit="L"
+            value={draft.kettle?.post_boil_shrinkage_l ?? 0}
+            onChange={(v) =>
+              // 0 clears the override → fall back to the percentage. Anything
+              // > 0 wins over the % in the water calc (#46).
+              updateNested("kettle", "post_boil_shrinkage_l", v > 0 ? v : undefined)
+            }
+            onBlur={commit}
+            step={0.1}
+          />
         </div>
+        <p className="text-caption text-text-muted mt-2">
+          {t("equipment.field.post_boil_shrink_hint")}
+        </p>
       </Section>
 
       <Section title={t("equipment.section.fermenter")}>
@@ -409,12 +431,17 @@ function ProfileForm({
           data-testid="mash-mode-select"
           value={draft.mash_mode ?? "classic"}
           onChange={(e) =>
-            update("mash_mode", e.target.value as "classic" | "biab", true)
+            update(
+              "mash_mode",
+              e.target.value as "classic" | "biab" | "single_vessel",
+              true,
+            )
           }
           className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-body text-text focus:outline-none focus:border-accent"
         >
           <option value="classic">{t("equipment.opt.mash_classic")}</option>
           <option value="biab">{t("equipment.opt.mash_biab")}</option>
+          <option value="single_vessel">{t("equipment.opt.mash_single_vessel")}</option>
         </select>
         <p className="text-caption text-text-muted mt-1">
           {t("equipment.field.mash_mode_hint")}

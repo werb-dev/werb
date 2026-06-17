@@ -111,9 +111,16 @@ export function profileToWaterOverrides(profile: ProfileWithId | undefined): Equ
   if (profile.kettle?.post_boil_shrinkage_pct !== undefined) {
     overrides.post_boil_shrinkage_pct = profile.kettle.post_boil_shrinkage_pct;
   }
+  // A measured-liters shrinkage overrides the percentage (#46).
+  if (profile.kettle?.post_boil_shrinkage_l !== undefined) {
+    overrides.post_boil_shrinkage_l = profile.kettle.post_boil_shrinkage_l;
+  }
   if (profile.transfer_loss_l !== undefined) {
     overrides.kettle_to_fermenter_loss_l = profile.transfer_loss_l;
   }
+  // Only true BIAB collapses mash + sparge into the kettle. A single-vessel
+  // all-in-one still sparges, so it keeps the classic mash+sparge water math
+  // (#47) — biab stays false.
   if (profile.mash_mode === "biab") {
     overrides.biab = true;
   }

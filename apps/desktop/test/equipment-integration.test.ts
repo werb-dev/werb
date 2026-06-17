@@ -78,6 +78,31 @@ describe("equipment profile → computeWater integration", () => {
     expect(biab.pre_boil_volume_l).toBeCloseTo(classic.pre_boil_volume_l, 4);
   });
 
+  it("single_vessel still sparges — classic water math, not BIAB (#47)", () => {
+    const single = computeWater(
+      recipeToWaterInput(RECIPE, profileToWaterOverrides(profile({ mash_mode: "single_vessel" }))),
+    );
+    const classic = computeWater(
+      recipeToWaterInput(RECIPE, profileToWaterOverrides(profile({ mash_mode: "classic" }))),
+    );
+    // All-in-one keeps a real sparge, unlike BIAB which zeroes it.
+    expect(single.sparge_water_l).toBeGreaterThan(0);
+    expect(single.sparge_water_l).toBeCloseTo(classic.sparge_water_l, 4);
+    expect(single.mash_water_l).toBeCloseTo(classic.mash_water_l, 4);
+  });
+
+  it("post_boil_shrinkage_l on the kettle overrides the percentage (#46)", () => {
+    const out = computeWater(
+      recipeToWaterInput(
+        RECIPE,
+        profileToWaterOverrides(
+          profile({ kettle: { capacity_l: 50, post_boil_shrinkage_l: 1 } }),
+        ),
+      ),
+    );
+    expect(out.post_boil_volume_l).toBeCloseTo(out.post_cool_kettle_volume_l + 1, 4);
+  });
+
   it("transfer_loss override propagates into post_cool_kettle_volume_l", () => {
     const lossy = computeWater(
       recipeToWaterInput(RECIPE, profileToWaterOverrides(profile({ transfer_loss_l: 1.5 }))),

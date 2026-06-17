@@ -8,6 +8,16 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Single-vessel (all-in-one) equipment layout** ([#47](https://github.com/werb-dev/werb/issues/47)).
+  A new mash mode for Brewzilla / Grainfather-style rigs: one vessel for mash +
+  boil, no separate HLT or mash tun (those sections hide, like BIAB), but —
+  unlike BIAB — it still sparges, so the water volumes use the classic mash +
+  sparge math. The all-in-one is sized like a classic rig.
+- **Post-boil loss can be a fixed volume, not just a percentage**
+  ([#46](https://github.com/werb-dev/werb/issues/46)). The kettle's post-boil
+  contraction now takes an optional liters value alongside the % field; when set
+  (> 0) the measured volume wins. For brewers who think in "I lose ~1 L" rather
+  than a percentage.
 - **Reorder hop additions** ([#42](https://github.com/werb-dev/werb/issues/42)).
   Hop rows in the editor now have up/down controls, so you can reorder additions
   (e.g. by time — 60 → 15 → flameout → dry hop) without deleting and re-adding.

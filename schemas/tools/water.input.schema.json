@@ -63,6 +63,11 @@
       "default": 4,
       "description": "Volume reduction percent from boiling temperature to room temperature."
     },
+    "post_boil_shrinkage_l": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Post-boil hot→cold contraction as an absolute volume (L). When provided, it overrides post_boil_shrinkage_pct: post_boil = post_cool + this."
+    },
     "kettle_to_fermenter_loss_l": {
       "type": "number",
       "minimum": 0,
