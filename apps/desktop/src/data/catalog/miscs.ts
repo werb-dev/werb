@@ -16,8 +16,8 @@ export const MISCS: MiscEntry[] = [
   { name: "Biofine Clear", type: "fining", default_use: "add_to_fermentation", default_time_min: 0, default_amount: 20, default_amount_unit: "ml" },
 
   // ─── Yeast nutrition ─────────────────────────────────────────────────
-  { name: "Yeast Nutrient (Servomyces)", type: "other", default_use: "add_to_boil", default_time_min: 10, default_amount: 1, default_amount_unit: "g", notes: "Zinc-fortified — supports yeast health.", aliases: ["nutriment de levure"] },
-  { name: "Yeast Nutrient (DAP / Fermaid-K)", type: "other", default_use: "add_to_boil", default_time_min: 10, default_amount: 5, default_amount_unit: "g", aliases: ["nutriment de levure"] },
+  { name: "Yeast Nutrient (Servomyces)", type: "other", default_use: "add_to_boil", default_time_min: 10, default_amount: 1, default_amount_unit: "g", notes: "Zinc-fortified — add the last ~10 min of the boil per the maker's instructions.", aliases: ["nutriment de levure"] },
+  { name: "Yeast Nutrient (DAP / Fermaid-K)", type: "other", default_use: "add_to_fermentation", default_time_min: 0, default_amount: 5, default_amount_unit: "g", notes: "Add at pitching (or stagger early in fermentation) — DAP / Fermaid-K aren't boil additions.", aliases: ["nutriment de levure"] },
 
   // ─── Water salts ─────────────────────────────────────────────────────
   { name: "Calcium Chloride (CaCl2)", type: "water_agent", default_use: "add_to_mash", default_amount: 5, default_amount_unit: "g", notes: "Boosts calcium + chloride — softens hop perception, builds malt.", aliases: ["chlorure de calcium"] },

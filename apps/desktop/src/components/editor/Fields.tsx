@@ -259,6 +259,48 @@ export function InlineDeleteButton({ onClick }: { onClick: () => void }) {
   );
 }
 
+/**
+ * Up / down controls to reorder a row within its section. Disabled at the
+ * ends so the brewer can't move the first row up or the last row down.
+ */
+export function RowReorder({
+  index,
+  count,
+  onMove,
+}: {
+  index: number;
+  count: number;
+  onMove: (dir: -1 | 1) => void;
+}) {
+  const t = useT();
+  const cls =
+    "w-6 h-7 rounded-pill flex items-center justify-center text-text-muted hover:text-text hover:bg-surface-raised transition-colors disabled:opacity-30 disabled:cursor-default disabled:hover:bg-transparent disabled:hover:text-text-muted";
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => onMove(-1)}
+        disabled={index === 0}
+        title={t("editor.row.move_up")}
+        aria-label={t("editor.row.move_up")}
+        className={cls}
+      >
+        ↑
+      </button>
+      <button
+        type="button"
+        onClick={() => onMove(1)}
+        disabled={index === count - 1}
+        title={t("editor.row.move_down")}
+        aria-label={t("editor.row.move_down")}
+        className={cls}
+      >
+        ↓
+      </button>
+    </>
+  );
+}
+
 export function AddRowButton({ label, onClick }: { label: string; onClick: () => void }) {
   return (
     <button

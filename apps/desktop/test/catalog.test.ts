@@ -52,6 +52,14 @@ describe("catalog content sanity", () => {
     }
   });
 
+  it("doses DAP / Fermaid-K at pitching, not in the boil (#45)", () => {
+    const dap = MISCS.find((m) => m.name.includes("DAP"));
+    expect(dap?.default_use).toBe("add_to_fermentation");
+    // Servomyces is a genuine boil addition (maker's instruction) — leave it.
+    const servo = MISCS.find((m) => m.name.includes("Servomyces"));
+    expect(servo?.default_use).toBe("add_to_boil");
+  });
+
   it("includes the French hops we explicitly curated", () => {
     const names = HOPS.map((h) => h.name);
     expect(names).toEqual(expect.arrayContaining([
