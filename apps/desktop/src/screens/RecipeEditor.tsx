@@ -83,6 +83,7 @@ import {
   MassLargeInlineInput,
   MassSmallInlineInput,
   RowHeader,
+  RowReorder,
   TempInlineInput,
   VolumeInlineInput,
   formatForStep,
@@ -719,7 +720,7 @@ function HopsSection({
   updateIngredients: (patch: Partial<BeerJsonRecipe["ingredients"]>) => void;
 }) {
   const t = useT();
-  const { items, pendingFocusIdx, addRow, updateRow, removeRow } = useIngredientRows<HopAddition>(
+  const { items, pendingFocusIdx, addRow, updateRow, removeRow, moveRow } = useIngredientRows<HopAddition>(
     draft.ingredients.hop_additions,
     (next) => updateIngredients({ hop_additions: next }),
   );
@@ -860,7 +861,12 @@ function HopsSection({
                 HOP_FORMS.map((f) => [f, hopFormLabel(t, f)]),
               )}
             />
-            <div className="col-span-1 flex justify-end">
+            <div className="col-span-1 flex items-center justify-end gap-0.5">
+              <RowReorder
+                index={i}
+                count={items.length}
+                onMove={(dir) => moveRow(i, dir)}
+              />
               <InlineDeleteButton onClick={() => removeRow(i)} />
             </div>
           </div>

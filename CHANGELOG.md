@@ -6,8 +6,19 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **Reorder hop additions** ([#42](https://github.com/werb-dev/werb/issues/42)).
+  Hop rows in the editor now have up/down controls, so you can reorder additions
+  (e.g. by time — 60 → 15 → flameout → dry hop) without deleting and re-adding.
+
 ### Fixed
 
+- **Yeast nutrient DAP / Fermaid-K no longer defaults into the boil**
+  ([#45](https://github.com/werb-dev/werb/issues/45)). It now defaults to *add at
+  pitching* (fermentation), which is where DAP / Fermaid-K actually go.
+  Servomyces stays a boil addition — that one really is added in the last ~10 min
+  of the boil per the maker's instructions.
 - **Leaving the editor via the top nav no longer discards unsaved edits silently**
   ([#51](https://github.com/werb-dev/werb/issues/51)). The unsaved-changes guard
   covered the back/cancel button and tab/window close, but the global nav pill

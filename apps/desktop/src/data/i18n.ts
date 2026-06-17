@@ -1053,6 +1053,8 @@ const STRINGS: Record<string, Entry> = {
     fr: "Choisir un ingrédient…",
   },
   "editor.row.delete": { en: "Delete", fr: "Supprimer" },
+  "editor.row.move_up": { en: "Move up", fr: "Monter" },
+  "editor.row.move_down": { en: "Move down", fr: "Descendre" },
   "editor.mash.empty": { en: "No mash steps. Add one below.", fr: "Aucune étape d'empâtage. Ajoutez-en une ci-dessous." },
   "editor.mash.strike_hint": {
     en: "Heat strike water to ≈{temp} to hit {target} at mash-in.",

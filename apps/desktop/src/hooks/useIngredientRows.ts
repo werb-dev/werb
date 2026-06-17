@@ -37,5 +37,16 @@ export function useIngredientRows<T>(
     setItems(list.filter((_, j) => j !== i));
   };
 
-  return { items: list, pendingFocusIdx, addRow, updateRow, removeRow };
+  // Swap a row with its neighbour in `dir` (-1 up, +1 down). Lets the brewer
+  // reorder additions (e.g. hops by time) without deleting and re-adding.
+  // Out-of-range moves (first row up / last row down) are no-ops.
+  const moveRow = (i: number, dir: -1 | 1) => {
+    const j = i + dir;
+    if (j < 0 || j >= list.length) return;
+    const copy = list.slice();
+    [copy[i], copy[j]] = [copy[j] as T, copy[i] as T];
+    setItems(copy);
+  };
+
+  return { items: list, pendingFocusIdx, addRow, updateRow, removeRow, moveRow };
 }
