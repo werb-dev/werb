@@ -635,7 +635,7 @@ function FermentablesSection({
               className="col-span-2"
               value={f.type}
               onChange={(v) =>
-                updateRow(i, { ...f, type: v as FermentableAddition["type"] })
+                updateRow(i, changeFermentableType(f, v as FermentableAddition["type"]))
               }
               labels={Object.fromEntries(
                 FERMENTABLE_TYPES.map((ty) => [ty, fermentableTypeLabel(t, ty)]),
@@ -1474,6 +1474,27 @@ function MiscsSection({
 }
 
 // ─── Catalog-aware combobox + apply-entry helpers ─────────────────────────
+
+/**
+ * Change a fermentable row's category. The name + spec (color, yield,
+ * producer, origin) were tied to the old category's ingredient — a malt's
+ * EBC/yield make no sense once the row is "honey" or "sugar", and the
+ * category-scoped picker (#34) can no longer re-find the old name. So a real
+ * category change resets to a clean row for the new type, keeping only what's
+ * category-agnostic: the amount the brewer set. No-op when the type is
+ * unchanged, so it never wipes a row on a redundant select. (#50)
+ */
+export function changeFermentableType(
+  f: FermentableAddition,
+  newType: FermentableAddition["type"],
+): FermentableAddition {
+  if (newType === f.type) return f;
+  return {
+    name: "",
+    type: newType,
+    amount: f.amount,
+  };
+}
 
 function applyFermentableEntry(
   f: FermentableAddition,

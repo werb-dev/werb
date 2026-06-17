@@ -8,6 +8,18 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Leaving the editor via the top nav no longer discards unsaved edits silently**
+  ([#51](https://github.com/werb-dev/werb/issues/51)). The unsaved-changes guard
+  covered the back/cancel button and tab/window close, but the global nav pill
+  was still shown on the editor — clicking Library/Stock/etc. mid-edit navigated
+  away without prompting. The editor is now a focused mode (like the brew screen):
+  the nav pill is hidden, so every exit runs through the guard or Save.
+- **Changing a fermentable's category no longer leaves a corrupted row**
+  ([#50](https://github.com/werb-dev/werb/issues/50)). Switching a row's type
+  (e.g. a malt to "honey") kept the old name and the grain's EBC/yield, and the
+  category-scoped picker could no longer re-find the original ingredient. A real
+  category change now resets the row to a clean entry for the new type (keeping
+  the amount), so the spec and the picker stay coherent.
 - **Numeric fields no longer snap back to "0" while you clear them.** Boxed
   number inputs (water ions + salts, carbonation, equipment sizing, brew-day
   measurements) re-rendered an emptied field as "0" mid-edit, so you couldn't
