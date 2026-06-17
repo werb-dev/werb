@@ -24,10 +24,13 @@
     "@tauri-apps/api": "^2.1.0",
     "@tauri-apps/plugin-dialog": "^2.1.0",
     "@tauri-apps/plugin-fs": "^2.1.0",
+    "@tauri-apps/plugin-http": "^2.1.0",
     "@werb/adapters": "workspace:*",
     "@werb/calc": "workspace:*",
     "@werb/types": "workspace:*",
     "@werb/validate": "workspace:*",
+    "jspdf": "^2.5.2",
+    "jspdf-autotable": "^3.8.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

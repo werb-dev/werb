@@ -13,6 +13,8 @@ interface JournalScreenProps {
   onExportJson: (session: WerbSession) => Promise<{ error?: WerbError | undefined }>;
   /** Export a session as printable HTML. */
   onExportHtml: (session: WerbSession) => Promise<{ error?: WerbError | undefined }>;
+  /** Export a session as a paginated PDF brew sheet. */
+  onExportPdf: (session: WerbSession) => Promise<{ error?: WerbError | undefined }>;
 }
 
 /**
@@ -29,6 +31,7 @@ export function JournalScreen({
   onOpenSession,
   onExportJson,
   onExportHtml,
+  onExportPdf,
 }: JournalScreenProps) {
   const { sessions, loading, error } = useBrewLog();
   const counts = countByStatus(sessions);
@@ -79,6 +82,7 @@ export function JournalScreen({
                   onOpen={() => onOpenSession(s.recipe_id, s.id)}
                   onExportJson={() => onExportJson(s)}
                   onExportHtml={() => onExportHtml(s)}
+                  onExportPdf={() => onExportPdf(s)}
                 />
               </li>
             ))}
@@ -94,11 +98,13 @@ function SessionRow({
   onOpen,
   onExportJson,
   onExportHtml,
+  onExportPdf,
 }: {
   session: WerbSession;
   onOpen: () => void;
   onExportJson: () => Promise<{ error?: WerbError | undefined }>;
   onExportHtml: () => Promise<{ error?: WerbError | undefined }>;
+  onExportPdf: () => Promise<{ error?: WerbError | undefined }>;
 }) {
   const t = useT();
   const localeTag = useBcp47();
@@ -137,7 +143,11 @@ function SessionRow({
         </button>
         <div className="flex items-center gap-2 shrink-0">
           <StatusBadge status={session.status} />
-          <ExportMenu onExportJson={onExportJson} onExportHtml={onExportHtml} />
+          <ExportMenu
+            onExportJson={onExportJson}
+            onExportHtml={onExportHtml}
+            onExportPdf={onExportPdf}
+          />
         </div>
       </div>
     </div>
@@ -147,9 +157,11 @@ function SessionRow({
 function ExportMenu({
   onExportJson,
   onExportHtml,
+  onExportPdf,
 }: {
   onExportJson: () => Promise<{ error?: WerbError | undefined }>;
   onExportHtml: () => Promise<{ error?: WerbError | undefined }>;
+  onExportPdf: () => Promise<{ error?: WerbError | undefined }>;
 }) {
   const t = useT();
   const [open, setOpen] = useState(false);
@@ -179,6 +191,18 @@ function ExportMenu({
             aria-hidden
           />
           <div className="absolute right-0 top-full mt-2 z-50 w-[calc(100vw-2rem)] sm:w-auto sm:min-w-[14rem] max-w-[18rem] bg-surface-raised border border-border rounded-lg shadow-xl overflow-hidden">
+            <button
+              type="button"
+              onClick={() => run(onExportPdf)}
+              className="block w-full text-left px-4 py-3 hover:bg-surface focus:bg-surface border-b border-border transition-colors"
+            >
+              <p className="text-body-sm font-medium text-text">
+                {t("journal.export.pdf_label")}
+              </p>
+              <p className="text-caption text-text-muted mt-0.5">
+                {t("journal.export.pdf_sub")}
+              </p>
+            </button>
             <button
               type="button"
               onClick={() => run(onExportHtml)}

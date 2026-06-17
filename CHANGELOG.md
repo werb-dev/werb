@@ -18,6 +18,22 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Load source-water profiles instead of typing six numbers** ([#9](https://github.com/werb-dev/werb/issues/9)).
+  The water-chemistry section can now fill the source ions two ways: **Use
+  recipe's water** pulls them from the recipe's own BeerJSON `water_additions`
+  profile, and **Load from moneaudebrassage.fr** fetches the latest official
+  tap-water analysis for a French commune by INSEE code (picking a network when
+  a commune has several). The last lookup is cached so your home commune stays
+  one click away and works offline; the commune fetch is desktop-only (the API
+  is cross-origin and Origin-gated, which a browser can't do) and the source is
+  attributed. Feeds straight into the existing salt-suggestion solver.
+- **One-click PDF brew sheet** ([#12](https://github.com/werb-dev/werb/issues/12)).
+  Journal → a session's ⋯ menu now exports a real, paginated PDF (not a
+  Print-dialog HTML) that tells the whole story of one brew: header with
+  recipe/style/batch/brewer/date, **targets vs. the gravities and ABV actually
+  measured**, the full recipe, mash schedule and brew-day timeline, the
+  fermentation/measurement log, incidents, and the post-brew tasting — 7-axis
+  sensory radar, rating, and tags. The printable HTML stays as a web fallback.
 - **Live strike-water temperature in the recipe editor.** The mash schedule
   now shows the temperature to heat the strike water to so the mash-in lands on
   the first step's target — computed with Palmer's formula (step target + grain
