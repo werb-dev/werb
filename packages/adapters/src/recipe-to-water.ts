@@ -76,3 +76,31 @@ export function recipeToWaterInput(
     ...rest,
   };
 }
+
+/** Recipe vs computed pre-boil volume, when they disagree enough to flag. */
+export interface PreBoilMismatch {
+  recipe_l: number;
+  computed_l: number;
+}
+
+/**
+ * Compare the recipe's own `boil.pre_boil_size` with the pre-boil volume
+ * computed from the equipment profile. Returns `null` when the recipe has
+ * no pre-boil volume or the gap is within max(0.5 L, 5 %) of it.
+ *
+ * Werb's volumes always follow the profile; a mismatch usually means the
+ * recipe was written for another rig, or the profile's boil-off is off.
+ */
+export function preBoilMismatch(
+  recipe: BeerJsonRecipe,
+  computedPreBoilL: number,
+): PreBoilMismatch | null {
+  const size = recipe.boil?.pre_boil_size;
+  if (!size) return null;
+  const recipeL = toLiters(size);
+  if (!(recipeL > 0)) return null;
+  const toleranceL = Math.max(0.5, recipeL * 0.05);
+  return Math.abs(computedPreBoilL - recipeL) > toleranceL
+    ? { recipe_l: recipeL, computed_l: computedPreBoilL }
+    : null;
+}

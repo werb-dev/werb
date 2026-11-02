@@ -514,6 +514,53 @@ fn field_mash_default_step_synthesized_when_empty() {
 }
 
 #[test]
+fn field_sparge_temp_becomes_a_sparge_step() {
+    let doc = convert_to_document(JOLIEBULLE);
+    assert_document_validates(&doc, "joliebulle Blanche with sparge step");
+    let steps = doc["beerjson"]["recipes"][0]["mash"]["mash_steps"]
+        .as_array()
+        .unwrap();
+    let last = steps.last().unwrap();
+    assert_eq!(last["type"], "sparge");
+    assert_eq!(last["step_temperature"]["value"], 78.0);
+    assert_eq!(
+        steps.iter().filter(|s| s["type"] == "sparge").count(),
+        1,
+        "one sparge step, after the rests",
+    );
+}
+
+#[test]
+fn field_no_sparge_step_without_sparge_temp() {
+    let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+<RECIPES><RECIPE>
+  <NAME>X</NAME><VERSION>1</VERSION><BATCH_SIZE>20.0</BATCH_SIZE>
+  <MASH><NAME>M</NAME><VERSION>1</VERSION><SPARGE_TEMP></SPARGE_TEMP>
+    <MASH_STEPS><MASH_STEP>
+      <NAME>Sacc</NAME><VERSION>1</VERSION>
+      <STEP_TEMP>67.0</STEP_TEMP><STEP_TIME>60.0</STEP_TIME>
+    </MASH_STEP></MASH_STEPS>
+  </MASH>
+</RECIPE></RECIPES>"#;
+    let json = convert(xml);
+    let steps = json["mash"]["mash_steps"].as_array().unwrap();
+    assert!(steps.iter().all(|s| s["type"] != "sparge"));
+}
+
+#[test]
+fn field_pre_boil_size_only_when_stated() {
+    let stated = convert(SAMPLE);
+    assert_eq!(stated["boil"]["pre_boil_size"]["value"], 26.0);
+
+    let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+<RECIPES><RECIPE>
+  <NAME>X</NAME><VERSION>1</VERSION><BATCH_SIZE>20.0</BATCH_SIZE><BOIL_SIZE></BOIL_SIZE>
+</RECIPE></RECIPES>"#;
+    let json = convert(xml);
+    assert!(json["boil"]["pre_boil_size"].is_null());
+}
+
+#[test]
 fn field_mash_grain_temperature_defaults_when_missing() {
     // MashProcedureType requires grain_temperature — the converter
     // falls back to 20 °C when the source omits GRAIN_TEMP.

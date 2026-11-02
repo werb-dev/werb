@@ -92,6 +92,7 @@ pub struct Recipe {
     pub batch_size: f64,
     /// Boil-kettle starting volume, in liters. Optional — defaults to
     /// `batch_size * 1.25` in [`Recipe::effective_boil_size`] when absent.
+    /// The BeerJSON conversion only carries a volume the file states.
     #[serde(default, deserialize_with = "empty_str_to_none_f64")]
     pub boil_size: Option<f64>,
     /// Boil duration, in minutes. Optional — defaults to 60 in
@@ -608,6 +609,9 @@ pub struct Mash {
     /// Initial grain temperature, in °C.
     #[serde(default, deserialize_with = "empty_str_to_none_f64")]
     pub grain_temp: Option<f64>,
+    /// Sparge water temperature, in °C.
+    #[serde(default, deserialize_with = "empty_str_to_none_f64")]
+    pub sparge_temp: Option<f64>,
     /// Steps that make up the mash schedule.
     #[serde(default)]
     pub mash_steps: Option<MashSteps>,

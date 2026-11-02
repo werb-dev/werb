@@ -17,6 +17,7 @@ import {
   isMass,
   isVolume,
   recipeApparentAttenuationPct,
+  preBoilMismatch,
   type BeerJsonRecipe,
 } from "@werb/adapters";
 import {
@@ -146,7 +147,8 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, inventory, onBac
     ibuHopIndices.forEach((idx, k) => {
       ibuByIndex.set(idx, ibu.additions[k]?.ibu ?? 0);
     });
-    return { ibu, water, color, gravity, fg: fgEstimate, abv, ibuByIndex };
+    const preBoil = preBoilMismatch(effectiveRecipe, water.pre_boil_volume_l);
+    return { ibu, water, preBoil, color, gravity, fg: fgEstimate, abv, ibuByIndex };
   }, [effectiveRecipe, recipe, activeProfile, prefs.ibu_method, prefs.color_method]);
 
   const claimedIbu = recipe.ibu_estimate?.ibu?.value ?? null;
@@ -351,6 +353,16 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, inventory, onBac
             <Tile label="Pre-boil" value={formatLiters(computed.water.pre_boil_volume_l, prefs).display} />
             <Tile label="Total water" value={formatLiters(computed.water.total_water_l, prefs).display} highlight />
           </div>
+          {computed.preBoil && (
+            <p data-testid="pre-boil-mismatch" className="text-body-sm text-warning mt-3">
+              <span className="font-medium">{t("water.pre_boil_mismatch.title")}.</span>{" "}
+              {t("water.pre_boil_mismatch.body", {
+                recipe: formatLiters(computed.preBoil.recipe_l, prefs).display,
+                computed: formatLiters(computed.preBoil.computed_l, prefs).display,
+                boilOff: formatLiters(computed.water.boil_off_l, prefs).display,
+              })}
+            </p>
+          )}
         </Section>
 
         {/* ─── Fermentables ────────────────────────────────────────────── */}

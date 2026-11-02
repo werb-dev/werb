@@ -63,9 +63,8 @@ export function recipeToScaleInput(
  * What is left alone:
  *   - target gravities, color, IBU, ABV — those are intended outcomes
  *     that stay valid when the recipe is scaled correctly.
- *   - fermentation steps, pre-boil volume — water amounts are
- *     re-derived by the calc engine from the new batch size; we don't
- *     touch any stored numbers.
+ *   - fermentation steps — water amounts are re-derived by the calc
+ *     engine from the new batch size.
  *   - miscellaneous_additions — typically water salts whose ratios are
  *     more about water chemistry than batch volume; left for the
  *     brewer to adjust manually.
@@ -78,6 +77,9 @@ export function recipeToScaleInput(
  * water stays at the original recipe's value while grain shrinks, so
  * the apparent thickness explodes and sparge eats the difference.
  * `amount` on every mash step is therefore scaled by `volume_factor`.
+ *
+ * `boil.pre_boil_size` is scaled by `volume_factor` too: screens compare
+ * it with the computed pre-boil volume and flag a mismatch.
  */
 export function applyScale(
   recipe: BeerJsonRecipe,
@@ -92,6 +94,15 @@ export function applyScale(
       ...recipe.efficiency,
       brewhouse: { value: to_efficiency_pct, unit: "%" },
     },
+    ...(recipe.boil?.pre_boil_size !== undefined && {
+      boil: {
+        ...recipe.boil,
+        pre_boil_size: {
+          ...recipe.boil.pre_boil_size,
+          value: recipe.boil.pre_boil_size.value * volume_factor,
+        },
+      },
+    }),
     ...(recipe.mash !== undefined && {
       mash: {
         ...recipe.mash,

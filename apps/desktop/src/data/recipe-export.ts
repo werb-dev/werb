@@ -1,4 +1,4 @@
-import type { BeerJsonRecipe } from "@werb/adapters";
+import { isSpargeStep, type BeerJsonRecipe } from "@werb/adapters";
 import type { WerbSession, SessionStep, Measurement } from "@werb/types";
 import { isTauri } from "./runtime.ts";
 import { WerbError } from "./errors.ts";
@@ -347,10 +347,8 @@ export function recipeToBeerXml(r: BeerJsonRecipe): string {
   if (r.author) lines.push(`    <BREWER>${esc(r.author)}</BREWER>`);
   lines.push(`    <BATCH_SIZE>${num(r.batch_size.value)}</BATCH_SIZE>`);
   if (r.boil) {
-    if ("pre_boil_size" in r.boil) {
-      const pbs = (r.boil as { pre_boil_size?: { value: number } }).pre_boil_size;
-      if (pbs) lines.push(`    <BOIL_SIZE>${num(pbs.value)}</BOIL_SIZE>`);
-    }
+    const pbs = r.boil.pre_boil_size;
+    if (pbs) lines.push(`    <BOIL_SIZE>${num(pbs.value)}</BOIL_SIZE>`);
     if (r.boil.boil_time) lines.push(`    <BOIL_TIME>${num(r.boil.boil_time.value)}</BOIL_TIME>`);
   }
   if (r.efficiency?.brewhouse) {
@@ -457,13 +455,17 @@ export function recipeToBeerXml(r: BeerJsonRecipe): string {
   }
 
   if (r.mash && r.mash.mash_steps.length > 0) {
+    // BeerXML has no sparge step type: a sparge step becomes SPARGE_TEMP.
+    const sparge = r.mash.mash_steps.find(isSpargeStep);
     lines.push(`    <MASH>`);
     lines.push(`      <NAME>${esc(r.mash.name ?? "Mash")}</NAME>`);
     lines.push(`      <VERSION>1</VERSION>`);
     if (r.mash.grain_temperature?.value !== undefined)
       lines.push(`      <GRAIN_TEMP>${num(r.mash.grain_temperature.value)}</GRAIN_TEMP>`);
+    if (sparge)
+      lines.push(`      <SPARGE_TEMP>${num(sparge.step_temperature.value)}</SPARGE_TEMP>`);
     lines.push(`      <MASH_STEPS>`);
-    for (const s of r.mash.mash_steps) {
+    for (const s of r.mash.mash_steps.filter((step) => !isSpargeStep(step))) {
       lines.push(`        <MASH_STEP>`);
       lines.push(`          <NAME>${esc(s.name)}</NAME>`);
       lines.push(`          <VERSION>1</VERSION>`);

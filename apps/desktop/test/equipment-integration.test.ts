@@ -2,13 +2,14 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { recipeToIbuInput, recipeToWaterInput } from "@werb/adapters";
-import { computeIbu, computeWater } from "@werb/calc";
+import { recipeToIbuInput, recipeToSpargeInput, recipeToWaterInput } from "@werb/adapters";
+import { computeIbu, computeSparge, computeWater } from "@werb/calc";
 import type { BeerJsonFile, BeerJsonRecipe } from "@werb/adapters";
 import {
   chillMinutesTo80c,
   DEFAULT_NO_CHILL_MINUTES_TO_80C,
   profileToIbuEquipment,
+  profileToSpargeEquipment,
   profileToWaterOverrides,
   type ProfileWithId,
 } from "../src/data/equipment.ts";
@@ -153,5 +154,43 @@ describe("equipment profile → computeIbu integration", () => {
     expect(ibuFor(measured)).toBeGreaterThan(
       ibuFor(profile({ chilling: { method: "no_chill" } })),
     );
+  });
+});
+
+describe("equipment profile → computeSparge integration", () => {
+  const plan = (p: ProfileWithId | undefined) => {
+    const water = computeWater(recipeToWaterInput(RECIPE, profileToWaterOverrides(p)));
+    return computeSparge(
+      recipeToSpargeInput(RECIPE, water.sparge_water_l, profileToSpargeEquipment(p)),
+    );
+  };
+
+  it("no profile means fly sparge at 75 °C in one run", () => {
+    expect(profileToSpargeEquipment(undefined)).toEqual({});
+    expect(plan(undefined)).toMatchObject({ method: "fly", runs: 1, water_temp_c: 75 });
+  });
+
+  it("batch sparge on a classic rig splits the water to fit the mash tun", () => {
+    const small = profile({
+      sparge_method: "batch",
+      mash_tun: { capacity_l: 20, grain_absorption_l_per_kg: 1, dead_space_l: 0.5 },
+    });
+    expect(profileToSpargeEquipment(small)).toEqual({
+      method: "batch",
+      grain_absorption_l_per_kg: 1,
+      mash_dead_space_l: 0.5,
+      mash_tun_capacity_l: 20,
+    });
+    expect(plan(small).runs).toBeGreaterThan(1);
+  });
+
+  it("single-vessel rigs ignore the mash tun capacity", () => {
+    const allInOne = profile({
+      mash_mode: "single_vessel",
+      sparge_method: "batch",
+      mash_tun: { capacity_l: 20 },
+    });
+    expect(profileToSpargeEquipment(allInOne).mash_tun_capacity_l).toBeUndefined();
+    expect(plan(allInOne).runs).toBe(1);
   });
 });

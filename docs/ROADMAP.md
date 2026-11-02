@@ -23,8 +23,8 @@ The original Phases 1–4 (below, kept for history) are essentially complete:
   live strike-water temperature (Stanovitch's "heating temp doesn't update"
   feedback).
 
-Remaining open: #19, #27, #31, #36, #38, #43, #48, #49. Sequenced below as
-Phases 5–9.
+Remaining open: #19, #27, #31, #36, #38, #43, #48, #49, #62, #63. Sequenced
+below as Phases 5–9.
 
 ## Phase 5 — Regressions & correctness bugs in shipped features
 
@@ -71,23 +71,30 @@ requesting it, the way #19 was handled.
 11. [#47](https://github.com/werb-dev/werb/issues/47) — Single-vessel all-in-one
     (Brewzilla / Grainfather) layout, distinct from BIAB. Builds on the BIAB
     work (#4/#5); group with #46 as one equipment pass.
+12. [#62](https://github.com/werb-dev/werb/issues/62): flag a recipe pre-boil
+    volume that disagrees with the active equipment profile, on the recipe
+    screen and in brew mode. May also explain #43. In review.
+13. [#63](https://github.com/werb-dev/werb/issues/63): sparge method (fly or
+    batch) in the equipment profile; batch sparge water temperature and runs
+    from the mash tun capacity; a BeerJSON `sparge` step and BeerXML
+    `SPARGE_TEMP` set the sparge temperature. In review.
 
 ## Phase 8 — Editor & mobile UX (chunkier, do together)
 
 The inline-edit, density, and mobile-friction reports are the same surface seen
 from three angles — scope them as one design effort, not three patches.
 
-12. [#36](https://github.com/werb-dev/werb/issues/36) — Make the recipe view
+14. [#36](https://github.com/werb-dev/werb/issues/36) — Make the recipe view
     inline-editable (Arwen reinforced: surface only Save/Cancel). The anchor.
-13. [#38](https://github.com/werb-dev/werb/issues/38) — Layout density / one-
+15. [#38](https://github.com/werb-dev/werb/issues/38) — Layout density / one-
     screen overview. Still wants device+resolution detail, but the mobile
     feedback corroborates it.
-14. [#48](https://github.com/werb-dev/werb/issues/48) — Mobile entry friction
+16. [#48](https://github.com/werb-dev/werb/issues/48) — Mobile entry friction
     (too many step selections). Overlaps #36/#38 directly.
 
 ## Phase 9 — SMPH IBU model (own lane, still blocked)
 
-15. [#27](https://github.com/werb-dev/werb/issues/27) — Full SMPH calc engine.
+17. [#27](https://github.com/werb-dev/werb/issues/27) — Full SMPH calc engine.
     **Hard-blocked** on the upstream BeerJSON field extensions being accepted;
     does not start until then. #44 is the near-term answer to "IBU too low".
 
@@ -118,6 +125,8 @@ review (see *Done* above).
 
 ## Changelog
 
+- **2026-11-02**: added #62 and #63 (water volumes and sparge, from brewing the
+  Wild Hop SMaSH) to Phase 7.
 - **2026-06-17** — third feedback batch (#42–#51) triaged in; recorded v0.4.0 /
   v0.5.0 completion and PR #40 / #41 in review; condensed the original Phases 1–4
   into *Done* + *History* and re-sequenced the remaining + new work into

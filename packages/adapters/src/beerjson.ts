@@ -32,7 +32,7 @@ export interface BeerJsonRecipe {
     water_additions?: unknown[];
   };
   mash?: MashProcedure;
-  boil?: { boil_time?: TimeType };
+  boil?: { boil_time?: TimeType; pre_boil_size?: VolumeType };
   original_gravity?: GravityType;
   final_gravity?: GravityType;
   alcohol_by_volume?: PercentType;

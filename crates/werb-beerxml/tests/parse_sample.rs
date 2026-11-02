@@ -231,6 +231,8 @@ fn parses_joliebulle_v4_export() {
     // The recipe-level OG and FG plant into est_og / est_fg.
     assert!(first.est_og_value().is_some());
     assert!(first.est_fg_value().is_some());
+    // Mash sparge temperature carries through.
+    assert_eq!(first.mash.as_ref().unwrap().sparge_temp, Some(78.0));
 }
 
 #[test]

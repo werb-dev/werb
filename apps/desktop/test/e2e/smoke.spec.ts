@@ -111,6 +111,29 @@ test.describe("Equipment — BIAB mash mode", () => {
     expect(await ibu()).toBeGreaterThan(chilled + 3);
   });
 
+  test("batch sparge profile heats the sparge water above 75 °C", async ({ page }) => {
+    const app = new App(page);
+    await app.go("Equipment");
+    await app.equipment.createFirstProfile();
+    await app.equipment.setSpargeMethod("batch");
+    await app.equipment.setActive();
+
+    await app.go("Library");
+    await app.library.importSamples();
+    await app.library.openRecipeByName("Cascade Pale Ale");
+    await page.getByRole("button", { name: /^Start brewing/i }).first().click();
+    await page.waitForTimeout(400);
+    const startAgain = page.getByRole("button", { name: /^Start brewing/i }).first();
+    if (await startAgain.isVisible().catch(() => false)) {
+      await startAgain.click();
+      await page.waitForTimeout(400);
+    }
+
+    const row = await page.locator('[data-testid="timeline-step-sparge"]').innerText();
+    const temp = parseFloat(row.match(/(\d+(?:\.\d+)?)\s*°C/)![1]!);
+    expect(temp).toBeGreaterThan(75);
+  });
+
   test("active BIAB profile → recipe shows zero sparge", async ({ page }) => {
     const app = new App(page);
     await app.go("Equipment");
