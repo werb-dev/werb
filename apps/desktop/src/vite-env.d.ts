@@ -1,4 +1,5 @@
 /// <reference types="vite/client" />
+/// <reference types="vite-plugin-pwa/react" />
 
 // Build-time stamps injected from vite.config.ts. Surface in the
 // Settings footer so a bug report can quote an exact commit.

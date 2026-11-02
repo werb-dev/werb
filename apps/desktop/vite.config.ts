@@ -57,8 +57,10 @@ export default defineConfig({
     // BeerXML wasm chunk). The app already persists everything to
     // OPFS / localStorage, so once the shell is cached it runs
     // entirely offline — useful in brew mode by the kettle.
+    // "prompt": a new release waits until the brewer accepts it from
+    // the UpdateBanner, so it never reloads mid-brew or mid-edit.
     VitePWA({
-      registerType: "autoUpdate",
+      registerType: "prompt",
       includeAssets: [
         "icons/icon-192.png",
         "icons/icon-512.png",

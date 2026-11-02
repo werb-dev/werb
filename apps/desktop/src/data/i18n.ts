@@ -963,6 +963,10 @@ const STRINGS: Record<string, Entry> = {
   "equipment.opt.mash_biab": { en: "BIAB (brew in a bag)", fr: "BIAB (sac dans la cuve)" },
   "equipment.opt.mash_single_vessel": { en: "Single-vessel (all-in-one)", fr: "Cuve unique (tout-en-un)" },
   "equipment.field.notes": { en: "Notes", fr: "Notes" },
+
+  "update.ready": { en: "A new version of Werb is ready.", fr: "Une nouvelle version de Werb est disponible." },
+  "update.reload": { en: "Reload", fr: "Recharger" },
+  "update.later": { en: "Later", fr: "Plus tard" },
   "equipment.section.chilling": { en: "Chilling", fr: "Refroidissement" },
   "equipment.field.chill_method": { en: "Method", fr: "Méthode" },
   "equipment.opt.chill_chiller": {

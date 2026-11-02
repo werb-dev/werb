@@ -12,6 +12,7 @@ import { BUNDLED_SAMPLES, createBlankRecipe, importRecipesFromDisk } from "./dat
 import { exportSessionHtml, exportSessionJson } from "./data/recipe-export.ts";
 import { partitionForImport, skippedSummary } from "./data/import-dedup.ts";
 import { useT, useUnits } from "./data/preferences.tsx";
+import { UpdateBanner } from "./components/UpdateBanner.tsx";
 
 // Lazy-loaded screens — the editor is the biggest screen by far
 // (full form + autocomplete dropdowns + every BeerJSON field).
@@ -244,6 +245,7 @@ export function App() {
         goTokens={goTokens}
       />
       <Suspense fallback={<ScreenLoading />}>{screen}</Suspense>
+      <UpdateBanner />
     </>
   );
 }

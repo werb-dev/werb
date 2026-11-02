@@ -6,6 +6,14 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **"New version available" banner on the web app.** When a new release is
+  deployed, the web app says so and switches over when you tap *Reload*, or
+  later if you're mid-brew or mid-edit. Before, it quietly kept serving the
+  cached version until the page had been reloaded twice. Open tabs check for
+  updates every hour. Not shown in the desktop app.
+
 ## [0.6.0] - 2026-11-02
 
 Brewing-accuracy and workflow release. Bitterness estimates now follow the
