@@ -6,6 +6,17 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-02
+
+Brewing-accuracy and workflow release. Bitterness estimates now follow the
+whole brew day, not just the boil: the equipment profile carries your chilling
+setup, so no-chill and slow-cooling brews get the IBU they really pick up after
+flameout, and fresh (wet) hops and the current grain bill's gravity are counted
+correctly ([#44](https://github.com/werb-dev/werb/issues/44)). Alongside: a
+personal stock with short-on-stock warnings (#1), source-water profiles (#9), a
+one-click PDF brew sheet (#12), single-vessel rigs (#47), post-boil loss in
+liters (#46) and hop reordering (#42).
+
 ### Added
 
 - **Chilling setup in the equipment profile, so no-chill bitterness counts**
@@ -45,6 +56,39 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Reorder hop additions** ([#42](https://github.com/werb-dev/werb/issues/42)).
   Hop rows in the editor now have up/down controls, so you can reorder additions
   (e.g. by time — 60 → 15 → flameout → dry hop) without deleting and re-adding.
+- **Load source-water profiles instead of typing six numbers** ([#9](https://github.com/werb-dev/werb/issues/9)).
+  The water-chemistry section can now fill the source ions two ways: **Use
+  recipe's water** pulls them from the recipe's own BeerJSON `water_additions`
+  profile, and **Load from moneaudebrassage.fr** fetches the latest official
+  tap-water analysis for a French commune by INSEE code (picking a network when
+  a commune has several). The last lookup is cached so your home commune stays
+  one click away and works offline; the commune fetch is desktop-only (the API
+  is cross-origin and Origin-gated, which a browser can't do) and the source is
+  attributed. Feeds straight into the existing salt-suggestion solver.
+- **One-click PDF brew sheet** ([#12](https://github.com/werb-dev/werb/issues/12)).
+  Journal → a session's ⋯ menu now exports a real, paginated PDF (not a
+  Print-dialog HTML) that tells the whole story of one brew: header with
+  recipe/style/batch/brewer/date, **targets vs. the gravities and ABV actually
+  measured**, the full recipe, mash schedule and brew-day timeline, the
+  fermentation/measurement log, incidents, and the post-brew tasting — 7-axis
+  sensory radar, rating, and tags. The printable HTML stays as a web fallback.
+- **Inventory / personal stock** ([#1](https://github.com/werb-dev/werb/issues/1)).
+  A new **Stock** screen tracks the malts, hops, yeast, and miscs you actually
+  own, with the per-item numbers that matter — hop alpha % (+ year, form), malt
+  EBC and yield, yeast attenuation (+ form, best-by). When a recipe references
+  an ingredient by name, the recipe screen uses your stock values to compute
+  OG/FG/IBU/SRM and the style-fit gauges, and shows a banner saying exactly
+  which values it swapped (e.g. *Cascade · alpha 5.5 → 7.2*). The shared catalog
+  stays immutable (SPEC principle #7) and the BeerJSON file is never rewritten —
+  overrides are per-install and display-only, so recipes stay portable.
+- **Live strike-water temperature in the recipe editor.** The mash schedule
+  now shows the temperature to heat the strike water to so the mash-in lands on
+  the first step's target — computed with Palmer's formula (step target + grain
+  temp + thickness) and updated live as you change the target or the water
+  volume, with an **Apply** button to write it into the step's infusion temp.
+  It's the same calc the brew session uses, so the editor and brew day agree.
+  Previously the infusion temperature was a static manual field and the
+  computed strike temp only appeared once brewing started (forum feedback).
 
 ### Fixed
 
@@ -88,42 +132,6 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the text locally and sit empty while you retype, reformatting on blur (the
   same behaviour the inline editor fields already had). Measurement fields keep
   their "blank = no reading" meaning instead of logging a 0.
-
-### Added
-
-- **Load source-water profiles instead of typing six numbers** ([#9](https://github.com/werb-dev/werb/issues/9)).
-  The water-chemistry section can now fill the source ions two ways: **Use
-  recipe's water** pulls them from the recipe's own BeerJSON `water_additions`
-  profile, and **Load from moneaudebrassage.fr** fetches the latest official
-  tap-water analysis for a French commune by INSEE code (picking a network when
-  a commune has several). The last lookup is cached so your home commune stays
-  one click away and works offline; the commune fetch is desktop-only (the API
-  is cross-origin and Origin-gated, which a browser can't do) and the source is
-  attributed. Feeds straight into the existing salt-suggestion solver.
-- **One-click PDF brew sheet** ([#12](https://github.com/werb-dev/werb/issues/12)).
-  Journal → a session's ⋯ menu now exports a real, paginated PDF (not a
-  Print-dialog HTML) that tells the whole story of one brew: header with
-  recipe/style/batch/brewer/date, **targets vs. the gravities and ABV actually
-  measured**, the full recipe, mash schedule and brew-day timeline, the
-  fermentation/measurement log, incidents, and the post-brew tasting — 7-axis
-  sensory radar, rating, and tags. The printable HTML stays as a web fallback.
-- **Inventory / personal stock** ([#1](https://github.com/werb-dev/werb/issues/1)).
-  A new **Stock** screen tracks the malts, hops, yeast, and miscs you actually
-  own, with the per-item numbers that matter — hop alpha % (+ year, form), malt
-  EBC and yield, yeast attenuation (+ form, best-by). When a recipe references
-  an ingredient by name, the recipe screen uses your stock values to compute
-  OG/FG/IBU/SRM and the style-fit gauges, and shows a banner saying exactly
-  which values it swapped (e.g. *Cascade · alpha 5.5 → 7.2*). The shared catalog
-  stays immutable (SPEC principle #7) and the BeerJSON file is never rewritten —
-  overrides are per-install and display-only, so recipes stay portable.
-- **Live strike-water temperature in the recipe editor.** The mash schedule
-  now shows the temperature to heat the strike water to so the mash-in lands on
-  the first step's target — computed with Palmer's formula (step target + grain
-  temp + thickness) and updated live as you change the target or the water
-  volume, with an **Apply** button to write it into the step's infusion temp.
-  It's the same calc the brew session uses, so the editor and brew day agree.
-  Previously the infusion temperature was a static manual field and the
-  computed strike temp only appeared once brewing started (forum feedback).
 
 ## [0.5.0] — 2026-06-09
 
@@ -655,6 +663,10 @@ Linux.
   workflow builds macOS Intel + Apple Silicon, Windows, and Linux
   artifacts and attaches them to a draft GitHub Release.
 
-[Unreleased]: https://github.com/werb-dev/werb/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/werb-dev/werb/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/werb-dev/werb/releases/tag/v0.6.0
+[0.5.0]: https://github.com/werb-dev/werb/releases/tag/v0.5.0
+[0.4.0]: https://github.com/werb-dev/werb/releases/tag/v0.4.0
+[0.3.0]: https://github.com/werb-dev/werb/releases/tag/v0.3.0
 [0.2.0]: https://github.com/werb-dev/werb/releases/tag/v0.2.0
 [0.1.0]: https://github.com/werb-dev/werb/releases/tag/v0.1.0
