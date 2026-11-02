@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 
@@ -7,6 +8,15 @@ import react from "@vitejs/plugin-react";
 // Tauri-specific server settings we don't want to inherit during tests.
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    // Virtual module from vite-plugin-pwa, which only exists in the Vite
+    // build; tests get a stub with no service worker.
+    alias: {
+      "virtual:pwa-register/react": fileURLToPath(
+        new URL("./test/stubs/pwa-register-react.ts", import.meta.url),
+      ),
+    },
+  },
   test: {
     environment: "happy-dom",
     globals: false,
