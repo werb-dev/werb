@@ -12,6 +12,8 @@ export * from "./scale.input.js";
 export * from "./scale.output.js";
 export * from "./strike-temp.input.js";
 export * from "./strike-temp.output.js";
+export * from "./sparge.input.js";
+export * from "./sparge.output.js";
 export * from "./carbonation.input.js";
 export * from "./carbonation.output.js";
 export * from "./yeast-pitch.input.js";

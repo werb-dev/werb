@@ -13,6 +13,26 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   later if you're mid-brew or mid-edit. Before, it quietly kept serving the
   cached version until the page had been reloaded twice. Open tabs check for
   updates every hour. Not shown in the desktop app.
+- **Batch sparge in the equipment profile**
+  ([#63](https://github.com/werb-dev/werb/issues/63)). Pick *fly* or *batch*.
+  With batch, brew mode gives the water temperature that brings the grain bed
+  to 75 °C (hotter than the 75 °C fly sparge water), and splits the water into
+  runs when the mash tun can't hold it all at once (e.g. "2 × 3.7 L").
+- **Pre-boil volume check** ([#62](https://github.com/werb-dev/werb/issues/62)).
+  When a recipe states its own pre-boil volume and your equipment profile gives
+  a different one (more than 0.5 L or 5 % apart), the recipe screen and brew
+  mode say so, with the profile's boil-off. Werb's volumes still follow your
+  profile.
+
+### Fixed
+
+- **Sparge temperature from the recipe.** A BeerJSON `sparge` mash step sets the
+  brew mode sparge temperature instead of showing up as an extra mash rest.
+  BeerXML and JolieBulle imports read `SPARGE_TEMP` into that step, and BeerXML
+  export writes it back.
+- **BeerXML import no longer invents a pre-boil volume.** Files without
+  `BOIL_SIZE` used to get 1.25 × the batch size; they now carry none.
+- **Scaling a recipe scales its pre-boil volume** along with the batch.
 
 ## [0.6.0] - 2026-11-02
 

@@ -1,16 +1,23 @@
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import {
   isMass,
+  preBoilMismatch,
+  recipeToSpargeInput,
   recipeToWaterInput,
   toGrams,
   toKilograms,
   toMinutes,
   type BeerJsonRecipe,
+  type PreBoilMismatch,
 } from "@werb/adapters";
-import type { SessionStep, WaterOutput } from "@werb/types";
-import { computeWater } from "@werb/calc";
+import type { SessionStep, SpargeOutput, WaterOutput } from "@werb/types";
+import { computeSparge, computeWater } from "@werb/calc";
 import { useBrewSession, useScreenWakeLock, useTick } from "../hooks/useBrewSession.ts";
-import { profileToWaterOverrides, type ProfileWithId } from "../data/equipment.ts";
+import {
+  profileToSpargeEquipment,
+  profileToWaterOverrides,
+  type ProfileWithId,
+} from "../data/equipment.ts";
 import { useBcp47, useT, useUnits } from "../data/preferences.tsx";
 import {
   formatCelsius,
@@ -73,6 +80,9 @@ export interface MashFermentable {
 
 interface BrewContext {
   water: WaterOutput;
+  /** Null for BIAB, which has no sparge. */
+  sparge: SpargeOutput | null;
+  preBoil: PreBoilMismatch | null;
   totalGrainKg: number;
   totalMashedKg: number;
   mashFermentables: MashFermentable[];
@@ -129,6 +139,13 @@ export function BrewScreen({ recipeId, recipe, sessionId, activeProfile, onBack,
 
   const ctx = useMemo<BrewContext>(() => {
     const water = computeWater(recipeToWaterInput(recipe, profileToWaterOverrides(activeProfile)));
+    const sparge =
+      activeProfile?.mash_mode === "biab"
+        ? null
+        : computeSparge(
+            recipeToSpargeInput(recipe, water.sparge_water_l, profileToSpargeEquipment(activeProfile)),
+          );
+    const preBoil = preBoilMismatch(recipe, water.pre_boil_volume_l);
     const fermentables = recipe.ingredients.fermentable_additions;
     const totalGrainKg = fermentables.reduce(
       (sum, f) => sum + (isMass(f.amount) ? toKilograms(f.amount) : 0),
@@ -161,6 +178,8 @@ export function BrewScreen({ recipeId, recipe, sessionId, activeProfile, onBack,
     const kettleFit = checkKettleFit(water, activeProfile);
     return {
       water,
+      sparge,
+      preBoil,
       totalGrainKg,
       totalMashedKg,
       mashFermentables,
@@ -178,7 +197,10 @@ export function BrewScreen({ recipeId, recipe, sessionId, activeProfile, onBack,
       <NoSession
         onBack={onBack}
         recipe={recipe}
-        onStart={() => brew.start({ biab })}
+        onStart={() =>
+          brew.start({ biab, ...(ctx.sparge && { spargeTempC: ctx.sparge.water_temp_c }) })
+        }
+        notice={ctx.preBoil && <PreBoilBanner mismatch={ctx.preBoil} water={ctx.water} prefs={prefs} />}
       />
     );
   }
@@ -198,6 +220,7 @@ export function BrewScreen({ recipeId, recipe, sessionId, activeProfile, onBack,
 
         {ctx.hltFit && ctx.hltFit.kind !== "ok" && <HltFitBanner fit={ctx.hltFit} prefs={prefs} />}
         {ctx.kettleFit && ctx.kettleFit.kind !== "ok" && <KettleFitBanner fit={ctx.kettleFit} prefs={prefs} />}
+        {ctx.preBoil && <PreBoilBanner mismatch={ctx.preBoil} water={ctx.water} prefs={prefs} />}
 
         {activeStep ? (
           <ActiveStepCard
@@ -401,6 +424,36 @@ function KettleFitBanner({
   );
 }
 
+function PreBoilBanner({
+  mismatch,
+  water,
+  prefs,
+}: {
+  mismatch: PreBoilMismatch;
+  water: WaterOutput;
+  prefs: UnitPreferences;
+}) {
+  const t = useT();
+  const vol = (l: number) => formatLiters(l, prefs).display;
+  return (
+    <section
+      data-testid="pre-boil-mismatch"
+      className="mb-6 sm:mb-8 rounded-xl border border-warning bg-warning/10 px-4 sm:px-5 py-3 sm:py-4 text-left"
+    >
+      <p className="text-caption uppercase tracking-widest text-warning font-medium">
+        {t("water.pre_boil_mismatch.title")}
+      </p>
+      <p className="text-body-sm text-text mt-1">
+        {t("water.pre_boil_mismatch.body", {
+          recipe: vol(mismatch.recipe_l),
+          computed: vol(mismatch.computed_l),
+          boilOff: vol(water.boil_off_l),
+        })}
+      </p>
+    </section>
+  );
+}
+
 function WakeLockBadge({ held }: { held: boolean }) {
   const t = useT();
   return (
@@ -513,6 +566,10 @@ function StepInfo({
     step.kind === "ferment_pitch" && variant === "active" && ctx.cultures && ctx.cultures.length > 0;
   const showMashIn =
     step.kind === "mash_in" && variant === "active" && ctx.mashFermentables.length > 0;
+  const spargeRuns =
+    step.kind === "sparge" && variant === "active" && ctx.sparge && ctx.sparge.runs > 1
+      ? ctx.sparge
+      : null;
 
   if (stats.length === 0 && !showHops && !showCultures && !showMashIn && step.target_temperature_c === undefined) {
     return null;
@@ -543,6 +600,15 @@ function StepInfo({
             storageKey={`werb.session.${sessionId}.hopAdded.${step.id}`}
             prefs={prefs}
           />
+        )}
+        {spargeRuns && (
+          <p data-testid="sparge-runs" className="text-body-sm text-text-muted">
+            {t("brew.sparge.next_runs", {
+              runs: spargeRuns.runs,
+              volume: formatLiters(spargeRuns.run_volume_l, prefs).display,
+              temp: formatCelsius(spargeRuns.next_runs_water_temp_c, prefs).display,
+            })}
+          </p>
         )}
         {showCultures && <CultureList cultures={ctx.cultures!} prefs={prefs} />}
         {showMashIn && <MashInList items={ctx.mashFermentables} prefs={prefs} />}
@@ -621,7 +687,12 @@ function stepStats(
     case "sparge":
       return [
         {
-          value: ctx.water.sparge_water_l > 0 ? vol(ctx.water.sparge_water_l) : "—",
+          value:
+            ctx.water.sparge_water_l <= 0
+              ? "—"
+              : ctx.sparge && ctx.sparge.runs > 1
+                ? `${ctx.sparge.runs} × ${vol(ctx.sparge.run_volume_l)}`
+                : vol(ctx.water.sparge_water_l),
           label: t("brew.stat.sparge_water"),
         },
         { value: vol(ctx.water.pre_boil_volume_l), label: t("brew.stat.pre_boil_target") },
@@ -777,7 +848,7 @@ function TimelineRow({
       : 0;
 
   return (
-    <li className="px-4 py-4 sm:px-5">
+    <li data-testid={`timeline-step-${step.kind}`} className="px-4 py-4 sm:px-5">
       <div className="flex items-start gap-3 sm:gap-4">
         <span
           aria-hidden
@@ -859,10 +930,12 @@ function NoSession({
   onBack,
   recipe,
   onStart,
+  notice,
 }: {
   onBack: () => void;
   recipe: BeerJsonRecipe;
   onStart: () => void;
+  notice?: ReactNode;
 }) {
   const t = useT();
   return (
@@ -870,6 +943,7 @@ function NoSession({
       <div className="text-center max-w-md px-6">
         <h2 className="text-h2 font-semibold capitalize">{recipe.name.toLowerCase()}</h2>
         <p className="text-body text-text-muted mt-3">{t("brew.no_session.body")}</p>
+        {notice && <div className="mt-6">{notice}</div>}
         <div className="mt-8 flex flex-col gap-3">
           <button
             onClick={onStart}

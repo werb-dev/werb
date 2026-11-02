@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://werb.dev/schemas/tools/sparge.output.schema.json",
+  "title": "SpargeOutput",
+  "description": "Sparge plan: how the sparge water is split and how hot to heat it.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["method", "runs", "run_volume_l", "water_temp_c", "next_runs_water_temp_c"],
+  "properties": {
+    "method": {
+      "type": "string",
+      "enum": ["batch", "fly"],
+      "description": "Echoed sparge method."
+    },
+    "runs": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of equal sparge runs. 1 for fly sparge, 0 when there is no sparge water."
+    },
+    "run_volume_l": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Water per run, in liters."
+    },
+    "water_temp_c": {
+      "type": "number",
+      "description": "Temperature to heat the (first run of) sparge water to, in °C. Capped at 95 °C."
+    },
+    "next_runs_water_temp_c": {
+      "type": "number",
+      "description": "Temperature for the runs after the first, in °C: the bed is already at the target, so they go in at the target temperature."
+    }
+  }
+}

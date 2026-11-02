@@ -168,7 +168,7 @@ A single command (`pnpm gen:types`) regenerates every type. CI checks they're up
 
 - Schemas + type generation (both TS and Rust via typify)
 - Ajv validation for recipes/sessions/equipment in the PWA + boon validation in Rust tests + a `werb validate` CLI binary
-- Calc engine: IBU (Tinseth + Rager), color (Morey + Daniels), ABV, FG from yeast attenuation, water volumes (classic + BIAB), gravity/efficiency, mash strike, carbonation (priming + force), yeast pitch rate, yeast starter sizing, water-salt additions
+- Calc engine: IBU (Tinseth + Rager), color (Morey + Daniels), ABV, FG from yeast attenuation, water volumes (classic + BIAB), gravity/efficiency, mash strike, sparge plan (fly/batch temperature, runs), carbonation (priming + force), yeast pitch rate, yeast starter sizing, water-salt additions
 - Library + schema-driven recipe view + recipe editor
 - Brew mode with wake lock + timeline + per-step measurement logging + sensory tasting form
 - Cost tracking with a bundled price table

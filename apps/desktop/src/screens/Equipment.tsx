@@ -490,6 +490,26 @@ function ProfileForm({
         </p>
       </label>
 
+      {draft.mash_mode !== "biab" && (
+        <label className="block">
+          <span className="block text-caption uppercase tracking-widest text-text-muted mb-2">
+            {t("equipment.field.sparge_method")}
+          </span>
+          <select
+            data-testid="sparge-method-select"
+            value={draft.sparge_method ?? "fly"}
+            onChange={(e) => update("sparge_method", e.target.value as "fly" | "batch", true)}
+            className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-body text-text focus:outline-none focus:border-accent"
+          >
+            <option value="fly">{t("equipment.opt.sparge_fly")}</option>
+            <option value="batch">{t("equipment.opt.sparge_batch")}</option>
+          </select>
+          <p className="text-caption text-text-muted mt-1">
+            {t("equipment.field.sparge_method_hint")}
+          </p>
+        </label>
+      )}
+
       <Field
         label={t("equipment.field.notes")}
         value={draft.notes ?? ""}

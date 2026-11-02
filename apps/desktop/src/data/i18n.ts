@@ -658,6 +658,18 @@ const STRINGS: Record<string, Entry> = {
     en: "Strike ({strike}) + sparge ({sparge}) = {total} exceeds your HLT capacity ({capacity}). Heat strike first, drain to mash, then heat sparge.",
     fr: "Empâtage ({strike}) + rinçage ({sparge}) = {total} dépasse votre cuve d'eau chaude ({capacity}). Chauffez l'empâtage d'abord, transférez vers la cuve d'empâtage, puis chauffez le rinçage.",
   },
+  "brew.sparge.next_runs": {
+    en: "{runs} runs of {volume}: the first at this temperature, the next ones at {temp}.",
+    fr: "{runs} passes de {volume} : la première à cette température, les suivantes à {temp}.",
+  },
+  "water.pre_boil_mismatch.title": {
+    en: "Pre-boil volume differs from the recipe",
+    fr: "Volume avant ébullition différent de la recette",
+  },
+  "water.pre_boil_mismatch.body": {
+    en: "Recipe: {recipe}. Your equipment: {computed} (boil-off {boilOff}). Werb's volumes follow your equipment profile. If the recipe matches your gear, check the profile's boil-off rate.",
+    fr: "Recette : {recipe}. Votre équipement : {computed} (évaporation {boilOff}). Les volumes de Werb suivent votre profil d'équipement. Si la recette correspond à votre matériel, vérifiez son taux d'évaporation.",
+  },
   "brew.kettle.too_small": { en: "Kettle too small", fr: "Cuve d'ébullition trop petite" },
   "brew.kettle.overflow": {
     en: "Pre-boil volume ({preBoil}) exceeds your kettle usable capacity ({capacity}). You'll boil over — reduce batch size or use a bigger kettle.",
@@ -962,6 +974,13 @@ const STRINGS: Record<string, Entry> = {
   "equipment.opt.mash_classic": { en: "Classic 3-vessel", fr: "Classique 3 cuves" },
   "equipment.opt.mash_biab": { en: "BIAB (brew in a bag)", fr: "BIAB (sac dans la cuve)" },
   "equipment.opt.mash_single_vessel": { en: "Single-vessel (all-in-one)", fr: "Cuve unique (tout-en-un)" },
+  "equipment.field.sparge_method": { en: "Sparge method", fr: "Méthode de rinçage" },
+  "equipment.field.sparge_method_hint": {
+    en: "Fly = water trickles onto the grain bed at 75 °C. Batch = drain, add water, stir, drain: the water has to be hotter to bring the bed to 75 °C. Werb computes that temperature and, from the mash tun capacity, how many runs you need.",
+    fr: "En continu = l'eau coule sur le grain à 75 °C. En batch = on vide, on ajoute l'eau, on remue, on vide : l'eau doit être plus chaude pour amener le grain à 75 °C. Werb calcule cette température et, d'après la capacité de la cuve d'empâtage, le nombre de passes.",
+  },
+  "equipment.opt.sparge_fly": { en: "Fly (continuous)", fr: "En continu" },
+  "equipment.opt.sparge_batch": { en: "Batch", fr: "En batch" },
   "equipment.field.notes": { en: "Notes", fr: "Notes" },
 
   "update.ready": { en: "A new version of Werb is ready.", fr: "Une nouvelle version de Werb est disponible." },

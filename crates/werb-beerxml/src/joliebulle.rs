@@ -221,6 +221,8 @@ struct JbMash {
     name: Option<String>,
     #[serde(default, deserialize_with = "loose_f64")]
     grain_temp: Option<f64>,
+    #[serde(default, deserialize_with = "loose_f64")]
+    sparge_temp: Option<f64>,
     #[serde(default)]
     mash_steps: Vec<JbMashStep>,
 }
@@ -545,6 +547,7 @@ impl From<JbMash> for Mash {
             name: m.name.unwrap_or_else(|| "Mash".to_string()),
             version: 1,
             grain_temp: m.grain_temp,
+            sparge_temp: m.sparge_temp,
             mash_steps: if m.mash_steps.is_empty() {
                 None
             } else {

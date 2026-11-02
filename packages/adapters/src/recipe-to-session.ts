@@ -4,6 +4,7 @@ import { toCelsius, toMinutes } from "./units.js";
 import { computeStrikeTemp } from "@werb/calc";
 import { recipeToStrikeTempInput, type StrikeTempOptions } from "./recipe-to-strike-temp.js";
 import { DEFAULT_WHIRLPOOL_TEMP_C } from "./recipe-to-ibu.js";
+import { DEFAULT_SPARGE_TEMP_C, isSpargeStep } from "./recipe-to-sparge.js";
 
 /**
  * Derive a pitch temperature for the recipe's cultures.
@@ -50,10 +51,13 @@ export function pitchTempC(cultures: readonly CultureAddition[]): number {
 /**
  * Initialize a brew session from a recipe.
  *
- * Generates a flat step list for the brew day: mash steps from the recipe,
- * a sparge placeholder, a boil with target duration, chill / transfer /
- * pitch steps. Every step starts in `pending` status; the brewer activates
- * them one at a time.
+ * Generates a flat step list for the brew day: mash rests from the recipe,
+ * a sparge step, a boil with target duration, chill / transfer / pitch
+ * steps. Every step starts in `pending` status; the brewer activates them
+ * one at a time.
+ *
+ * A BeerJSON `sparge` mash step is not a rest: its temperature becomes the
+ * sparge step's target, ahead of `deps.spargeTempC`.
  *
  * Boil hops are not separate steps: the brew screen lists them inside the
  * boil step. Whirlpool hops get a whirlpool step after the boil, held at
@@ -72,6 +76,8 @@ export interface SessionPlanDeps {
    * grain bag at the end of the mash and goes straight to boil.
    */
   biab?: boolean;
+  /** Sparge water temperature (from computeSparge); 75 °C when absent. */
+  spargeTempC?: number;
 }
 
 export function recipeToSessionPlan(
@@ -125,6 +131,7 @@ export function recipeToSessionPlan(
   }
 
   for (const step of recipe.mash?.mash_steps ?? []) {
+    if (isSpargeStep(step)) continue;
     steps.push({
       id: id(),
       kind: "mash",
@@ -135,17 +142,18 @@ export function recipeToSessionPlan(
     });
   }
 
-  // Sparge (implied; recipes rarely encode it as a discrete step).
-  // Default target temperature 75°C — typical sparge water temp.
-  // BIAB rigs skip it: the brewer lifts the bag at the end of mash
-  // and pours directly into the boil.
+  // BIAB rigs skip the sparge: the brewer lifts the bag at the end of
+  // the mash and goes straight to the boil.
   if (!deps.biab) {
+    const recipeSparge = recipe.mash?.mash_steps?.find(isSpargeStep);
     steps.push({
       id: id(),
       kind: "sparge",
       label: "",
       status: "pending",
-      target_temperature_c: 75,
+      target_temperature_c: recipeSparge
+        ? toCelsius(recipeSparge.step_temperature)
+        : (deps.spargeTempC ?? DEFAULT_SPARGE_TEMP_C),
     });
   }
 

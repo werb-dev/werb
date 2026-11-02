@@ -86,7 +86,9 @@ impl RecipeX {
             fermentation: None,
             packaging: None,
             boil: Some(Boil {
-                pre_boil_size: Some(volume_l(self.effective_boil_size())),
+                // Only a stated volume: screens flag a recipe pre-boil volume
+                // that disagrees with the equipment profile.
+                pre_boil_size: self.boil_size.map(volume_l),
                 boil_time: minutes(self.effective_boil_time()),
                 boil_steps: Vec::new(),
                 description: None,
@@ -409,6 +411,24 @@ fn mash_to_beerjson(mash: &crate::model::Mash) -> Mash {
                 value: 60,
                 unit: TimeUnit::Min,
             },
+            amount: None,
+            description: None,
+            end_ph: None,
+            end_temperature: None,
+            infuse_temperature: None,
+            ramp_time: None,
+            start_ph: None,
+            water_grain_ratio: None,
+        });
+    }
+
+    // BeerJSON has no sparge temperature field; it is a `sparge` step.
+    if let Some(t) = mash.sparge_temp {
+        steps.push(MashStep {
+            name: "Sparge".to_string(),
+            type_: MashStepKind::Sparge,
+            step_temperature: temperature_c(t),
+            step_time: minutes(0.0),
             amount: None,
             description: None,
             end_ph: None,

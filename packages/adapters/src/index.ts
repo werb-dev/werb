@@ -36,7 +36,18 @@ export {
   DEFAULT_WHIRLPOOL_TEMP_C,
   type IbuEquipment,
 } from "./recipe-to-ibu.js";
-export { recipeToWaterInput, type EquipmentOverrides } from "./recipe-to-water.js";
+export {
+  recipeToWaterInput,
+  preBoilMismatch,
+  type EquipmentOverrides,
+  type PreBoilMismatch,
+} from "./recipe-to-water.js";
+export {
+  recipeToSpargeInput,
+  isSpargeStep,
+  DEFAULT_SPARGE_TEMP_C,
+  type SpargeEquipment,
+} from "./recipe-to-sparge.js";
 export { recipeToColorInput } from "./recipe-to-color.js";
 export { recipeToGravityInput } from "./recipe-to-gravity.js";
 export { recipeApparentAttenuationPct } from "./recipe-attenuation.js";

@@ -198,6 +198,35 @@ describe("recipeToBeerXml", () => {
     expect(xml).toContain("<STEP_TIME>60</STEP_TIME>");
   });
 
+  it("exports a sparge step as SPARGE_TEMP, not a MASH_STEP", () => {
+    const xml = recipeToBeerXml({
+      ...FULL_RECIPE,
+      mash: {
+        ...FULL_RECIPE.mash!,
+        mash_steps: [
+          ...FULL_RECIPE.mash!.mash_steps,
+          {
+            name: "Sparge",
+            type: "sparge",
+            step_temperature: { value: 78, unit: "C" },
+            step_time: { value: 0, unit: "min" },
+          },
+        ],
+      },
+    });
+    expect(xml).toContain("<SPARGE_TEMP>78</SPARGE_TEMP>");
+    expect(xml).not.toContain("<TYPE>Sparge</TYPE>");
+    expect(xml.match(/<MASH_STEP>/g)).toHaveLength(FULL_RECIPE.mash!.mash_steps.length);
+  });
+
+  it("exports the recipe's pre-boil volume as BOIL_SIZE", () => {
+    const xml = recipeToBeerXml({
+      ...FULL_RECIPE,
+      boil: { boil_time: { value: 60, unit: "min" }, pre_boil_size: { value: 26, unit: "l" } },
+    });
+    expect(xml).toContain("<BOIL_SIZE>26</BOIL_SIZE>");
+  });
+
   it("emits estimate fields with their unit suffix", () => {
     const xml = recipeToBeerXml(FULL_RECIPE);
     expect(xml).toContain("<EST_OG>1.062 SG</EST_OG>");

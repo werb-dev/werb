@@ -151,8 +151,11 @@ export function useBrewSession(
   }, [backend, recipeId, sessionId]);
 
   const start = useCallback(
-    (opts: { biab?: boolean } = {}) => {
-      const fresh = recipeToSessionPlan(recipe, recipeId, { biab: opts.biab ?? false });
+    (opts: { biab?: boolean; spargeTempC?: number } = {}) => {
+      const fresh = recipeToSessionPlan(recipe, recipeId, {
+        biab: opts.biab ?? false,
+        ...(opts.spargeTempC !== undefined && { spargeTempC: opts.spargeTempC }),
+      });
       fresh.status = "in_progress";
       void save(backend, fresh);
       setSession(fresh);

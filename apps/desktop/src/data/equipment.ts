@@ -1,5 +1,5 @@
 import type { WerbEquipmentProfile } from "@werb/types";
-import type { EquipmentOverrides, IbuEquipment } from "@werb/adapters";
+import type { EquipmentOverrides, IbuEquipment, SpargeEquipment } from "@werb/adapters";
 import type { StorageBackend } from "../storage/index.ts";
 
 /**
@@ -125,6 +125,27 @@ export function profileToWaterOverrides(profile: ProfileWithId | undefined): Equ
     overrides.biab = true;
   }
   return overrides;
+}
+
+/**
+ * Map a profile to the equipment shape consumed by recipeToSpargeInput.
+ * Mash tun capacity only applies to a classic rig: it sets how many batch
+ * sparge runs fit.
+ */
+export function profileToSpargeEquipment(profile: ProfileWithId | undefined): SpargeEquipment {
+  if (!profile) return {};
+  const equipment: SpargeEquipment = {};
+  if (profile.sparge_method !== undefined) equipment.method = profile.sparge_method;
+  if (profile.mash_tun?.grain_absorption_l_per_kg !== undefined) {
+    equipment.grain_absorption_l_per_kg = profile.mash_tun.grain_absorption_l_per_kg;
+  }
+  if (profile.mash_tun?.dead_space_l !== undefined) {
+    equipment.mash_dead_space_l = profile.mash_tun.dead_space_l;
+  }
+  if ((profile.mash_mode ?? "classic") === "classic" && profile.mash_tun?.capacity_l !== undefined) {
+    equipment.mash_tun_capacity_l = profile.mash_tun.capacity_l;
+  }
+  return equipment;
 }
 
 /** Minutes to drop below 80 °C assumed for no-chill when none is measured. */
