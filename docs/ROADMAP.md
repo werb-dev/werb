@@ -16,18 +16,15 @@ The original Phases 1–4 (below, kept for history) are essentially complete:
 - **v0.4.0 (2026-05-26)** — Phases 1–3: #3, #4, #5, #6, #7, #8, #11, #13, #14,
   #15, #16, #17, #18.
 - **v0.5.0 (2026-06-09)** — #2, #10, #32, #33, #34, #35, #37, the reopened #7,
-  and the macOS workaround doc for #31. Plus the live strike-water temperature
-  (Stanovitch's "heating temp doesn't update" feedback) in the Unreleased
-  section.
-- **In review now** —
-  [PR #40](https://github.com/werb-dev/werb/pull/40): #9 (source-water profiles
-  + moneaudebrassage.fr) and #12 (PDF brew sheet);
-  [PR #41](https://github.com/werb-dev/werb/pull/41): #1 (inventory module —
-  directly answers Arwen's 2026-06-15 "persistent custom-ingredient library"
-  ask).
+  and the macOS workaround doc for #31.
+- **v0.6.0 (2026-11-02)**: #1 (inventory + short-on-stock warning), #9
+  (source-water profiles), #12 (PDF brew sheet), #42, #44 (no-chill cooling,
+  wet hops and grain-bill OG in the IBU calc), #45, #46, #47, #50, #51, plus the
+  live strike-water temperature (Stanovitch's "heating temp doesn't update"
+  feedback).
 
-Remaining open after those merge: #19, #27, #31, #36, #38 and the third batch
-#42–#51. Sequenced below as Phases 5–9.
+Remaining open: #19, #27, #31, #36, #38, #43, #48, #49. Sequenced below as
+Phases 5–9.
 
 ## Phase 5 — Regressions & correctness bugs in shipped features
 
@@ -59,10 +56,9 @@ requesting it, the way #19 was handled.
 6. [#43](https://github.com/werb-dev/werb/issues/43) — Sparge volume off
    (12 → 13.3 L). Needs the recipe + equipment profile.
 7. [#44](https://github.com/werb-dev/werb/issues/44) — IBU reads too low.
-   Post-boil cooling (no-chill), wet hops and the OG used for IBU are handled;
-   the reporter's example recipe (hops/alpha/time/OG/batch + the tool compared
-   against) is still needed to confirm their case. Near-term counterpart to the
-   #27 SMPH track.
+   Closed in v0.6.0 ([PR #58](https://github.com/werb-dev/werb/pull/58)):
+   post-boil cooling (no-chill), wet hops and the OG used for IBU. Reopen if the
+   reporter's recipe still reads low against their tool.
 8. [#49](https://github.com/werb-dev/werb/issues/49) — "Preview" missing
    OG/FG/ABV. Needs the reporter to point at the exact screen.
 9. [#19](https://github.com/werb-dev/werb/issues/19) — Import errors on standard
@@ -103,9 +99,6 @@ from three angles — scope them as one design effort, not three patches.
 
 ## Open judgment calls
 
-- **#44 vs #27** — answer the concrete "IBU too low" report with a calibration
-  check first (cheap, unblocked); SMPH is the long track and still gated on the
-  upstream schema.
 - **#36 / #38 / #48 as one effort** — recommended; an inline-edit rework is the
   natural moment to also tighten density and the mobile flow, rather than
   reworking the layout three times.

@@ -4892,7 +4892,7 @@ dependencies = [
 
 [[package]]
 name = "werb-desktop"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "serde",
  "serde_json",
