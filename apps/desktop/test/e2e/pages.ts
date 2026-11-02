@@ -48,6 +48,11 @@ class EquipmentPage {
     await this.page.waitForTimeout(250);
   }
 
+  async setChillMethod(method: "chiller" | "no_chill") {
+    await this.page.locator('[data-testid="chill-method-select"]').selectOption(method);
+    await this.page.waitForTimeout(250);
+  }
+
   async getMashMode(): Promise<string> {
     return this.page.locator('[data-testid="mash-mode-select"]').inputValue();
   }

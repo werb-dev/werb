@@ -8,6 +8,24 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Chilling setup in the equipment profile, so no-chill bitterness counts**
+  ([#44](https://github.com/werb-dev/werb/issues/44)). A new *Chilling* section
+  takes the method (wort chiller or no-chill) and how long the wort takes to drop
+  below 80 °C. Hops keep isomerising while the wort cools, so a slow cool now
+  raises the IBU estimate everywhere it shows: recipe screen, editor banner,
+  library cards and the *Solve to IBU* tool. It reuses the Malowicki kinetics
+  already behind whirlpool hops, run along an exponential cooling curve. A
+  chiller with no measured time keeps today's numbers; no-chill without a
+  measured time assumes 60 min. Example: in a pot that takes 45 min to cool, a
+  flameout addition bitters about like a 15-min boil addition.
+- **Wet (fresh) hops are weighed as fresh weight.** Hops with the form *leaf
+  (wet)* now count a fifth of their mass (fresh cones are ~80 % water), with the
+  alpha acid left at the variety's dry value. Before, 50 g of fresh hops counted
+  like 50 g of dried ones.
+- **Whirlpool step in brew mode.** Recipes with whirlpool / hopstand hops get a
+  whirlpool step after the boil (hottest whirlpool temperature, longest hold),
+  with the same add-and-tick hop checklist as the boil.
+
 - **"Short on stock" warning on the recipe screen**
   ([#1](https://github.com/werb-dev/werb/issues/1)). Building on the inventory
   module: when a recipe needs more of a malt or hop than you have on hand, the
@@ -30,6 +48,22 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **IBU uses the gravity of the current grain bill.** The bitterness calc read
+  the recipe's stored OG: recipes created in Werb have none, so it silently
+  assumed 1.050, and recipes edited after import kept the imported OG. It now
+  uses the OG computed from the fermentables (the stored OG only when there is no
+  grain bill). IBU shifts for recipes whose OG differs from 1.050 or from the
+  stored value; the bundled Double IPA goes from 108 to 100 IBU.
+- **Whirlpool hops on the recipe screen.** They now show their use and hold
+  temperature, and the per-hop IBU column lines up: with a whirlpool hop in the
+  list, rows showed the IBU of a different addition.
+- ***Solve to IBU* leaves dry hops alone.** It scaled every hop, including dry,
+  mash and packaging additions that add no IBU.
+- **BeerXML export writes whirlpool hops as `Aroma`**, BeerXML's post-boil
+  steep, instead of `Boil`, so other software no longer reads a hopstand as a
+  timed boil addition.
+- **The "IBU discrepancy" note is translated** and describes the current model
+  (boil, whirlpool and cooling).
 - **Yeast nutrient DAP / Fermaid-K no longer defaults into the boil**
   ([#45](https://github.com/werb-dev/werb/issues/45)). It now defaults to *add at
   pitching* (fermentation), which is where DAP / Fermaid-K actually go.

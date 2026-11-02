@@ -6,6 +6,7 @@ import type {
   CultureType,
   FermentableAddition,
   HopAddition,
+  IbuEquipment,
   MashProcedure,
   MashStep,
   MiscAddition,
@@ -13,6 +14,8 @@ import type {
 } from "@werb/adapters";
 import {
   applyScale,
+  DEFAULT_WHIRLPOOL_TEMP_C,
+  isIbuHop,
   isMass,
   isVolume,
   recipeApparentAttenuationPct,
@@ -58,6 +61,7 @@ import {
   type StyleEntry,
 } from "../data/catalog/index.ts";
 import { useT, useUnits } from "../data/preferences.tsx";
+import { profileToIbuEquipment, type ProfileWithId } from "../data/equipment.ts";
 import {
   cultureFormLabel,
   cultureTypeLabel,
@@ -103,13 +107,16 @@ import { Tile } from "./Recipe/Tile.tsx";
 
 interface RecipeEditorProps {
   recipe: BeerJsonRecipe;
+  /** Active equipment profile; its chilling setup feeds the IBU numbers. */
+  activeProfile?: ProfileWithId | undefined;
   onClose: () => void;
   onSave: (updated: BeerJsonRecipe) => void;
 }
 
-export function RecipeEditor({ recipe, onClose, onSave }: RecipeEditorProps) {
+export function RecipeEditor({ recipe, activeProfile, onClose, onSave }: RecipeEditorProps) {
   const [draft, setDraft] = useState<BeerJsonRecipe>(recipe);
   const t = useT();
+  const ibuEquipment = useMemo(() => profileToIbuEquipment(activeProfile), [activeProfile]);
 
   // Dirty = the draft has diverged from the recipe we opened. Drives the
   // leave-without-saving guard (in-app close + tab/window close). Snapshot
@@ -173,8 +180,8 @@ export function RecipeEditor({ recipe, onClose, onSave }: RecipeEditorProps) {
           {t("editor.intro")}
         </p>
 
-        <TargetsBanner draft={draft} />
-        <EditorTools draft={draft} onChange={setDraft} />
+        <TargetsBanner draft={draft} ibuEquipment={ibuEquipment} />
+        <EditorTools draft={draft} ibuEquipment={ibuEquipment} onChange={setDraft} />
 
         <MetadataSection draft={draft} update={update} />
         <FermentablesSection
@@ -199,18 +206,23 @@ export function RecipeEditor({ recipe, onClose, onSave }: RecipeEditorProps) {
  * to have to toggle out of edit mode to see the effect of a grain-bill
  * tweak; now the numbers update under their thumb.
  *
- * No equipment profile is threaded in — the editor focuses on the
- * recipe itself, and the calc engine falls back to its built-in
- * defaults (75 % efficiency, 0.96 L/kg grain absorption, etc.) when
- * none is provided. Equipment-aware numbers are still authoritative
- * on the read-only Recipe screen.
+ * Only the equipment's chilling setup is threaded in (for IBU, so the
+ * banner matches the Recipe screen); the other numbers come from the
+ * recipe alone, with the calc engine's built-in defaults (75 %
+ * efficiency, 0.96 L/kg grain absorption, etc.).
  */
-function TargetsBanner({ draft }: { draft: BeerJsonRecipe }) {
+function TargetsBanner({
+  draft,
+  ibuEquipment,
+}: {
+  draft: BeerJsonRecipe;
+  ibuEquipment: IbuEquipment;
+}) {
   const prefs = useUnits();
   const targets = useMemo(() => {
     const gravity = computeGravity(recipeToGravityInput(draft));
     const ibu = computeIbu({
-      ...recipeToIbuInput(draft),
+      ...recipeToIbuInput(draft, ibuEquipment),
       method: prefs.ibu_method,
     });
     const color = computeColor({
@@ -222,7 +234,7 @@ function TargetsBanner({ draft }: { draft: BeerJsonRecipe }) {
     const abv = computeAbv(gravity.og, fg);
     const buGu = computeBuGu(ibu.total_ibu, gravity.og);
     return { og: gravity.og, fg, ibu: ibu.total_ibu, abv, srm: color.srm, buGu };
-  }, [draft, prefs.ibu_method, prefs.color_method]);
+  }, [draft, ibuEquipment, prefs.ibu_method, prefs.color_method]);
 
   // Same BJCP-fit helper the read-only Recipe screen uses, so "in style"
   // means the same thing whether you're editing or viewing.
@@ -376,9 +388,11 @@ function TargetTool({
  */
 function EditorTools({
   draft,
+  ibuEquipment,
   onChange,
 }: {
   draft: BeerJsonRecipe;
+  ibuEquipment: IbuEquipment;
   onChange: (next: BeerJsonRecipe) => void;
 }) {
   const t = useT();
@@ -416,16 +430,17 @@ function EditorTools({
   const solveToIbu = (targetIbu: number) => {
     if (!(targetIbu >= 0)) return;
     const currentIbu = computeIbu({
-      ...recipeToIbuInput(draft),
+      ...recipeToIbuInput(draft, ibuEquipment),
       method: prefs.ibu_method,
     }).total_ibu;
     const factor = solveHopsToIbu(currentIbu, targetIbu);
+    // Only bittering hops move: dry / mash / packaging hops add no IBU.
     onChange({
       ...draft,
       ingredients: {
         ...draft.ingredients,
         hop_additions: (draft.ingredients.hop_additions ?? []).map((h) =>
-          isMass(h.amount)
+          isIbuHop(h) && isMass(h.amount)
             ? { ...h, amount: { ...h.amount, value: h.amount.value * factor } }
             : h,
         ),
@@ -436,7 +451,7 @@ function EditorTools({
   const curVol = litersToUserVolume(toLiters(draft.batch_size), prefs);
   const curOg = computeGravity(recipeToGravityInput(draft)).og;
   const curIbu = computeIbu({
-    ...recipeToIbuInput(draft),
+    ...recipeToIbuInput(draft, ibuEquipment),
     method: prefs.ibu_method,
   }).total_ibu;
 
@@ -709,8 +724,6 @@ const HOP_USE_KEYS: Record<(typeof HOP_USES)[number], string> = {
   add_to_mash: "editor.hop.use.mash",
   add_to_package: "editor.hop.use.package",
 };
-/** Default hopstand temperature when the brewer doesn't override it. */
-const DEFAULT_WHIRLPOOL_TEMP_C = 80;
 
 function HopsSection({
   draft,

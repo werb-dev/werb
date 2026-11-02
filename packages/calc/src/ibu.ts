@@ -1,14 +1,13 @@
 /**
  * IBU calculation.
  *
- * Two engines, picked per-addition:
+ * Per addition, up to three pieces add up:
  *
  *   - **Tinseth / Rager** drive boil-temperature hops. Tinseth is the
  *     community standard (Glenn Tinseth, "Hop Bitterness, IBU and the
  *     Chemistry of Beer", https://realbeer.com/hops/research.html);
- *     Rager is a switchable alternative (Settings → IBU method). Boil-
- *     hop behaviour is unchanged from earlier Werb versions, so
- *     recipes calibrated against Tinseth in v0.3 keep matching here.
+ *     Rager is a switchable alternative (Settings → IBU method). Both
+ *     assume the wort is chilled the moment the boil ends.
  *
  *   - **Malowicki kinetics** drive sub-boil hops (whirlpool / hopstand
  *     additions with `temperature_c` below 100 °C). Reference:
@@ -20,19 +19,21 @@
  *         d[iso]/dt = k1(T) · α − k2(T) · [iso]   (iso-AA degrade)
  *     Closed-form at constant T:
  *         u(T, t) = k1 / (k1 − k2) · (exp(−k2·t) − exp(−k1·t))
- *     Multiplied by `MALOWICKI_TO_BEER` (≈ 0.255) to absorb trub /
- *     fermentation / age losses into a single calibration constant —
- *     anchored so a 60-min addition at 100 °C lands on Tinseth's
- *     finished-beer utilisation. Replaces the previous
- *     ((T−76.7)/23.3)² approximation, which was a Brewfather-style
- *     curve fit that under-counted real-world whirlpool IBUs.
+ *     Multiplied by `MALOWICKI_TO_BEER` (0.46) to map wort iso-AA to
+ *     finished-beer IBU.
+ *
+ *   - **Post-boil cooling** (`post_boil_minutes_to_80c`): the same
+ *     kinetics integrated along an exponential cooling curve, applied to
+ *     every hot-side addition once its boil or hold time is over. This
+ *     is the bitterness a slow chill or no-chill adds on top of the
+ *     boil numbers.
+ *
+ * `leaf (wet)` hops have their mass scaled by `WET_HOP_DRY_FRACTION`;
+ * the other forms are used as-is.
  *
  * Pure function — no I/O, no globals. Inputs are validated by the JSON
- * Schema at schemas/tools/ibu.input.schema.json.
- *
- * Future work: full SMPH (oAAs + pH + clarity + krausen + age) is a
- * separate, larger upgrade. This module only implements the kinetic
- * core that sub-boil additions actually need.
+ * Schema at schemas/tools/ibu.input.schema.json. The full SMPH model
+ * (oAAs, pH, clarity, krausen, age) is tracked in #27.
  */
 
 import type { IbuInput, IbuOutput } from "@werb/types";
@@ -42,7 +43,7 @@ import type { IbuInput, IbuOutput } from "@werb/types";
  * From Malowicki 2005, Table 4.2:
  *   k1 (alpha → iso):  A = 7.9 · 10^11 /min,  Ea/R = 11858 K
  *   k2 (iso → degraded): A = 4.1 · 10^12 /min,  Ea/R = 12994 K
- * At 373.15 K (boiling) these give k1 ≈ 0.122 /min and k2 ≈ 0.0030 /min,
+ * At 373.15 K (boiling) these give k1 ≈ 0.0125 /min and k2 ≈ 0.0031 /min,
  * which match the published rate constants to ~2 %.
  */
 const MAL_K1_PRE = 7.9e11;
@@ -60,16 +61,71 @@ const MAL_K2_EA_OVER_R = 12994;
  */
 const MALOWICKI_TO_BEER = 0.46;
 
+/**
+ * Fresh (wet) hops are ~80 % water against ~10 % for kilned hops, so a
+ * gram of wet hops carries about a fifth of the alpha acids of a gram
+ * of the same variety dried.
+ */
+const WET_HOP_DRY_FRACTION = 0.2;
+
+/**
+ * Post-boil cooling curve: T(t) = AMBIENT + (FLAMEOUT − AMBIENT) · exp(−t/τ),
+ * with τ set so the curve crosses 80 °C at `post_boil_minutes_to_80c`.
+ * Integration ends at COOLING_STOP_C, where SMPH stops counting
+ * isomerisation (k1 < 3 · 10⁻⁴ /min).
+ */
+const FLAMEOUT_C = 100;
+const COOLING_AMBIENT_C = 20;
+const COOLING_STOP_C = 60;
+const COOLING_STEPS = 200;
+
+function rateConstants(tempC: number): { k1: number; k2: number } {
+  const T = tempC + 273.15;
+  return {
+    k1: MAL_K1_PRE * Math.exp(-MAL_K1_EA_OVER_R / T),
+    k2: MAL_K2_PRE * Math.exp(-MAL_K2_EA_OVER_R / T),
+  };
+}
+
 function malowickiUtilization(tempC: number, timeMin: number): number {
   if (timeMin <= 0) return 0;
-  const T = tempC + 273.15;
-  const k1 = MAL_K1_PRE * Math.exp(-MAL_K1_EA_OVER_R / T);
-  const k2 = MAL_K2_PRE * Math.exp(-MAL_K2_EA_OVER_R / T);
+  const { k1, k2 } = rateConstants(tempC);
   if (k1 <= 0 || Math.abs(k1 - k2) < 1e-15) return 0;
   return (
     (k1 / (k1 - k2)) *
     (Math.exp(-k2 * timeMin) - Math.exp(-k1 * timeMin))
   );
+}
+
+/**
+ * Net iso-α-acid fraction (of the original alpha) formed while the wort
+ * cools from `startC`, for an addition that already spent `heldMin` at
+ * `startC`. Steps along the cooling curve with piecewise-constant
+ * temperature and the exact two-step solution within each step.
+ */
+function coolingIsoGain(startC: number, heldMin: number, minutesTo80: number): number {
+  if (minutesTo80 <= 0 || startC <= COOLING_STOP_C) return 0;
+  const tau =
+    minutesTo80 /
+    Math.log((FLAMEOUT_C - COOLING_AMBIENT_C) / (80 - COOLING_AMBIENT_C));
+  const curveTime = (c: number) =>
+    tau * Math.log((FLAMEOUT_C - COOLING_AMBIENT_C) / (c - COOLING_AMBIENT_C));
+  const t0 = curveTime(Math.min(startC, FLAMEOUT_C));
+  const dt = (curveTime(COOLING_STOP_C) - t0) / COOLING_STEPS;
+
+  let alpha = Math.exp(-rateConstants(startC).k1 * heldMin);
+  let iso = malowickiUtilization(startC, heldMin);
+  const iso0 = iso;
+  for (let i = 0; i < COOLING_STEPS; i++) {
+    const t = t0 + (i + 0.5) * dt;
+    const tempC = COOLING_AMBIENT_C + (FLAMEOUT_C - COOLING_AMBIENT_C) * Math.exp(-t / tau);
+    const { k1, k2 } = rateConstants(tempC);
+    const e1 = Math.exp(-k1 * dt);
+    const e2 = Math.exp(-k2 * dt);
+    iso = iso * e2 + (alpha * k1 * (e2 - e1)) / (k1 - k2);
+    alpha *= e1;
+  }
+  return Math.max(0, iso - iso0);
 }
 
 export function computeIbu(input: IbuInput): IbuOutput {
@@ -82,6 +138,7 @@ export function computeIbu(input: IbuInput): IbuOutput {
   }
 
   const { og, batch_size_l, hops } = input;
+  const minutesTo80 = input.post_boil_minutes_to_80c ?? 0;
   // Rager uses a gravity adjustment as a flat post-divisor instead of
   // Tinseth's bigness factor. Compute both up-front; per-hop math
   // picks whichever the method needs.
@@ -90,11 +147,12 @@ export function computeIbu(input: IbuInput): IbuOutput {
 
   const additions = hops.map((h) => {
     const alphaDecimal = h.alpha_acid_pct / 100;
+    const grams = h.form === "leaf (wet)" ? h.amount_g * WET_HOP_DRY_FRACTION : h.amount_g;
     // batch_size_l is schema-validated > 0, but the editor allows 0
     // entry — guard so IBU is 0 instead of Infinity propagating
     // through the Recipe tile and BJCP-range coloring.
     const mgPerL =
-      batch_size_l > 0 ? (alphaDecimal * h.amount_g * 1000) / batch_size_l : 0;
+      batch_size_l > 0 ? (alphaDecimal * grams * 1000) / batch_size_l : 0;
     let utilization: number;
     let ibu: number;
     // Sub-boil additions take the Malowicki path regardless of the
@@ -103,8 +161,9 @@ export function computeIbu(input: IbuInput): IbuOutput {
     // the kinetic model is what the SMPH literature uses for this
     // regime.
     const subBoil = h.temperature_c !== undefined && h.temperature_c < 100;
+    const contactC = subBoil ? h.temperature_c! : FLAMEOUT_C;
     if (subBoil) {
-      utilization = malowickiUtilization(h.temperature_c!, h.time_min) *
+      utilization = malowickiUtilization(contactC, h.time_min) *
         MALOWICKI_TO_BEER;
       ibu = utilization * mgPerL;
     } else if (method === "Rager") {
@@ -119,6 +178,10 @@ export function computeIbu(input: IbuInput): IbuOutput {
       utilization = bigness * timeFactor;
       ibu = utilization * mgPerL;
     }
+    const coolingUtilization =
+      coolingIsoGain(contactC, h.time_min, minutesTo80) * MALOWICKI_TO_BEER;
+    utilization += coolingUtilization;
+    ibu += coolingUtilization * mgPerL;
     return {
       ...(h.name !== undefined ? { name: h.name } : {}),
       ibu: Math.max(0, ibu),

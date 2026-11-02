@@ -1,6 +1,8 @@
 import type { IbuInput } from "@werb/types";
-import type { BeerJsonRecipe } from "./beerjson.js";
+import { computeGravity } from "@werb/calc";
+import type { BeerJsonRecipe, HopAddition } from "./beerjson.js";
 import { isMass } from "./beerjson.js";
+import { recipeToGravityInput } from "./recipe-to-gravity.js";
 import {
   toCelsius,
   toGrams,
@@ -9,35 +11,57 @@ import {
   toSpecificGravity,
 } from "./units.js";
 
+/** Hopstand temperature for whirlpool additions that don't carry one, °C. */
+export const DEFAULT_WHIRLPOOL_TEMP_C = 80;
+
+/** Equipment-side inputs to the IBU calc, taken from the active profile. */
+export interface IbuEquipment {
+  /** Minutes from flameout until the wort is below 80 °C (0 = instant chill). */
+  post_boil_minutes_to_80c?: number;
+}
+
 /**
- * Map a BeerJSON Recipe to an IbuInput for @werb/calc.
- *
- * Filtering rule: hop additions are forwarded when their `timing.use`
- * involves thermal contact — `add_to_boil` (the obvious case) and
+ * Hop additions that contribute IBU: `add_to_boil` and
  * `add_to_whirlpool` (a Werb extension for hopstand additions; see
- * {@link TimingType}). Dry hops, mash hops and packaging hops are
- * ignored — Tinseth assumes thermal isomerisation, which dry/package
- * hops don't undergo, and mash hops are an esoteric corner case.
+ * {@link TimingType}). Dry, mash and packaging hops don't undergo
+ * thermal isomerisation and are left out. `computeIbu` returns one
+ * addition per hop matching this predicate, in recipe order.
+ */
+export function isIbuHop(h: HopAddition): boolean {
+  return h.timing?.use === "add_to_boil" || h.timing?.use === "add_to_whirlpool";
+}
+
+/**
+ * Map a BeerJSON Recipe (+ equipment) to an IbuInput for @werb/calc.
+ *
+ * Gravity: the OG computed from the grain bill, so IBU follows the
+ * fermentables as they are edited. The recipe's stored
+ * `original_gravity` is the fallback when there is no computable grain
+ * bill, then 1.050.
  *
  * Whirlpool hops carry their hold temperature via `timing.temperature`
- * (defaulting to 80 °C — a common hopstand setpoint when none is
- * specified); the calc engine derates utilization for sub-boil
- * temperatures so a 20-minute hopstand at 80 °C contributes a small
- * but non-zero IBU instead of being silently inflated as full-boil
- * bitterness like the v0.3 path did.
+ * (default {@link DEFAULT_WHIRLPOOL_TEMP_C}); the calc uses kinetics at
+ * that temperature instead of boil utilization.
  */
-export function recipeToIbuInput(recipe: BeerJsonRecipe): IbuInput {
-  const og = recipe.original_gravity
-    ? toSpecificGravity(recipe.original_gravity)
-    : 1.05; // sane default if missing
+export function recipeToIbuInput(
+  recipe: BeerJsonRecipe,
+  equipment: IbuEquipment = {},
+): IbuInput {
+  const computedOg = computeGravity(recipeToGravityInput(recipe)).og;
+  const og =
+    computedOg > 1
+      ? computedOg
+      : recipe.original_gravity
+        ? toSpecificGravity(recipe.original_gravity)
+        : 1.05;
 
   const batch_size_l = toLiters(recipe.batch_size);
+  const cooling =
+    equipment.post_boil_minutes_to_80c !== undefined && equipment.post_boil_minutes_to_80c > 0
+      ? { post_boil_minutes_to_80c: equipment.post_boil_minutes_to_80c }
+      : {};
 
-  const thermalHops = (recipe.ingredients.hop_additions ?? []).filter(
-    (h) =>
-      h.timing?.use === "add_to_boil" ||
-      h.timing?.use === "add_to_whirlpool",
-  );
+  const thermalHops = (recipe.ingredients.hop_additions ?? []).filter(isIbuHop);
 
   // IbuInput requires hops with minItems: 1. If the recipe has no thermal
   // hops, pass a sentinel zero-value entry so the calc returns total_ibu = 0.
@@ -46,6 +70,7 @@ export function recipeToIbuInput(recipe: BeerJsonRecipe): IbuInput {
       method: "Tinseth",
       og,
       batch_size_l,
+      ...cooling,
       hops: [{ amount_g: 0, alpha_acid_pct: 0, time_min: 0 }],
     };
   }
@@ -60,7 +85,7 @@ export function recipeToIbuInput(recipe: BeerJsonRecipe): IbuInput {
     const tempC = h.timing.temperature
       ? toCelsius(h.timing.temperature)
       : isWhirlpool
-        ? 80 // sane fallback when the brewer didn't specify
+        ? DEFAULT_WHIRLPOOL_TEMP_C
         : undefined;
     return {
       name: h.name,
@@ -76,6 +101,7 @@ export function recipeToIbuInput(recipe: BeerJsonRecipe): IbuInput {
     method: "Tinseth",
     og,
     batch_size_l,
+    ...cooling,
     hops: [hops[0]!, ...hops.slice(1)],
   };
 }

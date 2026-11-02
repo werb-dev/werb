@@ -195,8 +195,8 @@ describe("computeIbu — Malowicki (sub-boil)", () => {
   });
 
   it("very cold contact (<= 50 °C) contributes essentially nothing", () => {
-    // At 50 °C, k1 ≈ 4.4 × 10⁻⁴ /min — utilisation over 30 min is
-    // ~0.014 of alpha, × 0.255 calibration → ~1 IBU even for a
+    // At 50 °C, k1 ≈ 9 × 10⁻⁵ /min — utilisation over 30 min is
+    // ~0.003 of alpha, × 0.46 calibration → under 1 IBU even for a
     // serious hop dose.
     const out = computeIbu({
       og: 1.05, batch_size_l: 20,
@@ -205,5 +205,90 @@ describe("computeIbu — Malowicki (sub-boil)", () => {
       ],
     });
     expect(out.total_ibu).toBeLessThan(3);
+  });
+});
+
+describe("computeIbu — post-boil cooling", () => {
+  const hop = (time_min: number, extra = {}) => ({
+    amount_g: 30, alpha_acid_pct: 6, time_min, ...extra,
+  });
+  const ibu = (hops: Parameters<typeof computeIbu>[0]["hops"], minutes?: number, method?: "Rager") =>
+    computeIbu({
+      og: 1.05, batch_size_l: 20, hops,
+      ...(minutes !== undefined ? { post_boil_minutes_to_80c: minutes } : {}),
+      ...(method ? { method } : {}),
+    }).total_ibu;
+
+  it("0 minutes to 80 °C matches the instant-chill numbers exactly", () => {
+    expect(ibu([hop(60), hop(0)], 0)).toBe(ibu([hop(60), hop(0)]));
+  });
+
+  it("a flameout hop gains bitterness during a slow cool", () => {
+    expect(ibu([hop(0)])).toBe(0);
+    expect(ibu([hop(0)], 45)).toBeGreaterThan(5);
+  });
+
+  it("no-chill in a small pot makes a flameout hop bitter like a ~15-min boil", () => {
+    // Community no-chill rule of thumb: flameout additions behave like
+    // 15–20 min boil additions. 45 min to drop below 80 °C ≈ a covered
+    // pot of a few liters.
+    const flameout = ibu([hop(0)], 45);
+    expect(flameout).toBeGreaterThan(ibu([hop(10)]));
+    expect(flameout).toBeLessThan(ibu([hop(20)]));
+  });
+
+  it("slower cooling bitters more", () => {
+    const fast = ibu([hop(10)], 5);
+    const pot = ibu([hop(10)], 45);
+    const cube = ibu([hop(10)], 120);
+    expect(pot).toBeGreaterThan(fast);
+    expect(cube).toBeGreaterThan(pot);
+  });
+
+  it("long boils gain less than late additions (less alpha left to isomerise)", () => {
+    const gain60 = ibu([hop(60)], 60) - ibu([hop(60)]);
+    const gain5 = ibu([hop(5)], 60) - ibu([hop(5)]);
+    expect(gain5).toBeGreaterThan(gain60);
+    expect(gain60).toBeGreaterThan(0);
+  });
+
+  it("whirlpool additions keep isomerising after the stand when cooling is slow", () => {
+    const stand = { temperature_c: 80 };
+    expect(ibu([hop(20, stand)], 90)).toBeGreaterThan(ibu([hop(20, stand)]));
+  });
+
+  it("applies under Rager too", () => {
+    expect(ibu([hop(10)], 60, "Rager")).toBeGreaterThan(ibu([hop(10)], 0, "Rager"));
+  });
+
+  it("reports the cooling share in the per-addition utilization", () => {
+    const out = computeIbu({
+      og: 1.05, batch_size_l: 20, post_boil_minutes_to_80c: 60,
+      hops: [hop(0)],
+    });
+    // amount 30 g @ 6 % in 20 L → 90 mg/L alpha.
+    expect(out.additions[0]!.ibu).toBeCloseTo(out.additions[0]!.utilization * 90, 6);
+  });
+});
+
+describe("computeIbu — hop form", () => {
+  const base = { og: 1.05, batch_size_l: 20 };
+
+  it("wet hops carry a fifth of the alpha per gram of dried hops", () => {
+    const dry = computeIbu({
+      ...base, hops: [{ amount_g: 30, alpha_acid_pct: 6, time_min: 60, form: "leaf" }],
+    });
+    const wet = computeIbu({
+      ...base, hops: [{ amount_g: 150, alpha_acid_pct: 6, time_min: 60, form: "leaf (wet)" }],
+    });
+    expect(wet.total_ibu).toBeCloseTo(dry.total_ibu, 6);
+  });
+
+  it("pellet, leaf and plug give the same result", () => {
+    const of = (form: "pellet" | "leaf" | "plug") =>
+      computeIbu({ ...base, hops: [{ amount_g: 30, alpha_acid_pct: 6, time_min: 60, form }] })
+        .total_ibu;
+    expect(of("leaf")).toBe(of("pellet"));
+    expect(of("plug")).toBe(of("pellet"));
   });
 });

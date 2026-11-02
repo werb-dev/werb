@@ -2,10 +2,16 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { recipeToWaterInput } from "@werb/adapters";
-import { computeWater } from "@werb/calc";
+import { recipeToIbuInput, recipeToWaterInput } from "@werb/adapters";
+import { computeIbu, computeWater } from "@werb/calc";
 import type { BeerJsonFile, BeerJsonRecipe } from "@werb/adapters";
-import { profileToWaterOverrides, type ProfileWithId } from "../src/data/equipment.ts";
+import {
+  chillMinutesTo80c,
+  DEFAULT_NO_CHILL_MINUTES_TO_80C,
+  profileToIbuEquipment,
+  profileToWaterOverrides,
+  type ProfileWithId,
+} from "../src/data/equipment.ts";
 
 /**
  * The active equipment profile reaches the calc through a three-step
@@ -117,5 +123,35 @@ describe("equipment profile → computeWater integration", () => {
     const noProfile = computeWater(recipeToWaterInput(RECIPE, profileToWaterOverrides(undefined)));
     expect(Number.isFinite(noProfile.mash_water_l)).toBe(true);
     expect(noProfile.sparge_water_l).toBeGreaterThan(0);
+  });
+});
+
+describe("equipment profile → computeIbu integration", () => {
+  const ibuFor = (p: ProfileWithId | undefined) =>
+    computeIbu(recipeToIbuInput(RECIPE, profileToIbuEquipment(p))).total_ibu;
+
+  it("no profile and no chilling section mean instant chill", () => {
+    expect(chillMinutesTo80c(undefined)).toBe(0);
+    expect(chillMinutesTo80c(profile())).toBe(0);
+    expect(profileToIbuEquipment(profile())).toEqual({});
+    expect(ibuFor(profile())).toBe(ibuFor(undefined));
+  });
+
+  it("a chiller without a measured time stays instant", () => {
+    expect(chillMinutesTo80c(profile({ chilling: { method: "chiller" } }))).toBe(0);
+  });
+
+  it("no-chill defaults its cooling time and raises the IBU", () => {
+    const noChill = profile({ chilling: { method: "no_chill" } });
+    expect(chillMinutesTo80c(noChill)).toBe(DEFAULT_NO_CHILL_MINUTES_TO_80C);
+    expect(ibuFor(noChill)).toBeGreaterThan(ibuFor(profile()));
+  });
+
+  it("a measured time wins over the method default", () => {
+    const measured = profile({ chilling: { method: "no_chill", minutes_to_80c: 120 } });
+    expect(profileToIbuEquipment(measured)).toEqual({ post_boil_minutes_to_80c: 120 });
+    expect(ibuFor(measured)).toBeGreaterThan(
+      ibuFor(profile({ chilling: { method: "no_chill" } })),
+    );
   });
 });

@@ -30,7 +30,12 @@ export {
   toSpecificGravity,
   toSrm,
 } from "./units.js";
-export { recipeToIbuInput } from "./recipe-to-ibu.js";
+export {
+  recipeToIbuInput,
+  isIbuHop,
+  DEFAULT_WHIRLPOOL_TEMP_C,
+  type IbuEquipment,
+} from "./recipe-to-ibu.js";
 export { recipeToWaterInput, type EquipmentOverrides } from "./recipe-to-water.js";
 export { recipeToColorInput } from "./recipe-to-color.js";
 export { recipeToGravityInput } from "./recipe-to-gravity.js";

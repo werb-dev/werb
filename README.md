@@ -31,7 +31,7 @@ Most brewing apps lock your recipes inside a proprietary cloud silo. Werb takes 
 ## What you can do
 
 - **Import** BeerJSON and BeerXML recipes from BeerSmith, Brewfather, etc.
-- **Compute** IBU (Tinseth / Rager), color (Morey / Daniels), gravity, ABV, FG from yeast attenuation, water volumes (classic mash or BIAB), mash strike temperature, carbonation (priming + force), yeast pitch rate, yeast starter sizing, and brewing-salt additions to a target water profile.
+- **Compute** IBU (Tinseth / Rager, plus whirlpool and no-chill cooling), color (Morey / Daniels), gravity, ABV, FG from yeast attenuation, water volumes (classic mash or BIAB), mash strike temperature, carbonation (priming + force), yeast pitch rate, yeast starter sizing, and brewing-salt additions to a target water profile.
 - **Scale** a recipe to your equipment profile in one click.
 - **Brew** with a live session screen: timeline with countdowns, per-hop addition reminders, measurement logging (gravity, pH, temperature, volume, ABV), screen wake-lock.
 - **Reflect** with a post-brew sensory tasting form (7-axis radar chart, star rating, lessons-learned tags) that surfaces on the recipe screen so the next brew of the same recipe sees what to adjust.

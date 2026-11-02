@@ -77,6 +77,7 @@ interface BrewContext {
   totalMashedKg: number;
   mashFermentables: MashFermentable[];
   boilHops: BoilHop[];
+  whirlpoolHops: BoilHop[];
   cultures: BeerJsonRecipe["ingredients"]["culture_additions"];
   hltFit: HltFit | null;
   kettleFit: KettleFit | null;
@@ -143,19 +144,32 @@ export function BrewScreen({ recipeId, recipe, sessionId, activeProfile, onBack,
         type: f.type,
         amount_kg: toKilograms(f.amount as Parameters<typeof toKilograms>[0]),
       }));
-    const boilHops: BoilHop[] = (recipe.ingredients.hop_additions ?? [])
-      .filter((h) => h.timing?.use === "add_to_boil")
-      .map((h) => ({
-        name: h.name,
-        amount_g: isMass(h.amount) ? toGrams(h.amount) : 0,
-        alpha_acid_pct: h.alpha_acid?.value ?? 0,
-        time_min: h.timing?.time ? toMinutes(h.timing.time) : 0,
-        notes: h.notes,
-      }));
+    const hopsFor = (use: "add_to_boil" | "add_to_whirlpool"): BoilHop[] =>
+      (recipe.ingredients.hop_additions ?? [])
+        .filter((h) => h.timing?.use === use)
+        .map((h) => ({
+          name: h.name,
+          amount_g: isMass(h.amount) ? toGrams(h.amount) : 0,
+          alpha_acid_pct: h.alpha_acid?.value ?? 0,
+          time_min: h.timing?.time ? toMinutes(h.timing.time) : 0,
+          notes: h.notes,
+        }));
+    const boilHops = hopsFor("add_to_boil");
+    const whirlpoolHops = hopsFor("add_to_whirlpool");
     const cultures = recipe.ingredients.culture_additions;
     const hltFit = checkHltFit(water, activeProfile);
     const kettleFit = checkKettleFit(water, activeProfile);
-    return { water, totalGrainKg, totalMashedKg, mashFermentables, boilHops, cultures, hltFit, kettleFit };
+    return {
+      water,
+      totalGrainKg,
+      totalMashedKg,
+      mashFermentables,
+      boilHops,
+      whirlpoolHops,
+      cultures,
+      hltFit,
+      kettleFit,
+    };
   }, [recipe, activeProfile]);
 
   if (!brew.session) {
@@ -491,7 +505,10 @@ function StepInfo({
 }) {
   const t = useT();
   const stats = stepStats(step, ctx, prefs, t);
-  const showHops = step.kind === "boil" && variant === "active" && ctx.boilHops.length > 0;
+  // Whirlpool hops reuse the boil schedule: time = minutes before the stand ends.
+  const scheduleHops =
+    step.kind === "boil" ? ctx.boilHops : step.kind === "whirlpool" ? ctx.whirlpoolHops : [];
+  const showHops = variant === "active" && scheduleHops.length > 0;
   const showCultures =
     step.kind === "ferment_pitch" && variant === "active" && ctx.cultures && ctx.cultures.length > 0;
   const showMashIn =
@@ -520,8 +537,8 @@ function StepInfo({
         )}
         {showHops && (
           <HopSchedule
-            hops={ctx.boilHops}
-            boilDurationMin={step.target_duration_min ?? 60}
+            hops={scheduleHops}
+            boilDurationMin={step.target_duration_min ?? (step.kind === "boil" ? 60 : 0)}
             elapsedSec={elapsedSec}
             storageKey={`werb.session.${sessionId}.hopAdded.${step.id}`}
             prefs={prefs}
@@ -616,6 +633,8 @@ function stepStats(
         { value: vol(ctx.water.boil_off_l), label: t("brew.stat.boil_off") },
         { value: `${ctx.boilHops.length}`, label: t("brew.stat.hop_additions") },
       ];
+    case "whirlpool":
+      return [{ value: `${ctx.whirlpoolHops.length}`, label: t("brew.stat.hop_additions") }];
     case "chill":
       return [
         { value: vol(ctx.water.post_cool_kettle_volume_l), label: t("brew.stat.in_kettle") },

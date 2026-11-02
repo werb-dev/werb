@@ -328,6 +328,11 @@ const STRINGS: Record<string, Entry> = {
   "recipe.culture.attenuation": { en: "{pct}% atten", fr: "{pct} % d'atténuation" },
   "recipe.time.days": { en: "{n} day", fr: "{n} jour" },
   "recipe.time.minutes": { en: "{n} min", fr: "{n} min" },
+  "recipe.ibu_discrepancy.title": { en: "IBU discrepancy", fr: "Écart d'IBU" },
+  "recipe.ibu_discrepancy.body": {
+    en: "Recipe target: {claimed} IBU. Werb computes {computed} IBU ({method} for boil hops, isomerisation kinetics for whirlpool hops and post-boil cooling). Gaps this large usually come from the source software's formula or how it counted late additions: check the addition times, and the chilling setup of your equipment profile.",
+    fr: "Cible de la recette : {claimed} IBU. Werb calcule {computed} IBU ({method} pour l'ébullition, cinétique d'isomérisation pour le whirlpool et le refroidissement). Un tel écart vient en général de la formule du logiciel d'origine ou de sa façon de compter les ajouts tardifs : vérifiez les temps d'ajout et le refroidissement de votre profil d'équipement.",
+  },
   "recipe.mash.infusion": { en: "{volume} infusion", fr: "infusion {volume}" },
   // BeerJSON 2.x MashStepKind enum (drives the mash-step type pill
   // shown under each step on the Recipe view).
@@ -958,6 +963,18 @@ const STRINGS: Record<string, Entry> = {
   "equipment.opt.mash_biab": { en: "BIAB (brew in a bag)", fr: "BIAB (sac dans la cuve)" },
   "equipment.opt.mash_single_vessel": { en: "Single-vessel (all-in-one)", fr: "Cuve unique (tout-en-un)" },
   "equipment.field.notes": { en: "Notes", fr: "Notes" },
+  "equipment.section.chilling": { en: "Chilling", fr: "Refroidissement" },
+  "equipment.field.chill_method": { en: "Method", fr: "Méthode" },
+  "equipment.opt.chill_chiller": {
+    en: "Wort chiller (immersion, counterflow, plate)",
+    fr: "Refroidisseur (serpentin, contre-flux, plaques)",
+  },
+  "equipment.opt.chill_no_chill": { en: "No-chill (cools on its own)", fr: "No-chill (refroidissement naturel)" },
+  "equipment.field.minutes_to_80c": { en: "Time to drop below 80 °C", fr: "Temps pour passer sous 80 °C" },
+  "equipment.field.chilling_hint": {
+    en: "Hops keep adding bitterness while the wort is above ~80 °C, so a slow cool raises the IBU estimate. Time it once with a thermometer. Typical: chiller 0 to 5 min, no-chill pot 30 to 60 min, no-chill cube 90 to 150 min.",
+    fr: "Le houblon continue d'apporter de l'amertume tant que le moût dépasse ~80 °C : un refroidissement lent augmente l'IBU estimé. Chronométrez-le une fois avec un thermomètre. Ordres de grandeur : refroidisseur 0 à 5 min, no-chill en casserole 30 à 60 min, no-chill en cube 90 à 150 min.",
+  },
 
   "equipment.set_active": { en: "Set as active", fr: "Définir comme actif" },
   "equipment.active_clear": { en: "✓ Active — clear", fr: "✓ Actif — désactiver" },

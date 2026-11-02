@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import {
   recipeToIbuInput,
+  isIbuHop,
   recipeToWaterInput,
   recipeToColorInput,
   recipeToGravityInput,
@@ -43,20 +44,64 @@ describe("recipeToIbuInput — Double IPA fixture", () => {
     expect(input.hops[1]!.time_min).toBe(30);
   });
 
-  it("pulls OG and batch size from the recipe", () => {
+  it("uses the OG computed from the grain bill, not the stored target", () => {
     const input = recipeToIbuInput(recipe);
-    expect(input.og).toBeCloseTo(1.069, 4);
+    // Stored original_gravity is 1.069; the grain bill at the recipe's
+    // efficiency computes to ~1.0785.
+    expect(input.og).toBeCloseTo(computeGravity(recipeToGravityInput(recipe)).og, 6);
+    expect(input.og).toBeCloseTo(1.0785, 3);
     expect(input.batch_size_l).toBe(22);
   });
 
-  it("end-to-end IBU is in the expected range (claim 67, computed ~108)", () => {
+  it("falls back to the stored OG when there is no grain bill, then 1.050", () => {
+    const noGrain = {
+      ...recipe,
+      ingredients: { ...recipe.ingredients, fermentable_additions: [] },
+    };
+    expect(recipeToIbuInput(noGrain).og).toBeCloseTo(1.069, 4);
+    const { original_gravity: _og, ...bare } = noGrain;
+    expect(recipeToIbuInput(bare).og).toBe(1.05);
+  });
+
+  it("passes the equipment's post-boil cooling time through", () => {
+    expect(recipeToIbuInput(recipe, { post_boil_minutes_to_80c: 60 }).post_boil_minutes_to_80c)
+      .toBe(60);
+    expect(recipeToIbuInput(recipe, { post_boil_minutes_to_80c: 0 })).not.toHaveProperty(
+      "post_boil_minutes_to_80c",
+    );
+    expect(recipeToIbuInput(recipe)).not.toHaveProperty("post_boil_minutes_to_80c");
+  });
+
+  it("end-to-end IBU is in the expected range (claim 67, computed ~100)", () => {
     const out = computeIbu(recipeToIbuInput(recipe));
     expect(out.method).toBe("Tinseth");
-    // Hand-computed: 46.67 (10min) + 61.81 (30min) ≈ 108.48
-    expect(out.total_ibu).toBeCloseTo(108.48, 1);
+    // Hand-computed at OG 1.0785 (bigness 0.8151):
+    // 42.85 (10 min) + 56.77 (30 min) ≈ 99.62
+    expect(out.total_ibu).toBeCloseTo(99.62, 1);
     // Significant gap vs claimed 67 — exposes the BeerXML Aroma-vs-whirlpool
     // ambiguity. Captured here so a regression in either direction is loud.
-    expect(out.total_ibu).toBeGreaterThan(100);
+    expect(out.total_ibu).toBeGreaterThan(90);
+  });
+
+  it("no-chill raises the end-to-end IBU", () => {
+    const chilled = computeIbu(recipeToIbuInput(recipe)).total_ibu;
+    const noChill = computeIbu(recipeToIbuInput(recipe, { post_boil_minutes_to_80c: 90 })).total_ibu;
+    expect(noChill).toBeGreaterThan(chilled * 1.2);
+  });
+});
+
+describe("isIbuHop", () => {
+  const hop = (use: string) =>
+    ({ name: "h", amount: { value: 0.01, unit: "kg" }, timing: { use } }) as unknown as Parameters<
+      typeof isIbuHop
+    >[0];
+
+  it("keeps boil and whirlpool additions only", () => {
+    expect(isIbuHop(hop("add_to_boil"))).toBe(true);
+    expect(isIbuHop(hop("add_to_whirlpool"))).toBe(true);
+    expect(isIbuHop(hop("add_to_fermentation"))).toBe(false);
+    expect(isIbuHop(hop("add_to_mash"))).toBe(false);
+    expect(isIbuHop(hop("add_to_package"))).toBe(false);
   });
 });
 
@@ -156,6 +201,46 @@ describe("recipeToSessionPlan — Double IPA fixture", () => {
     expect(session.recipe_id).toBe("double-ipa-mandarina");
     expect(session.recipe_name).toBe(recipe.name);
     expect(session.steps.length).toBeGreaterThan(0);
+  });
+
+  it("adds no whirlpool step when the recipe has no whirlpool hops", () => {
+    reset();
+    const kinds = recipeToSessionPlan(recipe, "x", deps).steps.map((s) => s.kind);
+    expect(kinds).not.toContain("whirlpool");
+  });
+
+  it("adds a whirlpool step between boil and chill for whirlpool hops", () => {
+    reset();
+    const withWhirlpool = {
+      ...recipe,
+      ingredients: {
+        ...recipe.ingredients,
+        hop_additions: [
+          ...(recipe.ingredients.hop_additions ?? []),
+          {
+            name: "Citra",
+            amount: { value: 0.05, unit: "kg" as const },
+            timing: {
+              use: "add_to_whirlpool" as const,
+              time: { value: 20, unit: "min" as const },
+              temperature: { value: 85, unit: "C" as const },
+            },
+          },
+          {
+            name: "Mosaic",
+            amount: { value: 0.03, unit: "kg" as const },
+            timing: { use: "add_to_whirlpool" as const, time: { value: 10, unit: "min" as const } },
+          },
+        ],
+      },
+    };
+    const steps = recipeToSessionPlan(withWhirlpool, "x", deps).steps;
+    const kinds = steps.map((s) => s.kind);
+    const whirlpool = steps.find((s) => s.kind === "whirlpool")!;
+    expect(kinds.indexOf("whirlpool")).toBe(kinds.indexOf("boil") + 1);
+    expect(kinds.indexOf("chill")).toBe(kinds.indexOf("whirlpool") + 1);
+    expect(whirlpool.target_duration_min).toBe(20);
+    expect(whirlpool.target_temperature_c).toBe(85);
   });
 
   it("expands mash steps + adds sparge / boil / chill / transfer / pitch", () => {

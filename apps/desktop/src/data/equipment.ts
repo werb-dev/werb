@@ -1,5 +1,5 @@
 import type { WerbEquipmentProfile } from "@werb/types";
-import type { EquipmentOverrides } from "@werb/adapters";
+import type { EquipmentOverrides, IbuEquipment } from "@werb/adapters";
 import type { StorageBackend } from "../storage/index.ts";
 
 /**
@@ -125,6 +125,22 @@ export function profileToWaterOverrides(profile: ProfileWithId | undefined): Equ
     overrides.biab = true;
   }
   return overrides;
+}
+
+/** Minutes to drop below 80 °C assumed for no-chill when none is measured. */
+export const DEFAULT_NO_CHILL_MINUTES_TO_80C = 60;
+
+/** Minutes from flameout to below 80 °C for the profile's chilling setup. */
+export function chillMinutesTo80c(profile: ProfileWithId | undefined): number {
+  const chilling = profile?.chilling;
+  if (chilling?.minutes_to_80c !== undefined) return chilling.minutes_to_80c;
+  return chilling?.method === "no_chill" ? DEFAULT_NO_CHILL_MINUTES_TO_80C : 0;
+}
+
+/** Map a profile to the equipment shape consumed by recipeToIbuInput. */
+export function profileToIbuEquipment(profile: ProfileWithId | undefined): IbuEquipment {
+  const minutes = chillMinutesTo80c(profile);
+  return minutes > 0 ? { post_boil_minutes_to_80c: minutes } : {};
 }
 
 /**

@@ -3,6 +3,7 @@ import type { BeerJsonRecipe, CultureAddition, CultureType } from "./beerjson.js
 import { toCelsius, toMinutes } from "./units.js";
 import { computeStrikeTemp } from "@werb/calc";
 import { recipeToStrikeTempInput, type StrikeTempOptions } from "./recipe-to-strike-temp.js";
+import { DEFAULT_WHIRLPOOL_TEMP_C } from "./recipe-to-ibu.js";
 
 /**
  * Derive a pitch temperature for the recipe's cultures.
@@ -54,9 +55,9 @@ export function pitchTempC(cultures: readonly CultureAddition[]): number {
  * pitch steps. Every step starts in `pending` status; the brewer activates
  * them one at a time.
  *
- * Hop additions are NOT separate steps in v0 — the brewer keeps the recipe
- * view alongside while the boil is running. v1 will add hop-countdown alerts
- * inside the boil step.
+ * Boil hops are not separate steps: the brew screen lists them inside the
+ * boil step. Whirlpool hops get a whirlpool step after the boil, held at
+ * the hottest whirlpool temperature for the longest hold time.
  *
  * Pure function — no I/O. Caller provides `now()` and `id()` so tests can
  * use deterministic values.
@@ -155,6 +156,26 @@ export function recipeToSessionPlan(
       label: "",
       status: "pending",
       target_duration_min: toMinutes(recipe.boil.boil_time),
+    });
+  }
+
+  const whirlpoolHops = (recipe.ingredients.hop_additions ?? []).filter(
+    (h) => h.timing?.use === "add_to_whirlpool",
+  );
+  if (whirlpoolHops.length > 0) {
+    steps.push({
+      id: id(),
+      kind: "whirlpool",
+      label: "",
+      status: "pending",
+      target_duration_min: Math.max(
+        ...whirlpoolHops.map((h) => (h.timing.time ? toMinutes(h.timing.time) : 0)),
+      ),
+      target_temperature_c: Math.max(
+        ...whirlpoolHops.map((h) =>
+          h.timing.temperature ? toCelsius(h.timing.temperature) : DEFAULT_WHIRLPOOL_TEMP_C,
+        ),
+      ),
     });
   }
 

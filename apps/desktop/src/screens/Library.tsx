@@ -9,7 +9,11 @@ import {
 import { computeIbu, computeWater } from "@werb/calc";
 import type { StoredRecipe } from "../data/recipes.ts";
 import { filterAndSort, type SortKey } from "../data/library-sort.ts";
-import { profileToWaterOverrides, type ProfileWithId } from "../data/equipment.ts";
+import {
+  profileToIbuEquipment,
+  profileToWaterOverrides,
+  type ProfileWithId,
+} from "../data/equipment.ts";
 import { useT, useUnits } from "../data/preferences.tsx";
 import { WerbError, translateError } from "../data/errors.ts";
 import {
@@ -210,7 +214,10 @@ function RecipeCard({
     : null;
   const computedIbu = (() => {
     try {
-      return computeIbu({ ...recipeToIbuInput(recipe), method: prefs.ibu_method }).total_ibu;
+      return computeIbu({
+        ...recipeToIbuInput(recipe, profileToIbuEquipment(activeProfile)),
+        method: prefs.ibu_method,
+      }).total_ibu;
     } catch {
       return null;
     }

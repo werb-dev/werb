@@ -24,6 +24,12 @@
       "maximum": 1.2,
       "description": "Original gravity (specific gravity, e.g. 1.050). Used as the wort gravity proxy in utilization formulas."
     },
+    "post_boil_minutes_to_80c": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0,
+      "description": "Minutes from flameout until the wort drops below 80 °C. Hops keep isomerising while the wort cools; the calc follows an exponential cooling curve from 100 °C towards 20 °C that crosses 80 °C at this time. 0 = instant chill, which matches the Tinseth / Rager calibration. Typical: wort chiller 0-5, no-chill pot 30-60, no-chill cube 90-150."
+    },
     "hops": {
       "type": "array",
       "minItems": 1,
@@ -60,13 +66,13 @@
           "type": "string",
           "enum": ["pellet", "leaf", "leaf (wet)", "plug", "extract", "powder"],
           "default": "pellet",
-          "description": "Hop form. Used by some methods to apply a utilization multiplier (e.g. pellet ~1.10x leaf)."
+          "description": "Hop form. Only 'leaf (wet)' changes the result: fresh, unkilned cones are ~80 % water, so their mass is scaled by 0.2 while `alpha_acid_pct` stays the variety's dry (kilned) value."
         },
         "temperature_c": {
           "type": "number",
           "minimum": 0,
           "maximum": 110,
-          "description": "Optional contact temperature in °C. Omit (or set ≥ 100) for boiling-temp additions. Whirlpool / hopstand additions held below 100 °C get their utilization derated by the calc — at ~77 °C the contribution effectively drops to zero."
+          "description": "Optional contact temperature in °C. Omit (or set ≥ 100) for boiling-temp additions. Whirlpool / hopstand additions held below 100 °C use Malowicki isomerisation kinetics at this temperature, so cooler stands bitter less."
         }
       }
     }
