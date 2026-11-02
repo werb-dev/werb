@@ -21,6 +21,10 @@ export interface IbuInput {
    */
   og: number;
   /**
+   * Minutes from flameout until the wort drops below 80 °C. Hops keep isomerising while the wort cools; the calc follows an exponential cooling curve from 100 °C towards 20 °C that crosses 80 °C at this time. 0 = instant chill, which matches the Tinseth / Rager calibration. Typical: wort chiller 0-5, no-chill pot 30-60, no-chill cube 90-150.
+   */
+  post_boil_minutes_to_80c?: number;
+  /**
    * @minItems 1
    */
   hops: [HopAddition, ...HopAddition[]];
@@ -43,11 +47,11 @@ export interface HopAddition {
    */
   time_min: number;
   /**
-   * Hop form. Used by some methods to apply a utilization multiplier (e.g. pellet ~1.10x leaf).
+   * Hop form. Only 'leaf (wet)' changes the result: fresh, unkilned cones are ~80 % water, so their mass is scaled by 0.2 while `alpha_acid_pct` stays the variety's dry (kilned) value.
    */
   form?: "pellet" | "leaf" | "leaf (wet)" | "plug" | "extract" | "powder";
   /**
-   * Optional contact temperature in °C. Omit (or set ≥ 100) for boiling-temp additions. Whirlpool / hopstand additions held below 100 °C get their utilization derated by the calc — at ~77 °C the contribution effectively drops to zero.
+   * Optional contact temperature in °C. Omit (or set ≥ 100) for boiling-temp additions. Whirlpool / hopstand additions held below 100 °C use Malowicki isomerisation kinetics at this temperature, so cooler stands bitter less.
    */
   temperature_c?: number;
 }

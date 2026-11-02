@@ -138,6 +138,30 @@ describe("recipeToBeerXml", () => {
     expect(xml).toContain("<USE>Dry Hop</USE>");
   });
 
+  it("exports whirlpool hops as BeerXML Aroma, not Boil", () => {
+    const xml = recipeToBeerXml({
+      ...FULL_RECIPE,
+      ingredients: {
+        ...FULL_RECIPE.ingredients,
+        hop_additions: [
+          {
+            name: "Citra",
+            alpha_acid: { value: 12, unit: "%" },
+            amount: { value: 0.05, unit: "kg" },
+            timing: {
+              use: "add_to_whirlpool",
+              time: { value: 20, unit: "min" },
+              temperature: { value: 80, unit: "C" },
+            },
+          },
+        ],
+      },
+    });
+    const hops = xml.slice(xml.indexOf("<HOPS>"), xml.indexOf("</HOPS>"));
+    expect(hops).toContain("<USE>Aroma</USE>");
+    expect(hops).not.toContain("<USE>Boil</USE>");
+  });
+
   it("emits hops with form, alpha, time, and amount in kg", () => {
     const xml = recipeToBeerXml(FULL_RECIPE);
     expect(xml).toContain("<NAME>Cascade</NAME>");

@@ -113,6 +113,7 @@ export function App() {
       screen = (
         <RecipeEditor
           recipe={loaded.recipe}
+          activeProfile={equipmentApi.activeProfile}
           onClose={() => goRecipe(state.recipeId)}
           onSave={(updated) => recipesApi.update(state.recipeId, updated)}
         />

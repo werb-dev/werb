@@ -89,6 +89,28 @@ test.describe("Equipment — BIAB mash mode", () => {
     expect(await app.equipment.getMashThickness()).toBe("3.5");
   });
 
+  test("active no-chill profile raises the editor's IBU", async ({ page }) => {
+    const app = new App(page);
+    const ibu = async () => parseFloat(await app.recipe.editorIbuText());
+
+    await app.go("Library");
+    await app.library.importSamples();
+    await app.library.openRecipeByName("Cascade Pale Ale");
+    await app.recipe.edit();
+    const chilled = await ibu();
+    await app.recipe.clickCancel();
+
+    await app.go("Equipment");
+    await app.equipment.createFirstProfile();
+    await app.equipment.setChillMethod("no_chill");
+    await app.equipment.setActive();
+
+    await app.go("Library");
+    await app.library.openRecipeByName("Cascade Pale Ale");
+    await app.recipe.edit();
+    expect(await ibu()).toBeGreaterThan(chilled + 3);
+  });
+
   test("active BIAB profile → recipe shows zero sparge", async ({ page }) => {
     const app = new App(page);
     await app.go("Equipment");

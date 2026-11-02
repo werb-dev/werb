@@ -522,6 +522,8 @@ function recipeTypeToBeerXml(t: string): string {
 function hopUseToBeerXml(use: string): string {
   switch (use) {
     case "add_to_boil": return "Boil";
+    // BeerXML's post-boil steep; other tools would read "Boil" as a timed boil.
+    case "add_to_whirlpool": return "Aroma";
     case "add_to_fermentation": return "Dry Hop";
     case "add_to_mash": return "Mash";
     case "add_to_package": return "Bottling";

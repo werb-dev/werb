@@ -1,5 +1,9 @@
 import { useMemo, useState } from "react";
-import { DEFAULT_PROFILE_VALUES, type ProfileWithId } from "../data/equipment.ts";
+import {
+  chillMinutesTo80c,
+  DEFAULT_PROFILE_VALUES,
+  type ProfileWithId,
+} from "../data/equipment.ts";
 import type { useEquipment } from "../hooks/useEquipment.ts";
 import { computeEquipmentSuggest } from "@werb/calc";
 import type { EquipmentSuggestInput, EquipmentSuggestOutput } from "@werb/types";
@@ -178,7 +182,7 @@ function ProfileForm({
   };
 
   const updateNested = <
-    Section extends "hlt" | "mash_tun" | "kettle" | "fermenter",
+    Section extends "hlt" | "mash_tun" | "kettle" | "fermenter" | "chilling",
     Field extends keyof NonNullable<(typeof draft)[Section]>,
   >(
     section: Section,
@@ -391,6 +395,44 @@ function ProfileForm({
         </div>
         <p className="text-caption text-text-muted mt-2">
           {t("equipment.field.post_boil_shrink_hint")}
+        </p>
+      </Section>
+
+      <Section title={t("equipment.section.chilling")}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <label className="block">
+            <span className="block text-caption uppercase tracking-widest text-text-muted mb-2">
+              {t("equipment.field.chill_method")}
+            </span>
+            <select
+              data-testid="chill-method-select"
+              value={draft.chilling?.method ?? "chiller"}
+              onChange={(e) =>
+                // A measured time belongs to the old method; clear it so the
+                // new method's default applies until the brewer re-measures.
+                update(
+                  "chilling",
+                  { method: e.target.value as "chiller" | "no_chill" },
+                  true,
+                )
+              }
+              className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-body text-text focus:outline-none focus:border-accent"
+            >
+              <option value="chiller">{t("equipment.opt.chill_chiller")}</option>
+              <option value="no_chill">{t("equipment.opt.chill_no_chill")}</option>
+            </select>
+          </label>
+          <NumberField
+            label={t("equipment.field.minutes_to_80c")}
+            unit="min"
+            value={chillMinutesTo80c(draft)}
+            onChange={(v) => updateNested("chilling", "minutes_to_80c", v)}
+            onBlur={commit}
+            step={5}
+          />
+        </div>
+        <p className="text-caption text-text-muted mt-2">
+          {t("equipment.field.chilling_hint")}
         </p>
       </Section>
 

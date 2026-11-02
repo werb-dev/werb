@@ -5,7 +5,7 @@ import type { BoilHop } from "../Brew.tsx";
 import { formatDuration } from "./format.ts";
 
 /**
- * Boil-step companion: lists the recipe's hop additions in order of
+ * Boil / whirlpool step companion: lists the step's hop additions in order of
  * boil time, highlights the next one with an "Add now" callout when
  * it's due, and lets the brewer mark each as added. Per-hop state
  * persists via the StorageBackend so it survives a navigation away

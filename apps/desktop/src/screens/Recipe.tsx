@@ -1,6 +1,9 @@
 import { useMemo, useState } from "react";
 import {
+  DEFAULT_WHIRLPOOL_TEMP_C,
+  isIbuHop,
   recipeToIbuInput,
+  toCelsius,
   recipeToWaterInput,
   recipeToColorInput,
   recipeToGravityInput,
@@ -27,7 +30,11 @@ import {
   computeBuGu,
   computeGrainBillPct,
 } from "@werb/calc";
-import { profileToWaterOverrides, type ProfileWithId } from "../data/equipment.ts";
+import {
+  profileToIbuEquipment,
+  profileToWaterOverrides,
+  type ProfileWithId,
+} from "../data/equipment.ts";
 import { exportBeerJson, exportBeerXml, exportRecipeHtml } from "../data/recipe-export.ts";
 import { translateError, type WerbError } from "../data/errors.ts";
 import { useBrewSessionExists } from "../hooks/useBrewSession.ts";
@@ -44,6 +51,7 @@ import {
   formatLiters,
   formatMassLarge,
   formatMassSmall,
+  formatCelsius,
   formatSpecificGravity,
   formatSrm,
   formatTemperature,
@@ -72,6 +80,7 @@ import {
 // power the editor pickers.
 const TIMING_KEY: Record<string, string> = {
   add_to_boil: "editor.hop.use.boil",
+  add_to_whirlpool: "editor.hop.use.whirlpool",
   add_to_fermentation: "editor.hop.use.dry_hop",
   add_to_mash: "editor.hop.use.mash",
   add_to_package: "editor.hop.use.package",
@@ -110,7 +119,10 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, inventory, onBac
     [recipe, inventory],
   );
   const computed = useMemo(() => {
-    const ibu = computeIbu({ ...recipeToIbuInput(effectiveRecipe), method: prefs.ibu_method });
+    const ibu = computeIbu({
+      ...recipeToIbuInput(effectiveRecipe, profileToIbuEquipment(activeProfile)),
+      method: prefs.ibu_method,
+    });
     const water = computeWater(recipeToWaterInput(effectiveRecipe, profileToWaterOverrides(activeProfile)));
     const color = computeColor({ ...recipeToColorInput(effectiveRecipe), method: prefs.color_method });
     const gravity = computeGravity(recipeToGravityInput(effectiveRecipe));
@@ -125,12 +137,13 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, inventory, onBac
     const fgForAbv = recipe.final_gravity?.value ?? fgEstimate;
     const abv = computeAbv(ogForAbv, fgForAbv);
     // Per-addition IBU lookup keyed by index, since duplicate hop names exist.
-    const boilHopIndices = (effectiveRecipe.ingredients.hop_additions ?? [])
+    // computeIbu returns one addition per isIbuHop() hop, in recipe order.
+    const ibuHopIndices = (effectiveRecipe.ingredients.hop_additions ?? [])
       .map((h, i) => ({ h, i }))
-      .filter(({ h }) => h.timing?.use === "add_to_boil")
+      .filter(({ h }) => isIbuHop(h))
       .map(({ i }) => i);
     const ibuByIndex = new Map<number, number>();
-    boilHopIndices.forEach((idx, k) => {
+    ibuHopIndices.forEach((idx, k) => {
       ibuByIndex.set(idx, ibu.additions[k]?.ibu ?? 0);
     });
     return { ibu, water, color, gravity, fg: fgEstimate, abv, ibuByIndex };
@@ -410,6 +423,13 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, inventory, onBac
                             : t("recipe.time.minutes", { n: time.toFixed(0) })}
                         </>
                       )}
+                      {h.timing?.use === "add_to_whirlpool" &&
+                        ` · ${formatCelsius(
+                          h.timing.temperature
+                            ? toCelsius(h.timing.temperature)
+                            : DEFAULT_WHIRLPOOL_TEMP_C,
+                          prefs,
+                        ).display}`}
                       {h.form && ` · ${hopFormLabel(t, h.form)}`}
                       {h.notes && ` · ${h.notes}`}
                     </p>
@@ -542,19 +562,14 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, inventory, onBac
         {claimedIbu !== null && Math.abs(computed.ibu.total_ibu - claimedIbu) > 15 && (
           <aside className="mt-12 rounded-xl border border-border bg-surface p-6">
             <p className="text-caption uppercase tracking-widest text-warning font-medium">
-              IBU discrepancy
+              {t("recipe.ibu_discrepancy.title")}
             </p>
             <p className="text-body text-text-muted mt-2 leading-relaxed">
-              Recipe target is{" "}
-              <span className="text-text font-mono">{claimedIbu} IBU</span>; computed (Tinseth on
-              boil hops, no whirlpool reduction) is{" "}
-              <span className="text-text font-mono">
-                {computed.ibu.total_ibu.toFixed(0)} IBU
-              </span>
-              . The original software likely treated the late "Aroma" addition as a whirlpool
-              stand (no IBU contribution under standard Tinseth). Werb preserves the recorded
-              boil time as recorded — reconcile by editing the addition's timing or by adding
-              a whirlpool calc later.
+              {t("recipe.ibu_discrepancy.body", {
+                claimed: claimedIbu,
+                computed: computed.ibu.total_ibu.toFixed(0),
+                method: computed.ibu.method,
+              })}
             </p>
           </aside>
         )}

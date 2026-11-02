@@ -64,6 +64,19 @@ export interface WerbEquipmentProfile {
     trub_loss_l?: number;
   };
   /**
+   * How the wort is cooled after flameout. Hops keep adding bitterness while the wort is above ~80 °C, so this feeds the IBU estimate.
+   */
+  chilling?: {
+    /**
+     * 'chiller' = forced cooling (immersion, counterflow, plate, ice bath). 'no_chill' = the wort cools on its own (covered kettle or cube).
+     */
+    method?: "chiller" | "no_chill";
+    /**
+     * Measured minutes from flameout until the wort is below 80 °C. When omitted: 0 for 'chiller' (instant), 60 for 'no_chill'. Typical: chiller 0-5, no-chill pot 30-60, no-chill cube 90-150.
+     */
+    minutes_to_80c?: number;
+  };
+  /**
    * Volume lost during transfers between vessels (kettle to fermenter, fermenter to package).
    */
   transfer_loss_l?: number;

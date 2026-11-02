@@ -58,9 +58,11 @@ requesting it, the way #19 was handled.
 
 6. [#43](https://github.com/werb-dev/werb/issues/43) — Sparge volume off
    (12 → 13.3 L). Needs the recipe + equipment profile.
-7. [#44](https://github.com/werb-dev/werb/issues/44) — IBU reads too low. Needs
-   one example recipe (hops/alpha/time/OG/batch) to separate calibration from a
-   bug. Near-term, cheap counterpart to the #27 SMPH track.
+7. [#44](https://github.com/werb-dev/werb/issues/44) — IBU reads too low.
+   Post-boil cooling (no-chill), wet hops and the OG used for IBU are handled;
+   the reporter's example recipe (hops/alpha/time/OG/batch + the tool compared
+   against) is still needed to confirm their case. Near-term counterpart to the
+   #27 SMPH track.
 8. [#49](https://github.com/werb-dev/werb/issues/49) — "Preview" missing
    OG/FG/ABV. Needs the reporter to point at the exact screen.
 9. [#19](https://github.com/werb-dev/werb/issues/19) — Import errors on standard
