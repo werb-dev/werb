@@ -59,7 +59,7 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 24
           cache: pnpm
 
       # Linux needs the WebKitGTK + libssl + a few other system deps
@@ -209,7 +209,7 @@ jobs:
           fi
 
       - name: Attach to release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.ref_name }}
           name: "Werb ${{ github.ref_name }}"

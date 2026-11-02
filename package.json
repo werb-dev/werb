@@ -9,7 +9,7 @@
   "type": "module",
   "packageManager": "pnpm@9.0.0",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "scripts": {
     "gen:types": "node scripts/gen-types.mjs",

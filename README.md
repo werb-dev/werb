@@ -45,7 +45,7 @@ The app speaks **English and French** end-to-end (auto-detected, switchable in S
 
 Requirements:
 
-- **Node.js 20+** and [pnpm](https://pnpm.io/).
+- **Node.js 22+** and [pnpm](https://pnpm.io/).
 - **Rust toolchain via [rustup](https://rustup.rs/)**, with the WASM target installed (the BeerXML parser ships as a WASM crate). Homebrew's `rust` formula omits the `wasm32-unknown-unknown` target, so the desktop dev / test commands fail with `wasm32-unknown-unknown target not found in sysroot` if you install Rust that way — use rustup instead.
 - **[wasm-pack](https://rustwasm.github.io/wasm-pack/)** to bundle the crate (`cargo install wasm-pack`).
 - For desktop builds only: the [Tauri toolchain](https://tauri.app/v2/guides/getting-started/prerequisites/).
