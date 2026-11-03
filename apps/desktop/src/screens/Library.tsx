@@ -2,7 +2,6 @@ import { useState } from "react";
 import {
   recipeToIbuInput,
   recipeToWaterInput,
-  toSrm,
   srmToHex,
   type BeerJsonRecipe,
 } from "@werb/adapters";
@@ -20,8 +19,10 @@ import {
   formatColor,
   formatLiters,
   formatSpecificGravity,
+  formatSrm,
   formatVolume,
 } from "../data/units-format.ts";
+import { recipeTargets, shownValue } from "../data/recipe-targets.ts";
 
 interface LibraryScreenProps {
   recipes: StoredRecipe[];
@@ -195,7 +196,7 @@ export function LibraryScreen({
   );
 }
 
-function RecipeCard({
+export function RecipeCard({
   recipe,
   activeProfile,
   onSelect,
@@ -210,10 +211,18 @@ function RecipeCard({
 }) {
   const prefs = useUnits();
   const t = useT();
-  const beerColor = recipe.color_estimate ? srmToHex(toSrm(recipe.color_estimate)) : null;
+  // File values when present, else Werb's estimates, as on the recipe screen.
+  const targets = recipeTargets(recipe, prefs.color_method);
+  const og = shownValue(targets.og);
+  const fg = shownValue(targets.fg);
+  const abv = shownValue(targets.abv);
+  const srm = shownValue(targets.srm);
+  const beerColor = srm !== null ? srmToHex(srm) : null;
   const colorLabel = recipe.color_estimate
     ? formatColor(recipe.color_estimate, prefs).display
-    : null;
+    : srm !== null
+      ? formatSrm(srm, prefs).display
+      : null;
   const computedIbu = (() => {
     try {
       return computeIbu({
@@ -275,6 +284,7 @@ function RecipeCard({
         {beerColor && (
           <span
             aria-hidden
+            data-testid="card-color"
             className="block w-10 h-10 rounded-pill border border-border-strong shrink-0"
             style={{ backgroundColor: beerColor }}
             title={colorLabel ?? undefined}
@@ -292,30 +302,29 @@ function RecipeCard({
         />
         <Stat
           label={t("library.card.stat.og")}
-          value={
-            recipe.original_gravity
-              ? formatSpecificGravity(recipe.original_gravity.value, prefs).display
-              : "—"
-          }
+          value={og !== null ? formatSpecificGravity(og, prefs).display : "—"}
+          testId="card-stat-og"
         />
         <Stat
           label={t("library.card.stat.abv")}
-          value={
-            recipe.alcohol_by_volume
-              ? `${recipe.alcohol_by_volume.value.toFixed(1)}%`
-              : "—"
-          }
+          value={abv !== null ? `${abv.toFixed(1)}%` : "—"}
+          testId="card-stat-abv"
         />
         <Stat
           label={t("library.card.stat.ibu")}
-          value={claimedIbu !== null ? claimedIbu.toString() : "—"}
+          value={
+            claimedIbu !== null
+              ? claimedIbu.toString()
+              : computedIbu !== null
+                ? computedIbu.toFixed(0)
+                : "—"
+          }
           sub={
             computedIbu !== null && claimedIbu !== null
               ? `≈${computedIbu.toFixed(0)}`
-              : computedIbu !== null
-              ? computedIbu.toFixed(0)
               : undefined
           }
+          testId="card-stat-ibu"
           warn={
             claimedIbu !== null &&
             computedIbu !== null &&
@@ -324,11 +333,8 @@ function RecipeCard({
         />
         <Stat
           label={t("library.card.stat.fg")}
-          value={
-            recipe.final_gravity
-              ? formatSpecificGravity(recipe.final_gravity.value, prefs).display
-              : "—"
-          }
+          value={fg !== null ? formatSpecificGravity(fg, prefs).display : "—"}
+          testId="card-stat-fg"
         />
         <Stat
           label={t("library.card.stat.water")}
@@ -353,14 +359,16 @@ function Stat({
   value,
   sub,
   warn,
+  testId,
 }: {
   label: string;
   value: string;
   sub?: string | undefined;
   warn?: boolean | undefined;
+  testId?: string | undefined;
 }) {
   return (
-    <div>
+    <div data-testid={testId}>
       <dt className="text-caption text-text-muted">{label}</dt>
       <dd className={`text-body-sm mt-0.5 ${warn ? "text-warning" : "text-text"}`}>
         {value}

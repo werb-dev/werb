@@ -342,6 +342,19 @@ test.describe("Recipe editor — hops", () => {
   });
 });
 
+test.describe("Library cards", () => {
+  test("fill ABV, IBU and color from estimates when the file lacks them (#49)", async ({ page }) => {
+    const app = new App(page);
+    await app.go("Library");
+    await app.library.importSamples();
+    // The Punk IPA sample has OG and FG but no ABV, IBU or color.
+    const card = page.locator("li", { has: page.locator("h2", { hasText: /punk ipa/i }) });
+    await expect(card.getByTestId("card-stat-abv").locator("dd")).toHaveText(/^\d+\.\d%$/);
+    await expect(card.getByTestId("card-stat-ibu").locator("dd")).toHaveText(/^\d+$/);
+    await expect(card.getByTestId("card-color")).toBeVisible();
+  });
+});
+
 test.describe("Import (#19)", () => {
   const beerXml = (hops: string) =>
     `<?xml version="1.0"?><RECIPES><RECIPE><NAME>Comma Pale</NAME><VERSION>1</VERSION>` +
