@@ -7,9 +7,19 @@ use thiserror::Error;
 #[derive(Debug, Error)]
 pub enum Error {
     /// The input is not well-formed XML, or does not match the expected
-    /// BeerXML structure (e.g. missing `<RECIPES>` root).
+    /// BeerXML structure, at the document root (e.g. missing `<RECIPES>`).
     #[error("BeerXML parse error: {0}")]
     Xml(#[from] quick_xml::DeError),
+
+    /// An element's content does not fit BeerXML, at `location`: an XPath
+    /// with 1-based indices, e.g. `/RECIPES/RECIPE[1]/HOPS/HOP[3]/AMOUNT`.
+    #[error("{location}: {source}")]
+    Invalid {
+        /// Where in the document the problem is.
+        location: String,
+        /// What is wrong there.
+        source: quick_xml::DeError,
+    },
 
     /// A field that should be a number could not be parsed as one. The
     /// inner string is the offending raw text from the XML.

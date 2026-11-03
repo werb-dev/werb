@@ -170,3 +170,36 @@ describe("BeerXML → BeerJSON validates against the schema", () => {
     expect(result.valid, JSON.stringify(result.errors)).toBe(true);
   });
 });
+
+describe("BeerXML import tolerates common variations (#19)", () => {
+  const wrap = (body: string) =>
+    `<?xml version="1.0"?><RECIPES><RECIPE><NAME>Variations</NAME><VERSION>1</VERSION>` +
+    `<TYPE>all grain</TYPE><BATCH_SIZE>20</BATCH_SIZE><BOIL_TIME>60</BOIL_TIME>${body}</RECIPE></RECIPES>`;
+
+  it("imports decimal commas, lowercase values and common synonyms", () => {
+    const recipe = importXml(
+      wrap(
+        "<FERMENTABLES><FERMENTABLE><NAME>Pale</NAME><TYPE>Malt</TYPE><AMOUNT>4,5</AMOUNT>" +
+          "<YIELD>80</YIELD><COLOR>6</COLOR></FERMENTABLE></FERMENTABLES>" +
+          "<HOPS><HOP><NAME>Cascade</NAME><ALPHA>5,5</ALPHA><AMOUNT>0,03</AMOUNT>" +
+          "<USE>whirlpool</USE><TIME>20</TIME><FORM>pellets</FORM></HOP></HOPS>",
+      ),
+    );
+    expect(validateBeerJson(asDocument(recipe)).valid).toBe(true);
+    expect(recipe.ingredients.fermentable_additions[0]!.amount.value).toBeCloseTo(4.5, 6);
+    expect(recipe.ingredients.fermentable_additions[0]!.type).toBe("grain");
+    expect(recipe.ingredients.hop_additions![0]!.alpha_acid.value).toBeCloseTo(5.5, 6);
+    expect(recipe.ingredients.hop_additions![0]!.form).toBe("pellet");
+  });
+
+  it("says where a file breaks", () => {
+    const xml = wrap(
+      "<HOPS><HOP><NAME>A</NAME><ALPHA>5</ALPHA><AMOUNT>0.01</AMOUNT></HOP>" +
+        "<HOP><NAME>B</NAME><ALPHA>5</ALPHA><AMOUNT>lots</AMOUNT></HOP></HOPS>",
+    );
+    expect(() => wasm.parseBeerXmlJson(xml)).toThrow(
+      '/RECIPES/RECIPE[1]/HOPS/HOP[2]/AMOUNT: not a number: "lots"',
+    );
+  });
+});
+

@@ -16,11 +16,29 @@ where
     D: Deserializer<'de>,
 {
     match Option::<String>::deserialize(de)? {
-        Some(s) if !s.trim().is_empty() => {
-            s.trim().parse::<f64>().map(Some).map_err(de::Error::custom)
-        }
+        Some(s) if !s.trim().is_empty() => number::<D>(&s).map(Some),
         _ => Ok(None),
     }
+}
+
+/// Parses a BeerXML number. A decimal comma (`5,5`, from comma-decimal
+/// locales) reads as a point; with a point present, commas are thousands
+/// separators.
+fn parse_number(s: &str) -> Option<f64> {
+    let t = s.trim();
+    if let Ok(n) = t.parse::<f64>() {
+        return Some(n);
+    }
+    let normalized = if t.contains('.') {
+        t.replace(',', "")
+    } else {
+        t.replacen(',', ".", 1)
+    };
+    normalized.parse().ok()
+}
+
+fn number<'de, D: Deserializer<'de>>(s: &str) -> Result<f64, D::Error> {
+    parse_number(s).ok_or_else(|| de::Error::custom(format!("not a number: {:?}", s.trim())))
 }
 
 /// Serde helper for required `f64` fields: empty string falls back to
@@ -34,34 +52,39 @@ where
     if s.trim().is_empty() {
         Ok(0.0)
     } else {
-        s.trim().parse::<f64>().map_err(de::Error::custom)
+        number::<D>(&s)
     }
 }
 
-/// Serde helper for `Option<T>` fields where `T` is normally a
-/// string-tagged enum. joliebulle (and probably others) export empty
-/// self-closing elements (`<TYPE />`) instead of omitting the tag
-/// entirely — quick-xml hands those to serde as the literal token
-/// `$text`, which fails enum deserialization with `unknown variant`.
-///
-/// This helper intercepts that case: deserialize to `Option<String>`
-/// first, treat empty / whitespace / `$text` as `None`, and only on
-/// a real value drive the inner deserializer via the captured string.
-fn empty_str_to_none_enum<'de, T, D>(de: D) -> Result<Option<T>, D::Error>
+/// BeerXML enums read leniently: real exports vary in case and spacing
+/// (`boil`, `DRY HOP`) and use common synonyms (`Whirlpool` for `Aroma`).
+/// `from_text` gets the value lowercased with only letters and digits kept.
+trait LenientEnum: Sized {
+    fn from_text(normalized: &str) -> Option<Self>;
+}
+
+/// Serde helper for `Option<T>` enum fields. Empty elements, joliebulle's
+/// self-closing `<TYPE />` (which quick-xml hands over as `$text`) and
+/// unknown values all read as `None`, so one odd value never fails a whole
+/// import; the converter applies its default instead.
+fn lenient_enum<'de, T, D>(de: D) -> Result<Option<T>, D::Error>
 where
     D: Deserializer<'de>,
-    T: serde::de::DeserializeOwned,
+    T: LenientEnum,
 {
     let raw: Option<String> = Option::deserialize(de)?;
-    let Some(s) = raw else { return Ok(None) };
-    let trimmed = s.trim();
-    if trimmed.is_empty() || trimmed == "$text" {
-        return Ok(None);
-    }
-    T::deserialize(serde::de::value::StringDeserializer::<D::Error>::new(
-        trimmed.to_string(),
-    ))
-    .map(Some)
+    Ok(raw.and_then(|s| {
+        let trimmed = s.trim();
+        if trimmed.is_empty() || trimmed == "$text" {
+            return None;
+        }
+        let normalized: String = trimmed
+            .chars()
+            .filter(|c| c.is_alphanumeric())
+            .collect::<String>()
+            .to_lowercase();
+        T::from_text(&normalized)
+    }))
 }
 
 /// A single brewing recipe — the top-level `<RECIPE>` element.
@@ -82,7 +105,7 @@ pub struct Recipe {
     /// Optional in practice: many exporters omit this even though the
     /// spec lists it as required. joliebulle writes `<TYPE />` when
     /// unset, which the empty-str helper folds back to `None`.
-    #[serde(default, rename = "TYPE", deserialize_with = "empty_str_to_none_enum")]
+    #[serde(default, rename = "TYPE", deserialize_with = "lenient_enum")]
     pub recipe_type: Option<RecipeType>,
     /// Optional brewer name.
     #[serde(default)]
@@ -259,6 +282,17 @@ pub enum RecipeType {
     AllGrain,
 }
 
+impl LenientEnum for RecipeType {
+    fn from_text(t: &str) -> Option<Self> {
+        match t {
+            "extract" => Some(Self::Extract),
+            "partialmash" => Some(Self::PartialMash),
+            "allgrain" => Some(Self::AllGrain),
+            _ => None,
+        }
+    }
+}
+
 // ─── Style ────────────────────────────────────────────────────────────────
 
 /// A `<STYLE>` block describing the target style of a recipe.
@@ -331,19 +365,19 @@ pub struct Hop {
     #[serde(default = "default_version")]
     pub version: u32,
     /// Alpha-acid percentage.
-    #[serde(deserialize_with = "empty_str_to_zero_f64")]
+    #[serde(default, deserialize_with = "empty_str_to_zero_f64")]
     pub alpha: f64,
     /// Amount, in kilograms.
-    #[serde(deserialize_with = "empty_str_to_zero_f64")]
+    #[serde(default, deserialize_with = "empty_str_to_zero_f64")]
     pub amount: f64,
     /// Where in the brew the hop is added.
-    #[serde(default, rename = "USE", deserialize_with = "empty_str_to_none_enum")]
+    #[serde(default, rename = "USE", deserialize_with = "lenient_enum")]
     pub hop_use: Option<HopUse>,
     /// Boil time (or dry-hop duration), in minutes.
     #[serde(default, deserialize_with = "empty_str_to_none_f64")]
     pub time: Option<f64>,
     /// Pellet / leaf / plug.
-    #[serde(default, deserialize_with = "empty_str_to_none_enum")]
+    #[serde(default, deserialize_with = "lenient_enum")]
     pub form: Option<HopForm>,
     /// Bittering / aroma / both.
     #[serde(default, rename = "TYPE")]
@@ -370,6 +404,19 @@ pub enum HopUse {
     Aroma,
 }
 
+impl LenientEnum for HopUse {
+    fn from_text(t: &str) -> Option<Self> {
+        match t {
+            "boil" => Some(Self::Boil),
+            "dryhop" | "dryhopping" => Some(Self::DryHop),
+            "mash" => Some(Self::Mash),
+            "firstwort" | "fwh" => Some(Self::FirstWort),
+            "aroma" | "whirlpool" | "hopstand" | "flameout" => Some(Self::Aroma),
+            _ => None,
+        }
+    }
+}
+
 /// Physical form of the hop.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum HopForm {
@@ -379,6 +426,17 @@ pub enum HopForm {
     Plug,
     /// Whole-leaf hops.
     Leaf,
+}
+
+impl LenientEnum for HopForm {
+    fn from_text(t: &str) -> Option<Self> {
+        match t {
+            "pellet" | "pellets" => Some(Self::Pellet),
+            "plug" | "plugs" => Some(Self::Plug),
+            "leaf" | "whole" | "wholeleaf" | "cone" | "cones" => Some(Self::Leaf),
+            _ => None,
+        }
+    }
 }
 
 // ─── Fermentables ─────────────────────────────────────────────────────────
@@ -403,10 +461,10 @@ pub struct Fermentable {
     /// Grain / sugar / extract / dry extract / adjunct. Optional in
     /// practice — falls back to [`FermentableType::Adjunct`] via
     /// [`Fermentable::effective_type`] when missing.
-    #[serde(default, rename = "TYPE", deserialize_with = "empty_str_to_none_enum")]
+    #[serde(default, rename = "TYPE", deserialize_with = "lenient_enum")]
     pub fermentable_type: Option<FermentableType>,
     /// Amount, in kilograms.
-    #[serde(deserialize_with = "empty_str_to_zero_f64")]
+    #[serde(default, deserialize_with = "empty_str_to_zero_f64")]
     pub amount: f64,
     /// Yield percentage — sugar potential as a fraction of dry weight.
     #[serde(default, rename = "YIELD", deserialize_with = "empty_str_to_none_f64")]
@@ -449,6 +507,19 @@ pub enum FermentableType {
     Adjunct,
 }
 
+impl LenientEnum for FermentableType {
+    fn from_text(t: &str) -> Option<Self> {
+        match t {
+            "grain" | "malt" => Some(Self::Grain),
+            "sugar" => Some(Self::Sugar),
+            "extract" | "liquidextract" => Some(Self::Extract),
+            "dryextract" => Some(Self::DryExtract),
+            "adjunct" => Some(Self::Adjunct),
+            _ => None,
+        }
+    }
+}
+
 // ─── Yeasts ───────────────────────────────────────────────────────────────
 
 /// Wrapper for a list of `<YEAST>` elements inside `<YEASTS>`.
@@ -470,11 +541,11 @@ pub struct Yeast {
     pub version: u32,
     /// Yeast family — Ale, Lager, Wheat, Wine, Champagne. Optional —
     /// falls back to [`YeastType::Ale`] via [`Yeast::effective_type`].
-    #[serde(default, rename = "TYPE", deserialize_with = "empty_str_to_none_enum")]
+    #[serde(default, rename = "TYPE", deserialize_with = "lenient_enum")]
     pub yeast_type: Option<YeastType>,
     /// Liquid, dry, slant, or culture. Optional — falls back to
     /// [`YeastForm::Dry`] via [`Yeast::effective_form`].
-    #[serde(default, deserialize_with = "empty_str_to_none_enum")]
+    #[serde(default, deserialize_with = "lenient_enum")]
     pub form: Option<YeastForm>,
     /// Amount in liters (for liquid) or kilograms (for dry, when
     /// `amount_is_weight` is true). joliebulle omits the element
@@ -531,6 +602,19 @@ pub enum YeastType {
     Champagne,
 }
 
+impl LenientEnum for YeastType {
+    fn from_text(t: &str) -> Option<Self> {
+        match t {
+            "ale" => Some(Self::Ale),
+            "lager" => Some(Self::Lager),
+            "wheat" => Some(Self::Wheat),
+            "wine" => Some(Self::Wine),
+            "champagne" => Some(Self::Champagne),
+            _ => None,
+        }
+    }
+}
+
 /// Physical form of the culture.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum YeastForm {
@@ -542,6 +626,18 @@ pub enum YeastForm {
     Slant,
     /// Maintained culture / starter.
     Culture,
+}
+
+impl LenientEnum for YeastForm {
+    fn from_text(t: &str) -> Option<Self> {
+        match t {
+            "liquid" => Some(Self::Liquid),
+            "dry" => Some(Self::Dry),
+            "slant" => Some(Self::Slant),
+            "culture" => Some(Self::Culture),
+            _ => None,
+        }
+    }
 }
 
 // ─── Miscs ────────────────────────────────────────────────────────────────
@@ -567,13 +663,13 @@ pub struct Misc {
     #[serde(rename = "TYPE")]
     pub misc_type: Option<String>,
     /// Where it is added — boil, mash, primary, secondary, bottling.
-    #[serde(default, rename = "USE", deserialize_with = "empty_str_to_none_enum")]
+    #[serde(default, rename = "USE", deserialize_with = "lenient_enum")]
     pub misc_use: Option<MiscUse>,
     /// Time at addition, in minutes.
     #[serde(default, deserialize_with = "empty_str_to_none_f64")]
     pub time: Option<f64>,
     /// Amount in liters or kilograms (see [`amount_is_weight`](Self::amount_is_weight)).
-    #[serde(deserialize_with = "empty_str_to_zero_f64")]
+    #[serde(default, deserialize_with = "empty_str_to_zero_f64")]
     pub amount: f64,
     /// `true` when [`amount`](Self::amount) is in kg rather than L.
     #[serde(default)]
@@ -593,6 +689,19 @@ pub enum MiscUse {
     Secondary,
     /// Bottling / packaging.
     Bottling,
+}
+
+impl LenientEnum for MiscUse {
+    fn from_text(t: &str) -> Option<Self> {
+        match t {
+            "boil" => Some(Self::Boil),
+            "mash" => Some(Self::Mash),
+            "primary" => Some(Self::Primary),
+            "secondary" => Some(Self::Secondary),
+            "bottling" => Some(Self::Bottling),
+            _ => None,
+        }
+    }
 }
 
 // ─── Mash ─────────────────────────────────────────────────────────────────
@@ -636,7 +745,7 @@ pub struct MashStep {
     pub version: u32,
     /// Infusion / temperature / decoction. Optional — falls back to
     /// [`MashStepType::Infusion`] via [`MashStep::effective_type`].
-    #[serde(default, rename = "TYPE", deserialize_with = "empty_str_to_none_enum")]
+    #[serde(default, rename = "TYPE", deserialize_with = "lenient_enum")]
     pub step_type: Option<MashStepType>,
     /// Volume of water added at this step, in liters (for infusion steps).
     #[serde(default, deserialize_with = "empty_str_to_none_f64")]
@@ -672,4 +781,15 @@ pub enum MashStepType {
     Temperature,
     /// Decoction — pull part of the mash, boil it, return it.
     Decoction,
+}
+
+impl LenientEnum for MashStepType {
+    fn from_text(t: &str) -> Option<Self> {
+        match t {
+            "infusion" => Some(Self::Infusion),
+            "temperature" => Some(Self::Temperature),
+            "decoction" => Some(Self::Decoction),
+            _ => None,
+        }
+    }
 }

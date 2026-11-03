@@ -36,7 +36,8 @@ use crate::model::{
 /// the same Option semantics as the BeerXML parser.
 pub fn parse_joliebulle(json: &str) -> Result<Vec<Recipe>, Error> {
     let doc: JoliebulleDocument =
-        serde_json::from_str(json).map_err(|e| Error::Json(e.to_string()))?;
+        serde_path_to_error::deserialize(&mut serde_json::Deserializer::from_str(json))
+            .map_err(|e| Error::Json(format!("{}: {}", e.path(), e.inner())))?;
     Ok(doc.recipes.into_iter().map(Recipe::from).collect())
 }
 

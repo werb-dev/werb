@@ -108,6 +108,25 @@ describe("BeerJSON round-trip", () => {
     expect(result.error?.code).toBe("import.not_beerjson");
   });
 
+  it("imports a file that writes null for optional properties", () => {
+    const withNulls = JSON.parse(FIXTURE_RAW);
+    withNulls.beerjson.recipes[0].notes = null;
+    withNulls.beerjson.recipes[0].style = null;
+    const result = parseBeerJsonText(JSON.stringify(withNulls));
+    expect(result.error).toBeUndefined();
+    expect(result.recipes[0]).not.toHaveProperty("notes");
+  });
+
+  it("names the property that breaks validation", () => {
+    const broken = JSON.parse(FIXTURE_RAW);
+    delete broken.beerjson.recipes[0].batch_size;
+    const result = parseBeerJsonText(JSON.stringify(broken));
+    expect(result.error?.code).toBe("import.not_beerjson");
+    expect(result.error?.params?.detail).toBe(
+      '/beerjson/recipes/0: missing required property "batch_size"',
+    );
+  });
+
   it("rejects valid BeerJSON with no recipes inside", () => {
     const empty = JSON.stringify({ beerjson: { version: 2.06, recipes: [] } });
     const result = parseBeerJsonText(empty);

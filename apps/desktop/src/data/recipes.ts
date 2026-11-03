@@ -1,5 +1,5 @@
 import type { BeerJsonFile, BeerJsonRecipe } from "@werb/adapters";
-import { validateBeerJson } from "@werb/validate";
+import { describeErrors, stripNulls, validateBeerJson } from "@werb/validate";
 import type { StorageBackend } from "../storage/index.ts";
 import { isTauri } from "./runtime.ts";
 import { WerbError } from "./errors.ts";
@@ -86,7 +86,7 @@ const bundledRaw = import.meta.glob("../../../../examples/*.beerjson", {
 function parseAndCollect(path: string, raw: string): BeerJsonRecipe[] {
   let parsed: unknown;
   try {
-    parsed = JSON.parse(raw);
+    parsed = stripNulls(JSON.parse(raw));
   } catch (err) {
     console.warn(`[recipes] ${path}: invalid JSON — ${(err as Error).message}`);
     return [];
@@ -150,7 +150,7 @@ export interface ImportResult {
 export function parseBeerJsonText(raw: string): ImportResult {
   let parsed: unknown;
   try {
-    parsed = JSON.parse(raw);
+    parsed = stripNulls(JSON.parse(raw));
   } catch (err) {
     return {
       recipes: [],
@@ -159,8 +159,7 @@ export function parseBeerJsonText(raw: string): ImportResult {
   }
   const result = validateBeerJson(parsed);
   if (!result.valid) {
-    const first = result.errors[0];
-    const detail = first ? `${first.path}: ${first.message}` : "unknown";
+    const detail = describeErrors(parsed, result.errors);
     return { recipes: [], error: new WerbError("import.not_beerjson", { detail }) };
   }
   const recipes = (parsed as BeerJsonFile).beerjson?.recipes ?? [];
