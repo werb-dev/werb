@@ -32,6 +32,11 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Library cards show OG, FG, ABV, IBU and color for every recipe**
+  ([#49](https://github.com/werb-dev/werb/issues/49)). A card used to show "—"
+  for any figure the recipe file didn't state (e.g. ABV on an imported BeerXML
+  without an estimate) and no color swatch. It now falls back to Werb's
+  estimate from the ingredients, as the recipe screen already did.
 - **Default water on the web app.** New recipes now start from your water on
   the web too; they used to start from zero because the saved default loaded
   after the recipe had already picked its water. A recipe you haven't touched
