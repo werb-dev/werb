@@ -355,6 +355,61 @@ test.describe("Library cards", () => {
   });
 });
 
+test.describe("Import (#19)", () => {
+  const beerXml = (hops: string) =>
+    `<?xml version="1.0"?><RECIPES><RECIPE><NAME>Comma Pale</NAME><VERSION>1</VERSION>` +
+    `<TYPE>All Grain</TYPE><BATCH_SIZE>20</BATCH_SIZE><BOIL_TIME>60</BOIL_TIME>` +
+    `<FERMENTABLES><FERMENTABLE><NAME>Pale</NAME><TYPE>Malt</TYPE><AMOUNT>4,5</AMOUNT>` +
+    `<YIELD>80</YIELD><COLOR>6</COLOR></FERMENTABLE></FERMENTABLES><HOPS>${hops}</HOPS></RECIPE></RECIPES>`;
+
+  test("a BeerXML with decimal commas and loose values imports", async ({ page }) => {
+    const app = new App(page);
+    await app.go("Library");
+    await app.library.importFile(
+      "comma.xml",
+      beerXml("<HOP><NAME>Cascade</NAME><ALPHA>5,5</ALPHA><AMOUNT>0,03</AMOUNT><USE>whirlpool</USE><TIME>20</TIME></HOP>"),
+    );
+    await expect(page.locator("li h2", { hasText: /comma pale/i })).toBeVisible();
+    await expect(page.getByTestId("import-error")).toHaveCount(0);
+  });
+
+  test("a broken BeerXML says where it breaks", async ({ page }) => {
+    const app = new App(page);
+    await app.go("Library");
+    await app.library.importFile(
+      "broken.xml",
+      beerXml(
+        "<HOP><NAME>A</NAME><ALPHA>5</ALPHA><AMOUNT>0.01</AMOUNT></HOP>" +
+          "<HOP><NAME>B</NAME><ALPHA>5</ALPHA><AMOUNT>lots</AMOUNT></HOP>",
+      ),
+    );
+    await expect(page.getByTestId("import-error")).toContainText(
+      '/RECIPES/RECIPE[1]/HOPS/HOP[2]/AMOUNT: not a number: "lots"',
+    );
+  });
+
+  test("a BeerJSON error names the property", async ({ page }) => {
+    const app = new App(page);
+    await app.go("Library");
+    const doc = {
+      beerjson: {
+        version: 2.06,
+        recipes: [
+          {
+            name: "No batch",
+            type: "all grain",
+            author: "x",
+            efficiency: { brewhouse: { value: 72, unit: "%" } },
+            ingredients: { fermentable_additions: [] },
+          },
+        ],
+      },
+    };
+    await app.library.importFile("bad.beerjson", JSON.stringify(doc));
+    await expect(page.getByTestId("import-error")).toContainText('missing required property "batch_size"');
+  });
+});
+
 test.describe("Discoverability", () => {
   test("Library onboarding mentions local storage + GitHub sync", async ({ page }) => {
     const app = new App(page);

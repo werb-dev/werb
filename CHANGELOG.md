@@ -37,6 +37,17 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   for any figure the recipe file didn't state (e.g. ABV on an imported BeerXML
   without an estimate) and no color swatch. It now falls back to Werb's
   estimate from the ingredients, as the recipe screen already did.
+- **BeerXML imports that failed on one odd value now go through**
+  ([#19](https://github.com/werb-dev/werb/issues/19)). Decimal commas
+  (`5,5`), values in another case (`boil`, `DRY HOP`) and common synonyms
+  (`Whirlpool`, `Hop stand` → Aroma; `Malt` → Grain; `Whole` → Leaf) are
+  read; an unknown value falls back to the default instead of failing the
+  whole file; a missing hop alpha or amount reads as 0, like an empty one.
+  BeerJSON files that write `null` for optional properties import too.
+- **Import errors say where the file breaks** (#19). BeerXML errors give
+  the element, e.g. `/RECIPES/RECIPE[1]/HOPS/HOP[2]/AMOUNT: not a number:
+  "lots"`; BeerJSON errors name the missing or unknown property, or the
+  value and the allowed ones. Same messages for GitHub Pull.
 - **Default water on the web app.** New recipes now start from your water on
   the web too; they used to start from zero because the saved default loaded
   after the recipe had already picked its water. A recipe you haven't touched

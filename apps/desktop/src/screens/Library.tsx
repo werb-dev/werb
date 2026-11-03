@@ -148,7 +148,9 @@ export function LibraryScreen({
               <p className="text-caption uppercase tracking-widest text-warning font-medium">
                 {t("library.import_failed")}
               </p>
-              <p className="text-body-sm text-text mt-2 font-mono break-all">{importError}</p>
+              <p data-testid="import-error" className="text-body-sm text-text mt-2 font-mono break-all">
+                {importError}
+              </p>
             </div>
           )}
 

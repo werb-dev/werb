@@ -141,7 +141,11 @@ fn empty_input_errors() {
 #[test]
 fn malformed_xml_errors() {
     let xml = "<RECIPES><RECIPE><NAME>oops"; // truncated
-    assert!(matches!(parse(xml), Err(Error::Xml(_))));
+    match parse(xml) {
+        Err(Error::Invalid { location, .. }) => assert_eq!(location, "/RECIPES/RECIPE[1]/NAME"),
+        other => panic!("expected a located error, got {other:?}"),
+    }
+    assert!(matches!(parse("not xml at all <"), Err(Error::Xml(_))));
 }
 
 #[test]
@@ -258,4 +262,89 @@ fn joliebulle_v4_sniff_matches_real_exports() {
     ));
     // Random JSON shouldn't either.
     assert!(!werb_beerxml::looks_like_joliebulle(r#"{"hello":"world"}"#));
+}
+
+// ─── Lenient values and located errors ────────────────────────────────────
+
+fn one_hop(hop: &str) -> String {
+    format!(
+        r#"<?xml version="1.0"?><RECIPES><RECIPE><NAME>P</NAME><VERSION>1</VERSION>
+<BATCH_SIZE>20</BATCH_SIZE><HOPS>{hop}</HOPS></RECIPE></RECIPES>"#
+    )
+}
+
+#[test]
+fn reads_a_decimal_comma() {
+    let r = werb_beerxml::parse_one(&one_hop(
+        "<HOP><NAME>C</NAME><ALPHA>5,5</ALPHA><AMOUNT>0,03</AMOUNT><USE>Boil</USE></HOP>",
+    ))
+    .unwrap();
+    let hop = &r.hops.unwrap().items[0];
+    assert!((hop.alpha - 5.5).abs() < 1e-9);
+    assert!((hop.amount - 0.03).abs() < 1e-9);
+}
+
+#[test]
+fn enums_ignore_case_and_read_common_synonyms() {
+    use werb_beerxml::{FermentableType, HopForm, HopUse};
+    let r = werb_beerxml::parse_one(&one_hop(
+        "<HOP><NAME>A</NAME><ALPHA>5</ALPHA><AMOUNT>0.01</AMOUNT><USE>boil</USE><FORM>PELLETS</FORM></HOP>\
+         <HOP><NAME>B</NAME><ALPHA>5</ALPHA><AMOUNT>0.01</AMOUNT><USE>Whirlpool</USE><FORM>Whole</FORM></HOP>\
+         <HOP><NAME>C</NAME><ALPHA>5</ALPHA><AMOUNT>0.01</AMOUNT><USE>dry hop</USE></HOP>",
+    ))
+    .unwrap();
+    let hops = r.hops.unwrap().items;
+    assert_eq!(hops[0].hop_use, Some(HopUse::Boil));
+    assert_eq!(hops[0].form, Some(HopForm::Pellet));
+    assert_eq!(hops[1].hop_use, Some(HopUse::Aroma));
+    assert_eq!(hops[1].form, Some(HopForm::Leaf));
+    assert_eq!(hops[2].hop_use, Some(HopUse::DryHop));
+
+    let malt = werb_beerxml::parse_one(
+        r#"<RECIPES><RECIPE><NAME>P</NAME><BATCH_SIZE>20</BATCH_SIZE><FERMENTABLES>
+<FERMENTABLE><NAME>Pale</NAME><TYPE>Malt</TYPE><AMOUNT>4</AMOUNT></FERMENTABLE>
+</FERMENTABLES></RECIPE></RECIPES>"#,
+    )
+    .unwrap();
+    assert_eq!(
+        malt.fermentables.unwrap().items[0].fermentable_type,
+        Some(FermentableType::Grain)
+    );
+}
+
+#[test]
+fn an_unknown_enum_value_reads_as_absent() {
+    let r = werb_beerxml::parse_one(&one_hop(
+        "<HOP><NAME>A</NAME><ALPHA>5</ALPHA><AMOUNT>0.01</AMOUNT><USE>Kettle soup</USE></HOP>",
+    ))
+    .unwrap();
+    assert_eq!(r.hops.unwrap().items[0].hop_use, None);
+}
+
+#[test]
+fn a_missing_alpha_reads_as_zero_like_an_empty_one() {
+    let r = werb_beerxml::parse_one(&one_hop(
+        "<HOP><NAME>A</NAME><AMOUNT>0.01</AMOUNT><USE>Boil</USE></HOP>",
+    ))
+    .unwrap();
+    assert_eq!(r.hops.unwrap().items[0].alpha, 0.0);
+}
+
+#[test]
+fn a_bad_value_names_its_element() {
+    let err = werb_beerxml::parse(&one_hop(
+        "<HOP><NAME>A</NAME><ALPHA>5</ALPHA><AMOUNT>0.01</AMOUNT></HOP>\
+         <HOP><NAME>B</NAME><ALPHA>5</ALPHA><AMOUNT>lots</AMOUNT></HOP>",
+    ))
+    .unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        r#"/RECIPES/RECIPE[1]/HOPS/HOP[2]/AMOUNT: not a number: "lots""#
+    );
+}
+
+#[test]
+fn joliebulle_errors_name_their_field() {
+    let err = werb_beerxml::parse_joliebulle(r#"{"recipes": [{"name": 3}]}"#).unwrap_err();
+    assert!(err.to_string().contains("recipes[0].name"), "{err}");
 }

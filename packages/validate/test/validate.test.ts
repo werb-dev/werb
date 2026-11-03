@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { validateBeerJson } from "../src/index.js";
+import { describeErrors, stripNulls, validateBeerJson } from "../src/index.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const EXAMPLES = join(__dirname, "../../../examples");
@@ -52,3 +52,56 @@ describe("validateBeerJson", () => {
     expect(result.errors.length).toBeGreaterThan(0);
   });
 });
+
+describe("stripNulls", () => {
+  it("drops null properties at any depth, keeps everything else", () => {
+    expect(
+      stripNulls({ a: null, b: 0, c: "", d: { e: null, f: [1, { g: null, h: false }] } }),
+    ).toEqual({ b: 0, c: "", d: { f: [1, { h: false }] } });
+  });
+
+  it("lets a document with null optional properties validate", () => {
+    const doc = load("brewdog-punk-ipa-2007.beerjson") as {
+      beerjson: { recipes: Array<Record<string, unknown>> };
+    };
+    doc.beerjson.recipes[0]!.ibu_estimate = null;
+    doc.beerjson.recipes[0]!.notes = null;
+    expect(validateBeerJson(doc).valid).toBe(false);
+    expect(validateBeerJson(stripNulls(doc)).valid).toBe(true);
+  });
+});
+
+describe("describeErrors", () => {
+  const recipeWith = (patch: (r: Record<string, unknown>) => void) => {
+    const doc = load("brewdog-punk-ipa-2007.beerjson") as {
+      beerjson: { recipes: Array<Record<string, unknown>> };
+    };
+    patch(doc.beerjson.recipes[0]!);
+    return doc;
+  };
+  const describe1 = (doc: unknown) => describeErrors(doc, validateBeerJson(doc).errors);
+
+  it("names a bad enum value and the allowed ones", () => {
+    const doc = recipeWith((r) => {
+      r.type = "all-grain";
+    });
+    expect(describe1(doc)).toBe(
+      '/beerjson/recipes/0/type: "all-grain" is not one of "cider", "kombucha", "soda", "other", "mead", "wine", "extract", "partial mash", "all grain"',
+    );
+  });
+
+  it("names a missing required property", () => {
+    const doc = recipeWith((r) => {
+      delete r.batch_size;
+    });
+    expect(describe1(doc)).toBe('/beerjson/recipes/0: missing required property "batch_size"');
+  });
+
+  it("names the value of a wrong type", () => {
+    const doc = recipeWith((r) => {
+      r.name = 42;
+    });
+    expect(describe1(doc)).toBe("/beerjson/recipes/0/name: expected string, found 42");
+  });
+});
+

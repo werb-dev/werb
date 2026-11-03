@@ -131,6 +131,13 @@ class LibraryPage {
     }
   }
 
+  /** Import a recipe file through the Import button's file picker. */
+  async importFile(name: string, content: string) {
+    const chooser = this.page.waitForEvent("filechooser");
+    await this.page.getByRole("button", { name: /^Import recipes/i }).click();
+    await (await chooser).setFiles({ name, mimeType: "text/plain", buffer: Buffer.from(content) });
+  }
+
   /** Create a new empty recipe and save it. Lands on the recipe view. */
   async newEmptyRecipe(name: string) {
     await this.page.getByRole("button", { name: /\+\s*New recipe/i }).click();

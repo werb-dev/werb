@@ -19,8 +19,9 @@ struct Recipes {
 ///
 /// # Errors
 ///
-/// Returns [`Error::Xml`] for malformed XML and [`Error::NoRecipes`] when
-/// the document parses but contains no `<RECIPE>` elements.
+/// Returns [`Error::Invalid`] (or [`Error::Xml`] at the document root) for
+/// XML that doesn't fit BeerXML, and [`Error::NoRecipes`] when the document
+/// parses but contains no `<RECIPE>` elements.
 ///
 /// # Example
 ///
@@ -32,11 +33,40 @@ struct Recipes {
 /// }
 /// ```
 pub fn parse(xml: &str) -> Result<Vec<Recipe>, Error> {
-    let recipes: Recipes = quick_xml::de::from_str(xml)?;
+    let mut de = quick_xml::de::Deserializer::from_str(xml);
+    let recipes: Recipes = serde_path_to_error::deserialize(&mut de).map_err(|e| {
+        let location = xpath(e.path());
+        let source = e.into_inner();
+        if location == ROOT {
+            Error::Xml(source)
+        } else {
+            Error::Invalid { location, source }
+        }
+    })?;
     if recipes.items.is_empty() {
         return Err(Error::NoRecipes);
     }
     Ok(recipes.items)
+}
+
+const ROOT: &str = "/RECIPES";
+
+/// The serde path as an XPath with 1-based indices, the form someone
+/// opening the file in an editor can follow.
+fn xpath(path: &serde_path_to_error::Path) -> String {
+    use serde_path_to_error::Segment;
+    let mut out = String::from(ROOT);
+    for segment in path.iter() {
+        match segment {
+            Segment::Map { key } => {
+                out.push('/');
+                out.push_str(key);
+            }
+            Segment::Seq { index } => out.push_str(&format!("[{}]", index + 1)),
+            Segment::Enum { .. } | Segment::Unknown => {}
+        }
+    }
+    out
 }
 
 /// Convenience wrapper for the common "one recipe per file" case.

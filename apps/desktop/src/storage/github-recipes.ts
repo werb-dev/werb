@@ -13,7 +13,7 @@
  */
 
 import type { BeerJsonRecipe, BeerJsonFile } from "@werb/adapters";
-import { validateBeerJson } from "@werb/validate";
+import { describeErrors, stripNulls, validateBeerJson } from "@werb/validate";
 import type { GitHubBackendConfig } from "./github.ts";
 import { slugify } from "../data/recipe-export.ts";
 import {
@@ -249,18 +249,14 @@ export async function pullRecipes(
     if (!entry) continue;
     let parsed: BeerJsonFile;
     try {
-      parsed = JSON.parse(entry.raw) as BeerJsonFile;
+      parsed = stripNulls(JSON.parse(entry.raw)) as BeerJsonFile;
     } catch (err) {
       result.failed.push({ file: entry.file, error: `JSON parse: ${(err as Error).message}` });
       continue;
     }
     const validation = validateBeerJson(parsed);
     if (!validation.valid) {
-      const first = validation.errors[0];
-      result.failed.push({
-        file: entry.file,
-        error: first ? `${first.path}: ${first.message}` : "schema invalid",
-      });
+      result.failed.push({ file: entry.file, error: describeErrors(parsed, validation.errors) });
       continue;
     }
     const incoming = parsed.beerjson?.recipes ?? [];
