@@ -97,9 +97,11 @@ interface RecipeScreenProps {
   onStartBrewing?: (() => void) | undefined;
   onEdit?: (() => void) | undefined;
   onApplyScaled?: ((scaled: BeerJsonRecipe) => void) | undefined;
+  /** Opens Settings, where the brewer sets their own water. */
+  onOpenSettings?: (() => void) | undefined;
 }
 
-export function RecipeScreen({ recipeId, recipe, activeProfile, inventory, onBack, onStartBrewing, onEdit, onApplyScaled }: RecipeScreenProps) {
+export function RecipeScreen({ recipeId, recipe, activeProfile, inventory, onBack, onStartBrewing, onEdit, onApplyScaled, onOpenSettings }: RecipeScreenProps) {
   const hasActiveSession = useBrewSessionExists(recipeId);
   const prefs = useUnits();
   const t = useT();
@@ -562,7 +564,7 @@ export function RecipeScreen({ recipeId, recipe, activeProfile, inventory, onBac
         <YeastPitchSection recipe={recipe} />
 
         {/* ─── Water chemistry ──────────────────────────────────────────── */}
-        <WaterChemistrySection recipe={recipe} />
+        <WaterChemistrySection recipe={recipe} onOpenSettings={onOpenSettings} />
 
         {/* ─── Carbonation calculator ───────────────────────────────────── */}
         <CarbonationSection recipe={recipe} />

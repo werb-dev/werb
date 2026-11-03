@@ -18,6 +18,7 @@ import type { UnitPreferences } from "../data/units-format.ts";
 import { SUPPORTED_LOCALES } from "../data/i18n.ts";
 import { downloadTextFile, pickAndReadTextFile } from "../data/browser-fs.ts";
 import { translateError } from "../data/errors.ts";
+import { HomeWaterCard } from "./Settings/HomeWaterCard.tsx";
 
 /**
  * Sync + advanced storage settings.
@@ -71,6 +72,10 @@ export function SettingsScreen() {
 
         <Section title={t("settings.section.units")}>
           <UnitsCard />
+        </Section>
+
+        <Section title={t("settings.section.water")}>
+          <HomeWaterCard />
         </Section>
 
         <Section title={t("settings.section.github")}>

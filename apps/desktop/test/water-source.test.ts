@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { BeerJsonRecipe } from "@werb/adapters";
 import {
-  analysisToIons,
   recipeSourceIons,
+  sourceSelection,
 } from "../src/screens/Recipe/WaterChemistrySection.tsx";
+import { analysisToIons, isUnsetWater, ZERO_IONS } from "../src/data/home-water.ts";
 
 function recipeWith(waterAdditions: unknown[]): BeerJsonRecipe {
   return {
@@ -89,5 +90,27 @@ describe("analysisToIons", () => {
       so4_ppm: 12.8,
       hco3_ppm: 183,
     });
+  });
+});
+
+describe("sourceSelection", () => {
+  const home = { ca_ppm: 42, mg_ppm: 8, na_ppm: 10, cl_ppm: 20, so4_ppm: 30, hco3_ppm: 150 };
+  const fromRecipe = { ca_ppm: 60, mg_ppm: 5, na_ppm: 5, cl_ppm: 40, so4_ppm: 50, hco3_ppm: 100 };
+
+  it("picks My water when the source matches it", () => {
+    expect(sourceSelection(home, home, fromRecipe)).toBe("home");
+  });
+
+  it("picks the recipe's water when the source matches it", () => {
+    expect(sourceSelection(fromRecipe, home, fromRecipe)).toBe("recipe");
+  });
+
+  it("never matches an unset (all-zero) My water", () => {
+    expect(isUnsetWater(ZERO_IONS)).toBe(true);
+    expect(sourceSelection(ZERO_IONS, ZERO_IONS, null)).not.toBe("home");
+  });
+
+  it("falls back to custom for edited ions", () => {
+    expect(sourceSelection({ ...home, ca_ppm: 43 }, home, fromRecipe)).toBe("");
   });
 });
