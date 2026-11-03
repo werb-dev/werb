@@ -98,6 +98,7 @@ export function App() {
           onBack={goLibrary}
           onStartBrewing={() => goBrew(state.recipeId)}
           onEdit={() => goEditRecipe(state.recipeId)}
+          onOpenSettings={goSettings}
           onApplyScaled={
             profile
               ? (scaled) => recipesApi.update(state.recipeId, scaled)

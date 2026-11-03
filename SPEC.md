@@ -179,6 +179,7 @@ A single command (`pnpm gen:types`) regenerates every type. CI checks they're up
 - EN + FR, light + Cassis-dark themes
 - iPad PWA path validated against iOS 15 Safari
 - Source-water profile presets (Pilsen, Munich, Dortmund, Vienna, Burton, London, Edinburgh, Dublin, RO) bundled in the catalog and filled in from the Recipe water-chemistry form
+- "My water" in Settings (typed or loaded from moneaudebrassage.fr): new recipes follow it, and each recipe's water chemistry offers it next to the presets
 - BIAB equipment mode: all water in the kettle at once, no sparge step
 - Alternative IBU (Rager) and color (Daniels) methods, switchable in Settings
 - Yeast starter sizing using the Braukaiser growth model with stir-plate / shake / still aeration

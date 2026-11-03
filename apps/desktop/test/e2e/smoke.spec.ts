@@ -178,6 +178,30 @@ test.describe("Water chemistry — source = target reports no delta", () => {
     expect(await app.recipe.offTargetIonCount()).toBe(0);
   });
 
+  test("My water set in Settings is the recipe's source water", async ({ page }) => {
+    const app = new App(page);
+    await app.go("Settings");
+    const ca = page.locator('[data-testid="home-water-ca_ppm"]');
+    await ca.fill("42");
+    await ca.blur();
+    await page.waitForTimeout(250);
+
+    await app.go("Library");
+    await app.library.importSamples();
+    await app.library.openFirstRecipe();
+    await page.locator('[data-testid="water-chemistry"]').scrollIntoViewIfNeeded();
+    expect(await page.locator('[data-testid="water-source-select"]').inputValue()).toBe("home");
+    expect(await page.locator('[data-testid="water-source-ca_ppm"]').inputValue()).toBe("42");
+
+    // A preset replaces it; My water is one pick away.
+    await app.recipe.setWaterSource("burton");
+    await app.recipe.setWaterSource("home");
+    expect(await page.locator('[data-testid="water-source-ca_ppm"]').inputValue()).toBe("42");
+
+    await page.locator('[data-testid="water-open-settings"]').click();
+    await page.locator('[data-testid="home-water"]').waitFor();
+  });
+
   test("real mismatch still flags deltas (Burton vs Pilsner)", async ({ page }) => {
     // Guard against the city-targets fix over-collapsing comparisons.
     const app = new App(page);

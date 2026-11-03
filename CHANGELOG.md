@@ -23,9 +23,19 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   a different one (more than 0.5 L or 5 % apart), the recipe screen and brew
   mode say so, with the profile's boil-off. Werb's volumes still follow your
   profile.
+- **"My water" in Settings.** Set the water you brew with once: type the six
+  ions or load them from moneaudebrassage.fr (desktop app). New recipes use
+  it, and each recipe's water chemistry lists it as *My water* next to the
+  city profiles, plus *This recipe's water* when the file carries one. The
+  recipe's *Save as default* and loader buttons are replaced by a link to
+  Settings.
 
 ### Fixed
 
+- **Default water on the web app.** New recipes now start from your water on
+  the web too; they used to start from zero because the saved default loaded
+  after the recipe had already picked its water. A recipe you haven't touched
+  follows *My water* when you change it in Settings.
 - **Sparge temperature from the recipe.** A BeerJSON `sparge` mash step sets the
   brew mode sparge temperature instead of showing up as an extra mash rest.
   BeerXML and JolieBulle imports read `SPARGE_TEMP` into that step, and BeerXML
