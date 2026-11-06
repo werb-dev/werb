@@ -7,13 +7,9 @@
  * to pre-fill the water-chemistry source ions so FR brewers don't have
  * to copy six numbers by hand.
  *
- * The request is cross-origin and the API gates on the `Origin` header
- * — neither works from a browser `fetch` (CORS rejects it, and `Origin`
- * is a forbidden header the browser won't let JS set). So the fetch
- * goes through the Tauri HTTP plugin (a native request, no CORS, the
- * `Origin` header passes through). In the web build the feature is
- * unavailable and the caller falls back to manual entry / the last
- * cached pull.
+ * The API answers CORS requests from any origin, so the web build uses
+ * the browser `fetch`. The desktop app goes through the Tauri HTTP
+ * plugin, scoped to the API host in `capabilities/default.json`.
  *
  * Data © moneaudebrassage.fr — attribute the source in the UI.
  */
@@ -22,7 +18,6 @@ import { isTauri } from "./runtime.ts";
 import { WerbError } from "./errors.ts";
 
 const API_BASE = "https://apidb.moneaudebrassage.fr/lastanalyses";
-const ORIGIN = "https://www.moneaudebrassage.fr";
 
 /** One distribution network's latest ion analysis (ppm). */
 export interface WaterAnalysis {
@@ -95,28 +90,23 @@ function toAnalysis(q: RawQuartier): WaterAnalysis {
  * Fetch and parse the latest analyses for an INSEE commune code.
  *
  * Throws a {@link WerbError} the UI can translate:
- *   - `water.mab.web_unsupported` — not running under Tauri.
- *   - `water.mab.bad_code`        — code isn't a valid INSEE code.
- *   - `water.mab.not_found`       — commune has no published analysis.
- *   - `water.mab.network`         — request failed (offline, 5xx, …).
+ *   - `water.mab.bad_code`  — code isn't a valid INSEE code.
+ *   - `water.mab.not_found` — commune has no published analysis.
+ *   - `water.mab.network`   — request failed (offline, 5xx, …).
  */
 export async function fetchCommuneAnalyses(rawCode: string): Promise<CommuneAnalyses> {
   const code = rawCode.trim().toUpperCase();
   if (!isValidInsee(code)) {
     throw new WerbError("water.mab.bad_code");
   }
-  if (!isTauri()) {
-    throw new WerbError("water.mab.web_unsupported");
-  }
-
   // Dynamic import keeps the Tauri HTTP plugin out of the web bundle.
-  const { fetch: tauriFetch } = await import("@tauri-apps/plugin-http");
+  const request = isTauri() ? (await import("@tauri-apps/plugin-http")).fetch : fetch;
 
   let res: Response;
   try {
-    res = await tauriFetch(`${API_BASE}/${encodeURIComponent(code)}`, {
+    res = await request(`${API_BASE}/${encodeURIComponent(code)}`, {
       method: "GET",
-      headers: { Accept: "application/json", Origin: ORIGIN },
+      headers: { Accept: "application/json" },
     });
   } catch (err) {
     const detail = err instanceof Error ? err.message : String(err);

@@ -2,10 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fetchCommuneAnalyses, isValidInsee } from "../src/data/moneaudebrassage.ts";
 import { isWerbError } from "../src/data/errors.ts";
 
-// The module fetches through the Tauri HTTP plugin (dynamic import).
-// Mock the plugin so we can drive responses without a real network /
-// Tauri runtime.
+// Under Tauri the module fetches through the HTTP plugin (dynamic import),
+// elsewhere through the global fetch. Both are mocked.
 const tauriFetch = vi.fn();
+const browserFetch = vi.fn();
 vi.mock("@tauri-apps/plugin-http", () => ({ fetch: (...args: unknown[]) => tauriFetch(...args) }));
 
 const TAURI_KEY = "__TAURI_INTERNALS__";
@@ -70,12 +70,15 @@ describe("isValidInsee", () => {
 describe("fetchCommuneAnalyses", () => {
   beforeEach(() => {
     tauriFetch.mockReset();
+    browserFetch.mockReset();
+    vi.stubGlobal("fetch", browserFetch);
     (globalThis as Record<string, unknown>).window = globalThis as unknown as Window;
     (window as unknown as Record<string, unknown>)[TAURI_KEY] = {};
   });
 
   afterEach(() => {
     delete (window as unknown as Record<string, unknown>)[TAURI_KEY];
+    vi.unstubAllGlobals();
   });
 
   it("rejects a bad code before touching the network", async () => {
@@ -83,11 +86,12 @@ describe("fetchCommuneAnalyses", () => {
     expect(tauriFetch).not.toHaveBeenCalled();
   });
 
-  it("refuses to run outside Tauri", async () => {
+  it("uses the browser fetch outside Tauri", async () => {
     delete (window as unknown as Record<string, unknown>)[TAURI_KEY];
-    await expect(fetchCommuneAnalyses("73008")).rejects.toMatchObject({
-      code: "water.mab.web_unsupported",
-    });
+    browserFetch.mockResolvedValue(jsonResponse(SAMPLE));
+    const res = await fetchCommuneAnalyses("73008");
+    expect(res.networks).toHaveLength(1);
+    expect(browserFetch).toHaveBeenCalledOnce();
     expect(tauriFetch).not.toHaveBeenCalled();
   });
 
@@ -111,14 +115,14 @@ describe("fetchCommuneAnalyses", () => {
     });
   });
 
-  it("sends the Origin header the API gates on", async () => {
+  it("asks the API for the commune as JSON", async () => {
     tauriFetch.mockResolvedValue(jsonResponse(SAMPLE));
     await fetchCommuneAnalyses("73008");
-    const [url, opts] = tauriFetch.mock.calls[0];
-    expect(url).toContain("/lastanalyses/73008");
-    expect((opts as { headers: Record<string, string> }).headers.Origin).toBe(
-      "https://www.moneaudebrassage.fr",
+    expect(tauriFetch).toHaveBeenCalledWith(
+      "https://apidb.moneaudebrassage.fr/lastanalyses/73008",
+      { method: "GET", headers: { Accept: "application/json" } },
     );
+    expect(browserFetch).not.toHaveBeenCalled();
   });
 
   it("maps a 404 to not_found", async () => {

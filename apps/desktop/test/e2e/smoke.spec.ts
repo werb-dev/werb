@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { App } from "./pages.js";
 
 /**
@@ -200,6 +200,59 @@ test.describe("Water chemistry — source = target reports no delta", () => {
 
     await page.locator('[data-testid="water-open-settings"]').click();
     await page.locator('[data-testid="home-water"]').waitFor();
+  });
+
+  test.describe("My water from moneaudebrassage.fr", () => {
+    // page.route doesn't see requests that go through a service worker.
+    test.use({ serviceWorkers: "block" });
+
+    const network = (name: string, ca: number) => ({
+      nomreseau: name,
+      ca,
+      mg: 6,
+      na: 6,
+      cl: 11,
+      so4: 12,
+      hco3: 182,
+      ph: 7.8,
+      date_ca: "2026-09-22",
+    });
+
+    const serveCommune = async (page: Page, quartiers: unknown[]) => {
+      await page.route("https://apidb.moneaudebrassage.fr/lastanalyses/*", (route) =>
+        route.fulfill({
+          contentType: "application/json",
+          headers: { "Access-Control-Allow-Origin": "*" },
+          body: JSON.stringify({ departement: "73", inseecommune: "73008", quartiers }),
+        }),
+      );
+    };
+
+    const lookUp = async (page: Page, code: string) => {
+      await page.getByRole("button", { name: /moneaudebrassage\.fr/i }).click();
+      const panel = page.getByTestId("water-mab-panel");
+      await panel.getByRole("textbox").fill(code);
+      await panel.getByRole("button", { name: /^(Load|Charger)$/ }).click();
+      return panel;
+    };
+
+    test("a commune with one network fills My water in the browser", async ({ page }) => {
+      await serveCommune(page, [network("AIX LES BAINS PORTS", 53)]);
+      const app = new App(page);
+      await app.go("Settings");
+      await lookUp(page, "73008");
+      await expect(page.getByTestId("home-water-ca_ppm")).toHaveValue("53");
+      await expect(page.getByTestId("home-water-hco3_ppm")).toHaveValue("182");
+    });
+
+    test("a commune with several networks lets the brewer pick one", async ({ page }) => {
+      await serveCommune(page, [network("NORTH", 40), network("SOUTH", 90)]);
+      const app = new App(page);
+      await app.go("Settings");
+      const panel = await lookUp(page, "73008");
+      await panel.getByRole("button", { name: /SOUTH/ }).click();
+      await expect(page.getByTestId("home-water-ca_ppm")).toHaveValue("90");
+    });
   });
 
   test("real mismatch still flags deltas (Burton vs Pilsner)", async ({ page }) => {

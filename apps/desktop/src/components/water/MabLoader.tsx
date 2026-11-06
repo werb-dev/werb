@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useT } from "../../data/preferences.tsx";
 import { translateError } from "../../data/errors.ts";
-import { isTauri } from "../../data/runtime.ts";
 import {
   fetchCommuneAnalyses,
   isValidInsee,
@@ -13,12 +12,10 @@ import { usePersistedJson } from "../../storage/index.ts";
 
 /**
  * Fill the ions from the moneaudebrassage.fr public analysis for a French
- * commune. Desktop only: the API is cross-origin and Origin-gated, which a
- * browser fetch can't satisfy. The last pull is cached for offline use.
+ * commune. The last pull is cached for offline use.
  */
 export function MabLoader({ onLoad }: { onLoad: (ions: IonProfile) => void }) {
   const t = useT();
-  const desktop = isTauri();
   const [open, setOpen] = useState(false);
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
@@ -60,45 +57,39 @@ export function MabLoader({ onLoad }: { onLoad: (ions: IonProfile) => void }) {
           data-testid="water-mab-panel"
           className="rounded-lg bg-surface-raised border border-border p-3"
         >
-          {desktop ? (
-            <>
-              <div className="flex flex-wrap items-end gap-2">
-                <label className="block">
-                  <span className="block text-caption uppercase tracking-widest text-text-muted mb-1">
-                    {t("recipe.water.mab_insee")}
-                  </span>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={5}
-                    value={code}
-                    placeholder="73008"
-                    onChange={(e) => setCode(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && isValidInsee(code) && !loading) submit();
-                    }}
-                    className="w-28 bg-bg border border-border rounded-lg px-2 py-1.5 text-body-sm font-mono tabular-nums text-text focus:outline-none focus:border-accent"
-                  />
-                </label>
-                <button
-                  type="button"
-                  onClick={submit}
-                  disabled={loading || !isValidInsee(code)}
-                  className="rounded-lg bg-accent text-bg px-3 py-1.5 text-body-sm font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-default transition-opacity"
-                >
-                  {loading ? t("recipe.water.mab_loading") : t("recipe.water.mab_load")}
-                </button>
-              </div>
-              {error && <p className="mt-2 text-caption text-warning">{error}</p>}
-              {cache && cache.networks.length > 0 && (
-                <MabNetworkList
-                  commune={cache}
-                  onPick={(a) => onLoad(analysisToIons(a))}
-                />
-              )}
-            </>
-          ) : (
-            <p className="text-caption text-text-muted">{t("recipe.water.mab_desktop_only")}</p>
+          <div className="flex flex-wrap items-end gap-2">
+            <label className="block">
+              <span className="block text-caption uppercase tracking-widest text-text-muted mb-1">
+                {t("recipe.water.mab_insee")}
+              </span>
+              <input
+                type="text"
+                inputMode="numeric"
+                maxLength={5}
+                value={code}
+                placeholder="73008"
+                onChange={(e) => setCode(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && isValidInsee(code) && !loading) submit();
+                }}
+                className="w-28 bg-bg border border-border rounded-lg px-2 py-1.5 text-body-sm font-mono tabular-nums text-text focus:outline-none focus:border-accent"
+              />
+            </label>
+            <button
+              type="button"
+              onClick={submit}
+              disabled={loading || !isValidInsee(code)}
+              className="rounded-lg bg-accent text-bg px-3 py-1.5 text-body-sm font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-default transition-opacity"
+            >
+              {loading ? t("recipe.water.mab_loading") : t("recipe.water.mab_load")}
+            </button>
+          </div>
+          {error && <p className="mt-2 text-caption text-warning">{error}</p>}
+          {cache && cache.networks.length > 0 && (
+            <MabNetworkList
+              commune={cache}
+              onPick={(a) => onLoad(analysisToIons(a))}
+            />
           )}
           <p className="mt-3 text-caption text-text-muted opacity-70">
             {t("recipe.water.mab_attribution")}
