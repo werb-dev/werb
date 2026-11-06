@@ -32,6 +32,10 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Docs links open the docs on the web.** Once the web app had been opened,
+  links to the [documentation](https://werb-dev.github.io/werb/docs/) showed
+  the app instead. A browser that already has the app picks up the fix with
+  the next update (*Reload* on the "New version available" banner).
 - **Library cards show OG, FG, ABV, IBU and color for every recipe**
   ([#49](https://github.com/werb-dev/werb/issues/49)). A card used to show "—"
   for any figure the recipe file didn't state (e.g. ABV on an imported BeerXML

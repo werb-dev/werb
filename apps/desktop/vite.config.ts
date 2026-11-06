@@ -33,6 +33,7 @@ function gitCommit(): string {
 }
 const COMMIT = gitCommit();
 const BUILD_DATE = new Date().toISOString().slice(0, 10);
+const BASE = process.env.VITE_BASE ?? "/";
 
 // Vite config tuned for Tauri 2: fixed dev port, no auto-clear of stderr,
 // HMR over the host Tauri injects, and exclusion of the Rust build dir from
@@ -43,7 +44,7 @@ const BUILD_DATE = new Date().toISOString().slice(0, 10);
 //   • GitHub Pages deploy:      base="/werb/"  (CI sets VITE_BASE=/werb/)
 //   • custom domain on Pages:   base="/"  (CI sets VITE_BASE=/)
 export default defineConfig({
-  base: process.env.VITE_BASE ?? "/",
+  base: BASE,
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
     __APP_COMMIT__: JSON.stringify(COMMIT),
@@ -110,6 +111,9 @@ export default defineConfig({
         // bumping so it's precached alongside everything else.
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         globPatterns: ["**/*.{js,css,html,wasm,woff,woff2,png,svg,webmanifest}"],
+        // The mdBook docs are deployed under <base>docs/, inside this
+        // worker's scope: navigations there go to the network, not the app shell.
+        navigateFallbackDenylist: [new RegExp(`^${BASE}docs(/|$)`)],
       },
     }),
   ],
