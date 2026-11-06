@@ -736,10 +736,6 @@ const STRINGS: Record<string, Entry> = {
   "recipe.water.mab_insee": { en: "INSEE code", fr: "Code INSEE" },
   "recipe.water.mab_load": { en: "Load", fr: "Charger" },
   "recipe.water.mab_loading": { en: "Loading…", fr: "Chargement…" },
-  "recipe.water.mab_desktop_only": {
-    en: "Live commune lookup is available in the desktop app only. In the browser, enter the ions manually.",
-    fr: "La recherche par commune n'est disponible que dans l'application de bureau. Dans le navigateur, saisissez les ions manuellement.",
-  },
   "recipe.water.mab_networks": { en: "Networks for {insee} — pick one", fr: "Réseaux pour {insee} — choisissez-en un" },
   "recipe.water.mab_attribution": {
     en: "Water data © moneaudebrassage.fr",
@@ -1165,10 +1161,6 @@ const STRINGS: Record<string, Entry> = {
   "error.water.mab.bad_code": {
     en: "Enter a valid 5-digit INSEE commune code (e.g. 73008).",
     fr: "Saisissez un code INSEE de commune à 5 chiffres (ex. 73008).",
-  },
-  "error.water.mab.web_unsupported": {
-    en: "Commune lookup needs the desktop app — enter the ions manually here.",
-    fr: "La recherche par commune nécessite l'application de bureau — saisissez les ions manuellement ici.",
   },
   "error.water.mab.not_found": {
     en: "No published water analysis found for that commune.",

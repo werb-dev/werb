@@ -24,8 +24,8 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   mode say so, with the profile's boil-off. Werb's volumes still follow your
   profile.
 - **"My water" in Settings.** Set the water you brew with once: type the six
-  ions or load them from moneaudebrassage.fr (desktop app). New recipes use
-  it, and each recipe's water chemistry lists it as *My water* next to the
+  ions or load them from moneaudebrassage.fr by INSEE commune code, in the
+  desktop app and in the browser. New recipes use it, and each recipe's water chemistry lists it as *My water* next to the
   city profiles, plus *This recipe's water* when the file carries one. The
   recipe's *Save as default* and loader buttons are replaced by a link to
   Settings.
